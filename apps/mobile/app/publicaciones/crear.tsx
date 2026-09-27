@@ -17,14 +17,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { type Href, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -39,6 +32,7 @@ import {
   type ErroresCamposPublicacion,
   type ValoresPublicacion,
 } from '@/components/publicaciones/CamposPublicacion';
+import { FormularioConTeclado } from '@/components/ui/FormularioConTeclado';
 import { SelectField } from '@/components/ui/SelectField';
 import { estiloDeEstado } from '@/constants/EstadosMascota';
 import { tomarMascotaParaPublicar } from '@/lib/mascotaParaPublicar';
@@ -246,62 +240,56 @@ export default function CrearPublicacionScreen() {
             <CustomButton title="Cargar mascota" variant="acento" onPress={irACargarMascota} />
           </EstadoVacio>
         ) : (
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          <FormularioConTeclado
             className="flex-1"
+            contentContainerClassName="px-4 pb-10"
+            showsVerticalScrollIndicator={false}
           >
-            <ScrollView
-              className="flex-1"
-              contentContainerClassName="px-4 pb-10"
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              <CamposPublicacion
-                valores={valores}
-                onChange={(cambios) => setValores((previos) => ({ ...previos, ...cambios }))}
-                generoMascota={generoMascota}
-                errorDe={errorDe}
-                onBlur={marcarTocado}
-                filaMascota={
-                  <SelectField
-                    label="Seleccionar mascota"
-                    obligatorio
-                    placeholder="Elegí una"
-                    opciones={[
-                      // Primera, para quien viene a publicar una que todavía no cargó.
-                      { valor: CREAR_MASCOTA, etiqueta: '＋ Crear mascota nueva' },
-                      ...publicables.map((mascota) => ({
-                        valor: mascota.id,
-                        etiqueta: `${mascota.nombre} (${mascota.especie.nombre} · ${estiloDeEstado(mascota.estado.nombre).etiqueta})`,
-                      })),
-                    ]}
-                    valor={mascotaId}
-                    onChange={(valor) => {
-                      if (valor === CREAR_MASCOTA) {
-                        irACargarMascota();
-                        return;
-                      }
-                      setMascotaId(valor);
-                    }}
-                    onBlur={() => marcarTocado('mascotaId')}
-                    error={errorDe('mascotaId')}
-                    grande
-                  />
-                }
-              />
-
-              <View className="mt-5">
-                <CustomButton
-                  title="Publicar en adopción"
-                  variant="acento"
-                  loading={publicando}
-                  disabled={!formularioValido}
-                  onPress={() => void publicar()}
-                  onPressDeshabilitado={explicarQueFalta}
+            <CamposPublicacion
+              valores={valores}
+              onChange={(cambios) => setValores((previos) => ({ ...previos, ...cambios }))}
+              generoMascota={generoMascota}
+              errorDe={errorDe}
+              onBlur={marcarTocado}
+              filaMascota={
+                <SelectField
+                  label="Seleccionar mascota"
+                  obligatorio
+                  placeholder="Elegí una"
+                  opciones={[
+                    // Primera, para quien viene a publicar una que todavía no cargó.
+                    { valor: CREAR_MASCOTA, etiqueta: '＋ Crear mascota nueva' },
+                    ...publicables.map((mascota) => ({
+                      valor: mascota.id,
+                      etiqueta: `${mascota.nombre} (${mascota.especie.nombre} · ${estiloDeEstado(mascota.estado.nombre).etiqueta})`,
+                    })),
+                  ]}
+                  valor={mascotaId}
+                  onChange={(valor) => {
+                    if (valor === CREAR_MASCOTA) {
+                      irACargarMascota();
+                      return;
+                    }
+                    setMascotaId(valor);
+                  }}
+                  onBlur={() => marcarTocado('mascotaId')}
+                  error={errorDe('mascotaId')}
+                  grande
                 />
-              </View>
-            </ScrollView>
-          </KeyboardAvoidingView>
+              }
+            />
+
+            <View className="mt-5">
+              <CustomButton
+                title="Publicar en adopción"
+                variant="acento"
+                loading={publicando}
+                disabled={!formularioValido}
+                onPress={() => void publicar()}
+                onPressDeshabilitado={explicarQueFalta}
+              />
+            </View>
+          </FormularioConTeclado>
         )}
       </SafeAreaView>
     </Animated.View>

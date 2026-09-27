@@ -15,7 +15,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -30,6 +30,7 @@ import {
   type CampoValidado,
   type ValoresPublicacion,
 } from '@/components/publicaciones/CamposPublicacion';
+import { FormularioConTeclado } from '@/components/ui/FormularioConTeclado';
 import type { FotoElegida } from '@/components/ui/PhotosPickerField';
 import { TextField } from '@/components/ui/TextField';
 import { PALETA } from '@/constants/theme';
@@ -194,46 +195,40 @@ export default function EditarPublicacionScreen() {
             etiquetaAccion="Volver"
           />
         ) : (
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          <FormularioConTeclado
             className="flex-1"
+            contentContainerClassName="px-4 pb-10"
+            showsVerticalScrollIndicator={false}
           >
-            <ScrollView
-              className="flex-1"
-              contentContainerClassName="px-4 pb-10"
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              <CamposPublicacion
-                valores={valores}
-                onChange={(cambios) => setValores((previos) => ({ ...previos, ...cambios }))}
-                generoMascota={mascota.genero}
-                errorDe={errorDe}
-                onBlur={marcarTocado}
-                filaMascota={
-                  // La mascota se elige al publicar y no se cambia: se muestra fija.
-                  <TextField
-                    label="Mascota"
-                    value={`${mascota.nombre ?? 'Sin nombre'} (${mascota.especie.nombre})`}
-                    editable={false}
-                    ayuda="La mascota de una publicación no se puede cambiar."
-                    grande
-                  />
-                }
-              />
-
-              <View className="mt-5">
-                <CustomButton
-                  title="Guardar cambios"
-                  variant="acento"
-                  loading={guardando}
-                  disabled={!formularioValido}
-                  onPress={() => void guardar()}
-                  onPressDeshabilitado={explicarQueFalta}
+            <CamposPublicacion
+              valores={valores}
+              onChange={(cambios) => setValores((previos) => ({ ...previos, ...cambios }))}
+              generoMascota={mascota.genero}
+              errorDe={errorDe}
+              onBlur={marcarTocado}
+              filaMascota={
+                // La mascota se elige al publicar y no se cambia: se muestra fija.
+                <TextField
+                  label="Mascota"
+                  value={`${mascota.nombre ?? 'Sin nombre'} (${mascota.especie.nombre})`}
+                  editable={false}
+                  ayuda="La mascota de una publicación no se puede cambiar."
+                  grande
                 />
-              </View>
-            </ScrollView>
-          </KeyboardAvoidingView>
+              }
+            />
+
+            <View className="mt-5">
+              <CustomButton
+                title="Guardar cambios"
+                variant="acento"
+                loading={guardando}
+                disabled={!formularioValido}
+                onPress={() => void guardar()}
+                onPressDeshabilitado={explicarQueFalta}
+              />
+            </View>
+          </FormularioConTeclado>
         )}
       </SafeAreaView>
     </Animated.View>

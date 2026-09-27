@@ -17,14 +17,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CustomButton } from '@/components/CustomButton';
@@ -36,6 +29,7 @@ import {
   type FotoCapturada,
 } from '@/components/seguimiento/CapturaPruebaDeVida';
 import { FormCard, FormCardRow } from '@/components/ui/FormCard';
+import { FormularioConTeclado } from '@/components/ui/FormularioConTeclado';
 import { TextAreaField } from '@/components/ui/TextAreaField';
 import { PALETA } from '@/constants/theme';
 import {
@@ -202,77 +196,71 @@ export default function ActualizacionSeguimientoScreen() {
             onAccion={() => router.back()}
           />
         ) : (
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          <FormularioConTeclado
             className="flex-1"
+            contentContainerClassName="px-4 pb-10"
+            showsVerticalScrollIndicator={false}
           >
-            <ScrollView
-              className="flex-1"
-              contentContainerClassName="px-4 pb-10"
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              {/* Chip de contexto del diseño: en la maqueta dice el día de convivencia, pero
-                  la API no manda la fecha de la adopción. Se muestra lo que sí sabemos y es
-                  lo accionable: qué número de pedido es y cuánto queda del plazo de 48 h. */}
-              <View className="mb-3.5 flex-row items-center gap-2.5 self-start rounded-2xl bg-organic-accent-200 px-4 py-2.5">
-                <Ionicons name="calendar" size={17} color={PALETA.accent[700]} />
-                <Text className="text-[13px] font-semibold text-organic-accent-700">
-                  Pedido {pendiente.numero}
-                  {restante ? ` · te quedan ${restante}` : ''}
-                </Text>
-              </View>
+            {/* Chip de contexto del diseño: en la maqueta dice el día de convivencia, pero
+                la API no manda la fecha de la adopción. Se muestra lo que sí sabemos y es
+                lo accionable: qué número de pedido es y cuánto queda del plazo de 48 h. */}
+            <View className="mb-3.5 flex-row items-center gap-2.5 self-start rounded-2xl bg-organic-accent-200 px-4 py-2.5">
+              <Ionicons name="calendar" size={17} color={PALETA.accent[700]} />
+              <Text className="text-[13px] font-semibold text-organic-accent-700">
+                Pedido {pendiente.numero}
+                {restante ? ` · te quedan ${restante}` : ''}
+              </Text>
+            </View>
 
-              <View className="mb-3.5 rounded-2xl bg-organic-surface p-4">
-                <Text className="text-[12px] font-semibold uppercase tracking-wide text-organic-neutral-400">
-                  Pregunta
-                </Text>
-                <Text className="mt-2 font-titulo text-[18px] leading-6 text-organic-neutral-900">
-                  {pendiente.pregunta}
-                </Text>
-              </View>
+            <View className="mb-3.5 rounded-2xl bg-organic-surface p-4">
+              <Text className="text-[12px] font-semibold uppercase tracking-wide text-organic-neutral-400">
+                Pregunta
+              </Text>
+              <Text className="mt-2 font-titulo text-[18px] leading-6 text-organic-neutral-900">
+                {pendiente.pregunta}
+              </Text>
+            </View>
 
-              <FormCard>
-                <FormCardRow>
-                  <TextAreaField
-                    label="Tu respuesta"
-                    obligatorio
-                    placeholder={`Contá con detalle cómo viene ${detalle.mascota.nombre ?? 'la mascota'}...`}
-                    value={descripcion}
-                    onChangeText={setDescripcion}
-                    onBlur={() => setDescripcionTocada(true)}
-                    maximo={LIMITES.seguimiento.descripcion.max}
-                    error={
-                      mostrarErrores || descripcionTocada
-                        ? (errorDescripcion ?? undefined)
-                        : undefined
-                    }
-                    grande
-                  />
-                </FormCardRow>
-
-                <FormCardRow ultima>
-                  <CapturaPruebaDeVida
-                    foto={foto}
-                    onChange={setFoto}
-                    error={mostrarErrores ? (errorFoto ?? undefined) : undefined}
-                    deshabilitado={guardando}
-                  />
-                </FormCardRow>
-              </FormCard>
-
-              <View className="mt-5">
-                <CustomButton
-                  title="Guardar respuesta"
-                  variant="acento"
-                  loading={guardando}
-                  disabled={!formularioValido}
-                  onPress={() => void guardar()}
-                  onPressDeshabilitado={explicarQueFalta}
+            <FormCard>
+              <FormCardRow>
+                <TextAreaField
+                  label="Tu respuesta"
+                  obligatorio
+                  placeholder={`Contá con detalle cómo viene ${detalle.mascota.nombre ?? 'la mascota'}...`}
+                  value={descripcion}
+                  onChangeText={setDescripcion}
+                  onBlur={() => setDescripcionTocada(true)}
+                  maximo={LIMITES.seguimiento.descripcion.max}
+                  error={
+                    mostrarErrores || descripcionTocada
+                      ? (errorDescripcion ?? undefined)
+                      : undefined
+                  }
+                  grande
                 />
-              </View>
-            </ScrollView>
-          </KeyboardAvoidingView>
+              </FormCardRow>
+
+              <FormCardRow ultima>
+                <CapturaPruebaDeVida
+                  foto={foto}
+                  onChange={setFoto}
+                  error={mostrarErrores ? (errorFoto ?? undefined) : undefined}
+                  deshabilitado={guardando}
+                />
+              </FormCardRow>
+            </FormCard>
+
+            <View className="mt-5">
+              <CustomButton
+                title="Guardar respuesta"
+                variant="acento"
+                loading={guardando}
+                disabled={!formularioValido}
+                onPress={() => void guardar()}
+                onPressDeshabilitado={explicarQueFalta}
+              />
+            </View>
+          </FormularioConTeclado>
         )}
       </SafeAreaView>
     </View>

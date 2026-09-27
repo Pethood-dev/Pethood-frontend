@@ -6,20 +6,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CustomButton } from '@/components/CustomButton';
 import { CustomInput } from '@/components/CustomInput';
 import { useToast } from '@/components/feedback/Toast';
+import { FormularioConTeclado } from '@/components/ui/FormularioConTeclado';
 import { PALETA } from '@/constants/theme';
 import { useSesion } from '@/hooks/useSesion';
 import { validarConfirmacionPassword, validarPassword } from '@/lib/validacionRegistro';
@@ -104,95 +97,89 @@ export default function CambiarPasswordScreen() {
             <ActivityIndicator color={PALETA.pethood.naranja} />
           </View>
         ) : (
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            className="flex-1"
+          <FormularioConTeclado
+            showsVerticalScrollIndicator={false}
+            contentContainerClassName="px-5 pb-8 pt-4"
           >
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              contentContainerClassName="px-5 pb-8 pt-4"
-            >
-              <Text className="mb-6 text-base text-gray-600">
-                {tienePassword
-                  ? 'Ingresá tu contraseña actual y elegí una nueva.'
-                  : 'Definí una contraseña para tu cuenta.'}
-              </Text>
+            <Text className="mb-6 text-base text-gray-600">
+              {tienePassword
+                ? 'Ingresá tu contraseña actual y elegí una nueva.'
+                : 'Definí una contraseña para tu cuenta.'}
+            </Text>
 
-              {tienePassword ? (
-                <CustomInput
-                  label="Contraseña actual"
-                  placeholder="Tu contraseña actual"
-                  value={actual}
-                  onChangeText={setActual}
-                  error={errors.actual}
-                  secureTextEntry={!showActual}
-                  autoCapitalize="none"
-                  autoComplete="password"
-                  textContentType="password"
-                  rightIcon={
-                    <Ionicons
-                      name={showActual ? 'eye-off-outline' : 'eye-outline'}
-                      size={22}
-                      color={PALETA.gris[400]}
-                    />
-                  }
-                  onRightIconPress={() => setShowActual((prev) => !prev)}
-                  required
+            {tienePassword ? (
+              <CustomInput
+                label="Contraseña actual"
+                placeholder="Tu contraseña actual"
+                value={actual}
+                onChangeText={setActual}
+                error={errors.actual}
+                secureTextEntry={!showActual}
+                autoCapitalize="none"
+                autoComplete="password"
+                textContentType="password"
+                rightIcon={
+                  <Ionicons
+                    name={showActual ? 'eye-off-outline' : 'eye-outline'}
+                    size={22}
+                    color={PALETA.gris[400]}
+                  />
+                }
+                onRightIconPress={() => setShowActual((prev) => !prev)}
+                required
+              />
+            ) : null}
+
+            <CustomInput
+              label="Nueva contraseña"
+              placeholder="Mínimo 8 caracteres"
+              value={nueva}
+              onChangeText={setNueva}
+              error={errors.nueva}
+              secureTextEntry={!showNueva}
+              autoCapitalize="none"
+              autoComplete="new-password"
+              textContentType="newPassword"
+              rightIcon={
+                <Ionicons
+                  name={showNueva ? 'eye-off-outline' : 'eye-outline'}
+                  size={22}
+                  color={PALETA.gris[400]}
                 />
-              ) : null}
+              }
+              onRightIconPress={() => setShowNueva((prev) => !prev)}
+              required
+            />
 
-              <CustomInput
-                label="Nueva contraseña"
-                placeholder="Mínimo 8 caracteres"
-                value={nueva}
-                onChangeText={setNueva}
-                error={errors.nueva}
-                secureTextEntry={!showNueva}
-                autoCapitalize="none"
-                autoComplete="new-password"
-                textContentType="newPassword"
-                rightIcon={
-                  <Ionicons
-                    name={showNueva ? 'eye-off-outline' : 'eye-outline'}
-                    size={22}
-                    color={PALETA.gris[400]}
-                  />
-                }
-                onRightIconPress={() => setShowNueva((prev) => !prev)}
-                required
-              />
+            <CustomInput
+              label="Repetí la nueva contraseña"
+              placeholder="Volvé a escribirla"
+              value={confirmacion}
+              onChangeText={setConfirmacion}
+              error={errors.confirmacion}
+              secureTextEntry={!showConfirmacion}
+              autoCapitalize="none"
+              autoComplete="new-password"
+              textContentType="newPassword"
+              rightIcon={
+                <Ionicons
+                  name={showConfirmacion ? 'eye-off-outline' : 'eye-outline'}
+                  size={22}
+                  color={PALETA.gris[400]}
+                />
+              }
+              onRightIconPress={() => setShowConfirmacion((prev) => !prev)}
+              required
+            />
 
-              <CustomInput
-                label="Repetí la nueva contraseña"
-                placeholder="Volvé a escribirla"
-                value={confirmacion}
-                onChangeText={setConfirmacion}
-                error={errors.confirmacion}
-                secureTextEntry={!showConfirmacion}
-                autoCapitalize="none"
-                autoComplete="new-password"
-                textContentType="newPassword"
-                rightIcon={
-                  <Ionicons
-                    name={showConfirmacion ? 'eye-off-outline' : 'eye-outline'}
-                    size={22}
-                    color={PALETA.gris[400]}
-                  />
-                }
-                onRightIconPress={() => setShowConfirmacion((prev) => !prev)}
-                required
-              />
+            {formError ? <Text className="mb-3 text-sm text-red-500">{formError}</Text> : null}
 
-              {formError ? <Text className="mb-3 text-sm text-red-500">{formError}</Text> : null}
-
-              <CustomButton
-                title="Guardar contraseña"
-                loading={guardando}
-                onPress={() => void guardar()}
-              />
-            </ScrollView>
-          </KeyboardAvoidingView>
+            <CustomButton
+              title="Guardar contraseña"
+              loading={guardando}
+              onPress={() => void guardar()}
+            />
+          </FormularioConTeclado>
         )}
       </SafeAreaView>
     </View>

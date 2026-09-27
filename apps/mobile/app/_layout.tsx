@@ -12,6 +12,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import 'react-native-reanimated';
 
 import { BarraNavegacionSistema } from '@/components/BarraNavegacionSistema';
@@ -29,19 +30,26 @@ export default function RootLayout() {
     // Requisito de react-native-gesture-handler: sin esta raíz, el arrastre del mazo de
     // tarjetas de Adoptar no recibe eventos en Android.
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SesionProvider>
-        {/* El provider de toasts envuelve al Stack para que un toast disparado antes de
-            navegar siga visible en la pantalla siguiente. */}
-        <ToastProvider>
-          <StatusBar style="dark" />
-          {/* Oculta la barra de navegación del sistema para ganar la franja inferior. No
-              queda bloqueada: Android la vuelve a mostrar cuando el usuario desliza desde
-              el borde y la esconde sola al rato. El módulo es solo de Android; en iOS y
-              web BarraNavegacionSistema no importa expo-navigation-bar. */}
-          <BarraNavegacionSistema />
-          <RootNavigator />
-        </ToastProvider>
-      </SesionProvider>
+      {/* Mide el teclado cuadro a cuadro para `FormularioConTeclado`. Va una sola vez en la
+          raíz y no por pantalla: así escucha a la ventana durante toda la vida de la app y
+          no queda nada a medio restaurar cuando una pantalla se desmonta con el teclado
+          abierto (lo que le pasaba a `useAnimatedKeyboard` en el chat). Detecta solo que la
+          app es edge-to-edge, así que no necesita configuración. */}
+      <KeyboardProvider>
+        <SesionProvider>
+          {/* El provider de toasts envuelve al Stack para que un toast disparado antes de
+              navegar siga visible en la pantalla siguiente. */}
+          <ToastProvider>
+            <StatusBar style="dark" />
+            {/* Oculta la barra de navegación del sistema para ganar la franja inferior. No
+                queda bloqueada: Android la vuelve a mostrar cuando el usuario desliza desde
+                el borde y la esconde sola al rato. El módulo es solo de Android; en iOS y
+                web BarraNavegacionSistema no importa expo-navigation-bar. */}
+            <BarraNavegacionSistema />
+            <RootNavigator />
+          </ToastProvider>
+        </SesionProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }

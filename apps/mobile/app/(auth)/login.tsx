@@ -1,20 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CustomButton, FORMA_BOTON_ORGANIC_PRINCIPAL } from '@/components/CustomButton';
 import { CustomInput } from '@/components/CustomInput';
 import { GoogleLoginButton } from '@/components/GoogleLoginButton';
 import { PetHoodLogo } from '@/components/PetHoodLogo';
+import { FormularioConTeclado } from '@/components/ui/FormularioConTeclado';
 import { PALETA } from '@/constants/theme';
 import { useSesion } from '@/hooks/useSesion';
 import { validarEmail, validarPassword } from '@/lib/validacionRegistro';
@@ -105,111 +99,105 @@ export default function LoginScreen() {
           <PetHoodLogo />
         </View>
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          className="flex-1"
+        <View
+          style={SOMBRA_HOJA}
+          className="flex-1 rounded-t-[36px] bg-organic-neutral-100 px-6 pb-8 pt-8"
         >
-          <View
-            style={SOMBRA_HOJA}
-            className="flex-1 rounded-t-[36px] bg-organic-neutral-100 px-6 pb-8 pt-8"
+          <FormularioConTeclado
+            showsVerticalScrollIndicator={false}
+            contentContainerClassName="flex-grow"
           >
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              contentContainerClassName="flex-grow"
-            >
-              <Text className="mb-1 font-titulo text-[28px] leading-[34px] text-organic-neutral-900">
-                ¡Hola de nuevo!
-              </Text>
-              <Text className="mb-7 font-cuerpo text-[17px] text-organic-neutral-600">
-                Iniciá sesión para continuar
-              </Text>
+            <Text className="mb-1 font-titulo text-[28px] leading-[34px] text-organic-neutral-900">
+              ¡Hola de nuevo!
+            </Text>
+            <Text className="mb-7 font-cuerpo text-[17px] text-organic-neutral-600">
+              Iniciá sesión para continuar
+            </Text>
 
-              <CustomInput
-                organic
-                label="Correo electrónico"
-                placeholder="tu@correo.com"
-                value={email}
-                onChangeText={handleEmailChange}
-                onBlur={() => setFieldError('email', validarEmail(email))}
-                error={errors.email}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-                textContentType="emailAddress"
-                required
-              />
+            <CustomInput
+              organic
+              label="Correo electrónico"
+              placeholder="tu@correo.com"
+              value={email}
+              onChangeText={handleEmailChange}
+              onBlur={() => setFieldError('email', validarEmail(email))}
+              error={errors.email}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+              textContentType="emailAddress"
+              required
+            />
 
-              <CustomInput
-                organic
-                label="Contraseña"
-                placeholder="Mínimo 8 caracteres"
-                value={password}
-                onChangeText={setPassword}
-                error={errors.password}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                autoComplete="password"
-                textContentType="password"
-                rightIcon={
-                  <Ionicons
-                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                    size={24}
-                    color={PALETA.neutral[500]}
-                  />
-                }
-                onRightIconPress={() => setShowPassword((prev) => !prev)}
-                required
-              />
-
-              <Pressable
-                onPress={() => router.push('/recuperar' as Href)}
-                accessibilityRole="button"
-                className="mb-4 self-end"
-              >
-                <Text className="font-cuerpo-semi text-[15px] text-organic-accent-700">
-                  ¿Olvidaste tu contraseña?
-                </Text>
-              </Pressable>
-
-              {formError ? (
-                <Text className="mb-3 font-cuerpo text-[15px] text-red-500">{formError}</Text>
-              ) : null}
-
-              <View className="mt-2">
-                <CustomButton
-                  title="Iniciar sesión"
-                  variant="acento"
-                  grande
-                  style={FORMA_BOTON_ORGANIC_PRINCIPAL}
-                  loading={loading}
-                  onPress={handleLogin}
+            <CustomInput
+              organic
+              label="Contraseña"
+              placeholder="Mínimo 8 caracteres"
+              value={password}
+              onChangeText={setPassword}
+              error={errors.password}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              autoComplete="password"
+              textContentType="password"
+              rightIcon={
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={24}
+                  color={PALETA.neutral[500]}
                 />
-              </View>
+              }
+              onRightIconPress={() => setShowPassword((prev) => !prev)}
+              required
+            />
 
-              <View className="my-5 flex-row items-center">
-                <View className="h-px flex-1 bg-organic-neutral-300" />
-                <Text className="mx-3 font-cuerpo text-[15px] text-organic-neutral-500">o</Text>
-                <View className="h-px flex-1 bg-organic-neutral-300" />
-              </View>
-
-              <GoogleLoginButton onSuccess={completarSesion} onError={setFormError} />
-            </ScrollView>
-
-            <View className="mt-5 items-center">
-              <Text className="font-cuerpo text-[16px] text-organic-neutral-600">
-                ¿No tenés cuenta?{' '}
-                <Link href="/register" asChild>
-                  <Pressable>
-                    <Text className="font-cuerpo-semi text-[16px] text-organic-accent-700">
-                      Registrate
-                    </Text>
-                  </Pressable>
-                </Link>
+            <Pressable
+              onPress={() => router.push('/recuperar' as Href)}
+              accessibilityRole="button"
+              className="mb-4 self-end"
+            >
+              <Text className="font-cuerpo-semi text-[15px] text-organic-accent-700">
+                ¿Olvidaste tu contraseña?
               </Text>
+            </Pressable>
+
+            {formError ? (
+              <Text className="mb-3 font-cuerpo text-[15px] text-red-500">{formError}</Text>
+            ) : null}
+
+            <View className="mt-2">
+              <CustomButton
+                title="Iniciar sesión"
+                variant="acento"
+                grande
+                style={FORMA_BOTON_ORGANIC_PRINCIPAL}
+                loading={loading}
+                onPress={handleLogin}
+              />
             </View>
+
+            <View className="my-5 flex-row items-center">
+              <View className="h-px flex-1 bg-organic-neutral-300" />
+              <Text className="mx-3 font-cuerpo text-[15px] text-organic-neutral-500">o</Text>
+              <View className="h-px flex-1 bg-organic-neutral-300" />
+            </View>
+
+            <GoogleLoginButton onSuccess={completarSesion} onError={setFormError} />
+          </FormularioConTeclado>
+
+          <View className="mt-5 items-center">
+            <Text className="font-cuerpo text-[16px] text-organic-neutral-600">
+              ¿No tenés cuenta?{' '}
+              <Link href="/register" asChild>
+                <Pressable>
+                  <Text className="font-cuerpo-semi text-[16px] text-organic-accent-700">
+                    Registrate
+                  </Text>
+                </Pressable>
+              </Link>
+            </Text>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </SafeAreaView>
     </View>
   );
