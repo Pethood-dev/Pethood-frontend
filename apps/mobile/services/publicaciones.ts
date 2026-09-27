@@ -4,7 +4,7 @@
  * El feed ya viene ordenado y sin las mascotas propias ni las que el usuario guardó en
  * favoritos: el cliente no vuelve a filtrar nada, solo pagina.
  */
-import { get } from './api';
+import { adjuntarArchivo, get, patch, putFormData } from './api';
 import type { Genero, Tamanio } from './mascotas';
 
 export interface MascotaPublicada {
@@ -25,11 +25,12 @@ export interface MascotaPublicada {
 }
 
 /**
- * Estado del AVISO, no de la mascota (catálogo `Estado_Publicacion`). Hoy cambia solo,
- * siguiendo a la mascota:
- * - `Activa`: se ve en el feed (mascota `Disponible`).
- * - `Pausada`: sigue viva pero no aparece en el feed (en tratamiento o en tránsito).
- * - `Finalizada`: la mascota ya fue adoptada (o falleció).
+ * Estado del AVISO, no de la mascota (catálogo `Estado_Publicacion`):
+ * - `Activa`: se ve en el feed y recibe solicitudes.
+ * - `Pausada`: sigue viva pero fuera del feed. La pausa quien la gestiona, o sola cuando la
+ *   mascota pasa a tratamiento o tránsito. Se reactiva siempre a mano.
+ * - `Finalizada`: aviso cerrado para siempre. La finaliza quien la gestiona, o sola cuando
+ *   la mascota es adoptada o fallece.
  */
 export interface EstadoPublicacion {
   id: number;
@@ -60,7 +61,19 @@ export interface PublicacionFeed {
    * propia mascota.
    */
   esPropia: boolean;
+  /**
+   * Si la puede editar y cambiarle el estado desde el perfil activo: quien la publicó
+   * (perfil personal) o cualquier miembro del refugio dueño. Siempre `false` en el feed.
+   */
+  puedeEditar: boolean;
 }
+
+/** Nombres del catálogo `Estado_Publicacion`, tal como los manda el backend. */
+export const ESTADO_PUBLICACION = {
+  ACTIVA: 'Activa',
+  PAUSADA: 'Pausada',
+  FINALIZADA: 'Finalizada',
+} as const;
 
 export interface FeedPublicaciones {
   /** Total que matchea los filtros, no el largo de esta página. */
@@ -144,6 +157,65 @@ export function listarFeed(
 
 export function obtenerPublicacion(id: number): Promise<PublicacionFeed> {
   return get(`/publicaciones/${id}`);
+}
+
+/**
+ * En `imagenes`, el lugar de cada foto nueva: la primera marca es la primera de las que se
+ * suben en `fotos`, y así. Tiene que coincidir con `MARCADOR_FOTO_NUEVA` del backend.
+ */
+const MARCADOR_FOTO_NUEVA = 'nueva';
+
+export interface DatosEdicionPublicacion {
+  descripcion: string;
+  ubicacion: string;
+  requisitos: string[];
+  personalidad: string[];
+  desparasitado: boolean;
+  vacunas: string;
+  /**
+   * Galería final en orden (la primera es la portada): las que ya estaban traen `remota`, las
+   * nuevas no. Vacía, vuelve a usar la foto de la mascota.
+   */
+  fotos: { uri: string; nombre: string; tipo: string; remota?: string }[];
+}
+
+/**
+ * Reemplaza todos los datos editables de la publicación (todo menos la mascota) y devuelve
+ * la ficha actualizada. Mismo multipart que el alta; el orden de la galería viaja en
+ * `imagenes`, con las existentes por su ruta y las nuevas marcadas.
+ */
+export async function editarPublicacion(
+  id: number,
+  datos: DatosEdicionPublicacion,
+): Promise<PublicacionFeed> {
+  const formData = new FormData();
+
+  formData.append('descripcion', datos.descripcion);
+  formData.append('ubicacion', datos.ubicacion);
+  formData.append('desparasitado', String(datos.desparasitado));
+  formData.append('vacunas', datos.vacunas);
+
+  // Repetir la clave es como viaja una lista en multipart.
+  for (const requisito of datos.requisitos) formData.append('requisitos', requisito);
+  for (const rasgo of datos.personalidad) formData.append('personalidad', rasgo);
+
+  for (const foto of datos.fotos) {
+    formData.append('imagenes', foto.remota ?? MARCADOR_FOTO_NUEVA);
+    if (!foto.remota) await adjuntarArchivo(formData, 'fotos', foto);
+  }
+
+  return putFormData(`/publicaciones/${id}`, formData);
+}
+
+/** Cambios de estado manuales. Ver `EstadoPublicacion` para qué puede ir a qué. */
+export type AccionEstadoPublicacion = 'PAUSAR' | 'REACTIVAR' | 'FINALIZAR';
+
+/** Pausa, reactiva o finaliza la publicación y devuelve la ficha con el estado nuevo. */
+export function cambiarEstadoPublicacion(
+  id: number,
+  accion: AccionEstadoPublicacion,
+): Promise<PublicacionFeed> {
+  return patch(`/publicaciones/${id}/estado`, { accion });
 }
 
 /** Tarjeta de "Mis publicaciones". La ficha completa se pide con `obtenerPublicacion`. */

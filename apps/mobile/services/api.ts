@@ -241,6 +241,10 @@ export function patchFormData<T>(ruta: string, formData: FormData): Promise<T> {
   return enviarFormData<T>('PATCH', ruta, formData);
 }
 
+export function putFormData<T>(ruta: string, formData: FormData): Promise<T> {
+  return enviarFormData<T>('PUT', ruta, formData);
+}
+
 interface ApiFetchOptions extends Omit<RequestInit, 'body'> {
   body?: unknown;
   token?: string;

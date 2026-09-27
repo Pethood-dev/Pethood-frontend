@@ -31,57 +31,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CustomButton } from '@/components/CustomButton';
 import { EstadoCargando, EstadoError, EstadoVacio } from '@/components/feedback/EstadosPantalla';
 import { useToast } from '@/components/feedback/Toast';
-import { ChipMultiField } from '@/components/ui/ChipMultiField';
-import { FormCard, FormCardRow } from '@/components/ui/FormCard';
-import { PhotosPickerField, type FotoElegida } from '@/components/ui/PhotosPickerField';
+import {
+  CamposPublicacion,
+  ETIQUETAS_CAMPOS,
+  VALORES_INICIALES,
+  validarCamposPublicacion,
+  type ErroresCamposPublicacion,
+  type ValoresPublicacion,
+} from '@/components/publicaciones/CamposPublicacion';
 import { SelectField } from '@/components/ui/SelectField';
-import { TagInputField } from '@/components/ui/TagInputField';
-import { TextAreaField } from '@/components/ui/TextAreaField';
-import { TextField } from '@/components/ui/TextField';
-import { ToggleField } from '@/components/ui/ToggleField';
 import { estiloDeEstado } from '@/constants/EstadosMascota';
 import { tomarMascotaParaPublicar } from '@/lib/mascotaParaPublicar';
 import { PALETA } from '@/constants/theme';
 import { crearPublicacion, listarPublicables, type Mascota } from '@/services/mascotas';
-import { textoSegunGenero } from '@/shared/genero';
-import { LIMITES } from '@/shared/validation/limits';
-import { validarTexto } from '@/shared/validation/text';
-
-/**
- * Rasgos de prueba hasta que exista un catálogo propio. Cuando se defina, salen de la API
- * como el resto de los catálogos.
- *
- * "Bueno con chicos" y "Bueno con otras mascotas" no son rasgos cualquiera: son los dos
- * que resuelven los toggles de "Compatible con" del filtro de Adoptar. El backend los
- * matchea por texto exacto (`publicaciones.dto.ts`), así que cambiar la redacción de
- * cualquiera de los dos rompe el filtro en silencio.
- */
-const RASGOS_DE_PERSONALIDAD = [
-  'Juguetón',
-  'Cariñoso',
-  'Tranquilo',
-  'Activo',
-  'Protector',
-  'Sociable',
-  'Independiente',
-  'Bueno con chicos',
-  'Bueno con otras mascotas',
-];
-
-/**
- * Forma femenina de cada rasgo, solo para mostrar (ver `ChipMultiField.etiquetaDe`). Los dos
- * de compatibilidad se traducen igual que el resto: lo que cambia es la etiqueta, nunca el
- * texto que viaja al backend.
- */
-const RASGO_FEMENINO: Partial<Record<string, string>> = {
-  Juguetón: 'Juguetona',
-  Cariñoso: 'Cariñosa',
-  Tranquilo: 'Tranquila',
-  Activo: 'Activa',
-  Protector: 'Protectora',
-  'Bueno con chicos': 'Buena con chicos',
-  'Bueno con otras mascotas': 'Buena con otras mascotas',
-};
 
 /**
  * Valor de la opción "Crear mascota nueva" del selector. No es un id: los ids son positivos,
@@ -89,16 +51,13 @@ const RASGO_FEMENINO: Partial<Record<string, string>> = {
  */
 const CREAR_MASCOTA = -1;
 
-interface ErroresFormulario {
+interface ErroresFormulario extends ErroresCamposPublicacion {
   mascotaId?: string;
-  descripcion?: string;
-  ubicacion?: string;
 }
 
 const ETIQUETAS: Record<keyof ErroresFormulario, string> = {
   mascotaId: 'la mascota',
-  descripcion: 'la descripción',
-  ubicacion: 'la ubicación',
+  ...ETIQUETAS_CAMPOS,
 };
 
 export default function CrearPublicacionScreen() {
@@ -110,13 +69,7 @@ export default function CrearPublicacionScreen() {
   const [mascotaId, setMascotaId] = useState<number | null>(
     params.mascotaId ? Number(params.mascotaId) : null,
   );
-  const [fotos, setFotos] = useState<FotoElegida[]>([]);
-  const [descripcion, setDescripcion] = useState('');
-  const [desparasitado, setDesparasitado] = useState(false);
-  const [vacunas, setVacunas] = useState('');
-  const [personalidad, setPersonalidad] = useState<string[]>([]);
-  const [requisitos, setRequisitos] = useState<string[]>([]);
-  const [ubicacion, setUbicacion] = useState('');
+  const [valores, setValores] = useState<ValoresPublicacion>(VALORES_INICIALES);
 
   const [publicables, setPublicables] = useState<Mascota[]>([]);
   const [cargandoMascotas, setCargandoMascotas] = useState(true);
@@ -182,34 +135,17 @@ export default function CrearPublicacionScreen() {
   };
 
   const errores = useMemo<ErroresFormulario>(() => {
-    const resultado: ErroresFormulario = {};
+    const resultado: ErroresFormulario = validarCamposPublicacion(valores);
 
     if (mascotaId === null) resultado.mascotaId = 'Elegí la mascota que querés publicar';
 
-    const errorDescripcion = validarTexto(descripcion, {
-      min: 1,
-      max: LIMITES.publicacion.descripcion.max,
-      etiqueta: 'La descripción',
-    });
-    if (errorDescripcion) resultado.descripcion = errorDescripcion;
-
-    const errorUbicacion = validarTexto(ubicacion, {
-      min: 1,
-      max: LIMITES.publicacion.ubicacion.max,
-      etiqueta: 'La ubicación',
-    });
-    if (errorUbicacion) resultado.ubicacion = errorUbicacion;
-
     return resultado;
-  }, [mascotaId, descripcion, ubicacion]);
+  }, [mascotaId, valores]);
 
   const formularioValido = Object.keys(errores).length === 0;
 
   /** El género de la mascota elegida decide cómo concordar "Desparasitado" y los rasgos. */
   const generoMascota = publicables.find((mascota) => mascota.id === mascotaId)?.genero ?? null;
-
-  const etiquetaDeRasgo = (rasgo: string): string =>
-    textoSegunGenero(generoMascota, rasgo, RASGO_FEMENINO[rasgo] ?? rasgo);
 
   const errorDe = (campo: keyof ErroresFormulario): string | undefined =>
     mostrarErrores || tocados[campo] ? errores[campo] : undefined;
@@ -241,13 +177,13 @@ export default function CrearPublicacionScreen() {
     try {
       await crearPublicacion({
         mascotaId,
-        descripcion: descripcion.trim(),
-        ubicacion: ubicacion.trim(),
-        requisitos,
-        personalidad,
-        desparasitado,
-        vacunas: vacunas.trim(),
-        fotos,
+        descripcion: valores.descripcion.trim(),
+        ubicacion: valores.ubicacion.trim(),
+        requisitos: valores.requisitos,
+        personalidad: valores.personalidad,
+        desparasitado: valores.desparasitado,
+        vacunas: valores.vacunas.trim(),
+        fotos: valores.fotos,
       });
 
       toast.mostrarExito('¡Listo! Tu publicación ya está activa.');
@@ -320,14 +256,13 @@ export default function CrearPublicacionScreen() {
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
-              <PhotosPickerField
-                fotos={fotos}
-                onChange={setFotos}
-                maximo={LIMITES.publicacion.imagenes.max}
-              />
-
-              <FormCard>
-                <FormCardRow>
+              <CamposPublicacion
+                valores={valores}
+                onChange={(cambios) => setValores((previos) => ({ ...previos, ...cambios }))}
+                generoMascota={generoMascota}
+                errorDe={errorDe}
+                onBlur={marcarTocado}
+                filaMascota={
                   <SelectField
                     label="Seleccionar mascota"
                     obligatorio
@@ -352,78 +287,8 @@ export default function CrearPublicacionScreen() {
                     error={errorDe('mascotaId')}
                     grande
                   />
-                </FormCardRow>
-
-                <FormCardRow>
-                  <TextAreaField
-                    label="Descripción para el swipe"
-                    obligatorio
-                    placeholder="Contá qué lo hace especial"
-                    value={descripcion}
-                    onChangeText={setDescripcion}
-                    onBlur={() => marcarTocado('descripcion')}
-                    maximo={LIMITES.publicacion.descripcion.max}
-                    error={errorDe('descripcion')}
-                    grande
-                  />
-                </FormCardRow>
-
-                <FormCardRow>
-                  <ToggleField
-                    label={textoSegunGenero(generoMascota, 'Desparasitado', 'Desparasitada')}
-                    valor={desparasitado}
-                    onChange={setDesparasitado}
-                    grande
-                  />
-                </FormCardRow>
-
-                <FormCardRow>
-                  <TextField
-                    label="Vacunas"
-                    placeholder="Ej. Rabia, Parvovirus"
-                    value={vacunas}
-                    onChangeText={setVacunas}
-                    maxLength={LIMITES.publicacion.vacunas.max}
-                    grande
-                  />
-                </FormCardRow>
-
-                <FormCardRow>
-                  <ChipMultiField
-                    label="Personalidad"
-                    opciones={RASGOS_DE_PERSONALIDAD}
-                    seleccionadas={personalidad}
-                    onChange={setPersonalidad}
-                    etiquetaDe={etiquetaDeRasgo}
-                    grande
-                  />
-                </FormCardRow>
-
-                <FormCardRow>
-                  <TagInputField
-                    label="Requisitos de adoptante"
-                    placeholder="Ej. Casa con patio"
-                    etiquetas={requisitos}
-                    onChange={setRequisitos}
-                    maximoPorEtiqueta={LIMITES.publicacion.requisito.max}
-                    grande
-                  />
-                </FormCardRow>
-
-                <FormCardRow ultima>
-                  <TextField
-                    label="Ubicación"
-                    obligatorio
-                    placeholder="Ej. Palermo, CABA"
-                    value={ubicacion}
-                    onChangeText={setUbicacion}
-                    onBlur={() => marcarTocado('ubicacion')}
-                    maxLength={LIMITES.publicacion.ubicacion.max}
-                    error={errorDe('ubicacion')}
-                    grande
-                  />
-                </FormCardRow>
-              </FormCard>
+                }
+              />
 
               <View className="mt-5">
                 <CustomButton
