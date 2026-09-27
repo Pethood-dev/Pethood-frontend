@@ -16,6 +16,11 @@ export interface FotoElegida {
   uri: string;
   nombre: string;
   tipo: string;
+  /**
+   * Solo en una foto que ya estaba subida (al editar): la ruta tal como la devolvió la API,
+   * que es con la que el backend la reconoce. `uri` es su versión absoluta, para mostrarla.
+   */
+  remota?: string;
 }
 
 interface PhotosPickerFieldProps {

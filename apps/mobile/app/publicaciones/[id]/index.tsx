@@ -9,19 +9,23 @@
  * le pasa la mascota y se refresca la ficha cuando la solicitud queda creada.
  *
  * También se abre desde "Mis publicaciones". Sobre lo propio (`esPropia`) no hay corazón ni
- * CTA, y en su lugar se muestra el estado de la publicación.
+ * CTA, y en su lugar se muestra el estado de la publicación. Quien la puede gestionar
+ * (`puedeEditar`) además tiene ahí las acciones: editarla y pausarla, reactivarla o
+ * finalizarla, cada cambio de estado con su cartel de confirmación.
  */
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GaleriaFotos } from '@/components/adoptar/GaleriaFotos';
+import { CustomButton } from '@/components/CustomButton';
 import { EstadoCargando, EstadoError } from '@/components/feedback/EstadosPantalla';
 import { useToast } from '@/components/feedback/Toast';
 import { BotonSolicitar, solicitudEnviadaDe } from '@/components/solicitudes/BotonSolicitar';
 import { Chip } from '@/components/ui/Chip';
+import { ConfirmDialog, type TonoDialogo } from '@/components/ui/ConfirmDialog';
 import { EstadoMascotaBadge } from '@/components/ui/EstadoMascotaBadge';
 import { EstadoPublicacionBadge } from '@/components/ui/EstadoPublicacionBadge';
 import { SeccionTitulada } from '@/components/ui/SeccionTitulada';
@@ -29,7 +33,13 @@ import { ESTADO_SOLICITABLE, resumenMascota } from '@/constants/Mascotas';
 import { PALETA } from '@/constants/theme';
 import { useSesion } from '@/hooks/useSesion';
 import { agregarFavorito, quitarFavorito } from '@/services/favoritos';
-import { obtenerPublicacion, type PublicacionFeed } from '@/services/publicaciones';
+import {
+  ESTADO_PUBLICACION,
+  cambiarEstadoPublicacion,
+  obtenerPublicacion,
+  type AccionEstadoPublicacion,
+  type PublicacionFeed,
+} from '@/services/publicaciones';
 import { obtenerElegibilidad } from '@/services/solicitudes';
 
 /** Ítem de una lista con viñeta, para requisitos y vacunas. */
@@ -46,6 +56,48 @@ function Vinieta({ texto, icono }: { texto: string; icono: 'checkmark-circle' | 
     </View>
   );
 }
+
+/** Cartel de confirmación y aviso de éxito de cada cambio de estado manual. */
+const CAMBIOS_DE_ESTADO: Record<
+  AccionEstadoPublicacion,
+  {
+    tono: TonoDialogo;
+    icono: keyof typeof Ionicons.glyphMap;
+    titulo: string;
+    mensaje: string;
+    detalle?: string;
+    confirmar: string;
+    exito: string;
+  }
+> = {
+  PAUSAR: {
+    tono: 'advertencia',
+    icono: 'pause-circle-outline',
+    titulo: '¿Seguro que querés pausar la publicación?',
+    mensaje: 'Va a dejar de aparecer en Adoptar y no va a recibir solicitudes nuevas.',
+    detalle: 'La podés reactivar cuando quieras.',
+    confirmar: 'Pausar',
+    exito: 'Pausamos la publicación.',
+  },
+  REACTIVAR: {
+    tono: 'exito',
+    icono: 'play-circle-outline',
+    titulo: '¿Seguro que querés reactivar la publicación?',
+    mensaje: 'Va a volver a aparecer en Adoptar y a recibir solicitudes.',
+    confirmar: 'Reactivar',
+    exito: '¡Listo! La publicación volvió a estar activa.',
+  },
+  FINALIZAR: {
+    tono: 'peligro',
+    icono: 'flag-outline',
+    titulo: '¿Seguro que querés finalizar la publicación?',
+    mensaje: 'Deja de aparecer en Adoptar y ya no se puede reactivar ni editar.',
+    detalle:
+      'Si más adelante querés volver a ofrecerla, creás una publicación nueva y esta deja de aparecer en Mis publicaciones.',
+    confirmar: 'Finalizar',
+    exito: 'Finalizamos la publicación.',
+  },
+};
 
 /** Dato suelto en la grilla de características. */
 function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
@@ -75,6 +127,9 @@ export default function FichaPublicacionScreen() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+  /** Cambio de estado esperando confirmación en el cartel. */
+  const [accionPendiente, setAccionPendiente] = useState<AccionEstadoPublicacion | null>(null);
+  const [cambiandoEstado, setCambiandoEstado] = useState(false);
   /** Solicitud viva del usuario sobre esta publicación, si tiene. Ver `BotonSolicitar`. */
   const [solicitudAbiertaId, setSolicitudAbiertaId] = useState<number | null>(() =>
     Number.isInteger(publicacionId) ? (solicitudEnviadaDe(publicacionId) ?? null) : null,
@@ -114,9 +169,29 @@ export default function FichaPublicacionScreen() {
       .catch(() => undefined);
   }, [publicacionId, puedeAdoptar]);
 
-  useEffect(() => {
-    void cargar();
-  }, [cargar]);
+  // Al tomar foco y no solo al montar: al volver de editarla, la ficha muestra los cambios.
+  useFocusEffect(
+    useCallback(() => {
+      void cargar();
+    }, [cargar]),
+  );
+
+  const confirmarCambioDeEstado = async (): Promise<void> => {
+    if (!publicacion || !accionPendiente) return;
+
+    setCambiandoEstado(true);
+    try {
+      setPublicacion(await cambiarEstadoPublicacion(publicacion.id, accionPendiente));
+      toast.mostrarExito(CAMBIOS_DE_ESTADO[accionPendiente].exito);
+    } catch (err) {
+      toast.mostrarError(
+        err instanceof Error ? err.message : 'No pudimos cambiar el estado. Intentalo de nuevo.',
+      );
+    } finally {
+      setCambiandoEstado(false);
+      setAccionPendiente(null);
+    }
+  };
 
   /**
    * Update optimista del corazón: cambia en el acto y se revierte si el servidor falla.
@@ -189,6 +264,8 @@ export default function FichaPublicacionScreen() {
 
   const { mascota } = publicacion;
   const vacunas = publicacion.vacunas?.trim();
+  const estadoPublicacion = publicacion.estado.nombre;
+  const cambioPendiente = accionPendiente ? CAMBIOS_DE_ESTADO[accionPendiente] : null;
 
   // Renglón de la tarjeta del formulario: quién publica y desde dónde, lo que ya se ve
   // arriba de la ficha.
@@ -295,6 +372,50 @@ export default function FichaPublicacionScreen() {
               </View>
             </SeccionTitulada>
           ) : null}
+
+          {/* Acciones de quien la gestiona, al final: primero se ve la publicación entera tal
+              como la ve quien adopta. Una finalizada ya no tiene ninguna: es terminal.
+              Pausar solo desde activa, reactivar solo desde pausada, finalizar desde las dos
+              (el backend vuelve a validar cada transición). */}
+          {publicacion.puedeEditar && estadoPublicacion !== ESTADO_PUBLICACION.FINALIZADA ? (
+            <View className="mt-6 gap-2.5">
+              <CustomButton
+                title="Editar publicación"
+                variant="acento"
+                onPress={() =>
+                  router.push({
+                    pathname: '/publicaciones/[id]/editar',
+                    params: { id: publicacion.id },
+                  })
+                }
+              />
+
+              {estadoPublicacion === ESTADO_PUBLICACION.ACTIVA ? (
+                <CustomButton
+                  title="Pausar publicación"
+                  variant="neutro"
+                  onPress={() => setAccionPendiente('PAUSAR')}
+                />
+              ) : estadoPublicacion === ESTADO_PUBLICACION.PAUSADA ? (
+                <CustomButton
+                  title="Reactivar publicación"
+                  variant="acento-borde"
+                  onPress={() => setAccionPendiente('REACTIVAR')}
+                />
+              ) : null}
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Finalizar publicación"
+                onPress={() => setAccionPendiente('FINALIZAR')}
+                className="items-center py-2 active:opacity-60"
+              >
+                <Text className="text-base font-semibold" style={{ color: PALETA.estado.error }}>
+                  Finalizar publicación
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
         </View>
       </ScrollView>
       </View>
@@ -303,11 +424,14 @@ export default function FichaPublicacionScreen() {
           mascota no hay nada que solicitar, así que el pie directamente no se muestra —
           el backend también lo rechaza (PUBLICACION_PROPIA) si de algún modo se llegara a
           tocar. Tampoco se muestra si el estado no es solicitable (En_Tratamiento,
-          En_Transito, Adoptado…), salvo que ya haya una solicitud en curso — ese caso lo
-          resuelve `BotonSolicitar` por dentro. */}
+          En_Transito, Adoptado…) o si la publicación no está activa (pausada o
+          finalizada), salvo que ya haya una solicitud en curso — ese caso lo resuelve
+          `BotonSolicitar` por dentro. */}
       {puedeAdoptar &&
       !publicacion.esPropia &&
-      (mascota.estado.nombre === ESTADO_SOLICITABLE || solicitudAbiertaId !== null) ? (
+      ((mascota.estado.nombre === ESTADO_SOLICITABLE &&
+        estadoPublicacion === ESTADO_PUBLICACION.ACTIVA) ||
+        solicitudAbiertaId !== null) ? (
         <View
           className="border-t border-organic-neutral-200 bg-organic-bg px-4 pt-3"
           style={{ paddingBottom: 12 + insets.bottom }}
@@ -376,6 +500,18 @@ export default function FichaPublicacionScreen() {
           />
         </Pressable>
       ) : null}
+      <ConfirmDialog
+        visible={cambioPendiente !== null}
+        tono={cambioPendiente?.tono}
+        icono={cambioPendiente?.icono}
+        titulo={cambioPendiente?.titulo ?? ''}
+        mensaje={cambioPendiente?.mensaje ?? ''}
+        detalle={cambioPendiente?.detalle}
+        textoConfirmar={cambioPendiente?.confirmar}
+        cargando={cambiandoEstado}
+        onConfirmar={() => void confirmarCambioDeEstado()}
+        onCerrar={() => setAccionPendiente(null)}
+      />
     </View>
   );
 }
