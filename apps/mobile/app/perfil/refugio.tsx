@@ -17,16 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { ImagePickerAsset } from 'expo-image-picker';
 import { useNavigation, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -38,6 +29,7 @@ import { useToast } from '@/components/feedback/Toast';
 import { BotonCircular } from '@/components/ui/BotonCircular';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { FormCard, FormCardRow } from '@/components/ui/FormCard';
+import { FormularioConTeclado } from '@/components/ui/FormularioConTeclado';
 import { LogoRefugio } from '@/components/ui/LogoRefugio';
 import { TextAreaField } from '@/components/ui/TextAreaField';
 import { TextField } from '@/components/ui/TextField';
@@ -283,139 +275,133 @@ export default function DatosRefugioScreen() {
             <ActivityIndicator color={PALETA.accent[600]} />
           </View>
         ) : (
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            className="flex-1"
+          <FormularioConTeclado
+            showsVerticalScrollIndicator={false}
+            contentContainerClassName="px-5 pb-8 pt-4"
           >
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              contentContainerClassName="px-5 pb-8 pt-4"
-            >
-              <View className="mb-6 items-center">
-                <Pressable
-                  onPress={puedeEditar ? abrirSelectorFoto : undefined}
-                  disabled={!puedeEditar}
-                  accessibilityRole={puedeEditar ? 'button' : 'image'}
-                  accessibilityLabel={puedeEditar ? 'Cambiar foto del refugio' : 'Foto del refugio'}
-                  className="relative"
-                >
-                  <LogoRefugio uri={fotoVisible} tamanio={100} />
-                  {puedeEditar ? (
-                    <View className="absolute -bottom-1 -right-1 h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-organic-accent-600">
-                      <Ionicons name="camera" size={16} color={PALETA.blanco} />
-                    </View>
-                  ) : null}
-                </Pressable>
-              </View>
-
-              <FormCard organic>
-                <FormCardRow>
-                  <TextField
-                    label="Nombre del refugio"
-                    obligatorio
-                    lapiz={puedeEditar}
-                    editable={puedeEditar}
-                    grande
-                    value={form.nombre}
-                    onChangeText={(valor) => cambiar('nombre', valor)}
-                    onBlur={() => alSalirDelCampo('nombre')}
-                    error={errors.nombre}
-                    autoCapitalize="words"
-                    maxLength={LIMITES.refugio.nombre.max}
-                  />
-                </FormCardRow>
-                <FormCardRow>
-                  <TextAreaField
-                    label="Descripción"
-                    lapiz={puedeEditar}
-                    editable={puedeEditar}
-                    grande
-                    maximo={LIMITES.refugio.descripcion.max}
-                    value={form.descripcion}
-                    onChangeText={(valor) => cambiar('descripcion', valor)}
-                    onBlur={() => alSalirDelCampo('descripcion')}
-                    error={errors.descripcion}
-                    placeholder="Contá quiénes son y a qué se dedican"
-                  />
-                </FormCardRow>
-                <FormCardRow>
-                  <TextField
-                    label="Dirección"
-                    obligatorio
-                    lapiz={puedeEditar}
-                    editable={puedeEditar}
-                    grande
-                    value={form.direccion}
-                    onChangeText={(valor) => cambiar('direccion', valor)}
-                    onBlur={() => alSalirDelCampo('direccion')}
-                    error={errors.direccion}
-                    autoCapitalize="words"
-                    textContentType="fullStreetAddress"
-                    maxLength={LIMITES.refugio.direccion.max}
-                  />
-                </FormCardRow>
-                <FormCardRow>
-                  <TextField
-                    label="Teléfono"
-                    lapiz={puedeEditar}
-                    editable={puedeEditar}
-                    grande
-                    value={form.telefono}
-                    onChangeText={(valor) => cambiar('telefono', valor)}
-                    onBlur={() => alSalirDelCampo('telefono')}
-                    error={errors.telefono}
-                    keyboardType="phone-pad"
-                    textContentType="telephoneNumber"
-                    maxLength={16}
-                  />
-                </FormCardRow>
-                <FormCardRow ultima>
-                  <TextField
-                    label="Correo"
-                    lapiz={puedeEditar}
-                    editable={puedeEditar}
-                    grande
-                    value={form.email}
-                    onChangeText={(valor) => cambiar('email', valor)}
-                    onBlur={() => alSalirDelCampo('email')}
-                    error={errors.email}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    textContentType="emailAddress"
-                  />
-                </FormCardRow>
-              </FormCard>
-
-              {formError ? (
-                <Text className="mt-3 text-center text-sm text-red-500">{formError}</Text>
-              ) : null}
-
-              {hayCambios ? (
-                <View className="mt-6 flex-row gap-3">
-                  <View className="flex-1">
-                    <CustomButton
-                      title="Cancelar"
-                      variant="acento-borde"
-                      style={FORMA_BOTON_ORGANIC}
-                      onPress={cancelarEdicion}
-                    />
+            <View className="mb-6 items-center">
+              <Pressable
+                onPress={puedeEditar ? abrirSelectorFoto : undefined}
+                disabled={!puedeEditar}
+                accessibilityRole={puedeEditar ? 'button' : 'image'}
+                accessibilityLabel={puedeEditar ? 'Cambiar foto del refugio' : 'Foto del refugio'}
+                className="relative"
+              >
+                <LogoRefugio uri={fotoVisible} tamanio={100} />
+                {puedeEditar ? (
+                  <View className="absolute -bottom-1 -right-1 h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-organic-accent-600">
+                    <Ionicons name="camera" size={16} color={PALETA.blanco} />
                   </View>
-                  <View className="flex-1">
-                    <CustomButton
-                      title="Guardar cambios"
-                      variant="acento"
-                      style={FORMA_BOTON_ORGANIC_PRINCIPAL}
-                      loading={guardando}
-                      disabled={!formularioValido}
-                      onPress={() => void guardar()}
-                      onPressDeshabilitado={explicarQueFalta}
-                    />
-                  </View>
+                ) : null}
+              </Pressable>
+            </View>
+
+            <FormCard organic>
+              <FormCardRow>
+                <TextField
+                  label="Nombre del refugio"
+                  obligatorio
+                  lapiz={puedeEditar}
+                  editable={puedeEditar}
+                  grande
+                  value={form.nombre}
+                  onChangeText={(valor) => cambiar('nombre', valor)}
+                  onBlur={() => alSalirDelCampo('nombre')}
+                  error={errors.nombre}
+                  autoCapitalize="words"
+                  maxLength={LIMITES.refugio.nombre.max}
+                />
+              </FormCardRow>
+              <FormCardRow>
+                <TextAreaField
+                  label="Descripción"
+                  lapiz={puedeEditar}
+                  editable={puedeEditar}
+                  grande
+                  maximo={LIMITES.refugio.descripcion.max}
+                  value={form.descripcion}
+                  onChangeText={(valor) => cambiar('descripcion', valor)}
+                  onBlur={() => alSalirDelCampo('descripcion')}
+                  error={errors.descripcion}
+                  placeholder="Contá quiénes son y a qué se dedican"
+                />
+              </FormCardRow>
+              <FormCardRow>
+                <TextField
+                  label="Dirección"
+                  obligatorio
+                  lapiz={puedeEditar}
+                  editable={puedeEditar}
+                  grande
+                  value={form.direccion}
+                  onChangeText={(valor) => cambiar('direccion', valor)}
+                  onBlur={() => alSalirDelCampo('direccion')}
+                  error={errors.direccion}
+                  autoCapitalize="words"
+                  textContentType="fullStreetAddress"
+                  maxLength={LIMITES.refugio.direccion.max}
+                />
+              </FormCardRow>
+              <FormCardRow>
+                <TextField
+                  label="Teléfono"
+                  lapiz={puedeEditar}
+                  editable={puedeEditar}
+                  grande
+                  value={form.telefono}
+                  onChangeText={(valor) => cambiar('telefono', valor)}
+                  onBlur={() => alSalirDelCampo('telefono')}
+                  error={errors.telefono}
+                  keyboardType="phone-pad"
+                  textContentType="telephoneNumber"
+                  maxLength={16}
+                />
+              </FormCardRow>
+              <FormCardRow ultima>
+                <TextField
+                  label="Correo"
+                  lapiz={puedeEditar}
+                  editable={puedeEditar}
+                  grande
+                  value={form.email}
+                  onChangeText={(valor) => cambiar('email', valor)}
+                  onBlur={() => alSalirDelCampo('email')}
+                  error={errors.email}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  textContentType="emailAddress"
+                />
+              </FormCardRow>
+            </FormCard>
+
+            {formError ? (
+              <Text className="mt-3 text-center text-sm text-red-500">{formError}</Text>
+            ) : null}
+
+            {hayCambios ? (
+              <View className="mt-6 flex-row gap-3">
+                <View className="flex-1">
+                  <CustomButton
+                    title="Cancelar"
+                    variant="acento-borde"
+                    style={FORMA_BOTON_ORGANIC}
+                    onPress={cancelarEdicion}
+                  />
                 </View>
-              ) : null}
-            </ScrollView>
-          </KeyboardAvoidingView>
+                <View className="flex-1">
+                  <CustomButton
+                    title="Guardar cambios"
+                    variant="acento"
+                    style={FORMA_BOTON_ORGANIC_PRINCIPAL}
+                    loading={guardando}
+                    disabled={!formularioValido}
+                    onPress={() => void guardar()}
+                    onPressDeshabilitado={explicarQueFalta}
+                  />
+                </View>
+              </View>
+            ) : null}
+          </FormularioConTeclado>
         )}
       </SafeAreaView>
 

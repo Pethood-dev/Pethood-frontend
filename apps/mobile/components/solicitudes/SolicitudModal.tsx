@@ -11,12 +11,14 @@
  * La forma del borrador y su validación viven en `borrador.ts`, y cada paso en su archivo.
  */
 import { useCallback, useState, type ReactElement } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, ScrollView, Text, View } from 'react-native';
+import { Modal, Platform, Text, View } from 'react-native';
+import { KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CustomButton } from '@/components/CustomButton';
 import { BarraPasos } from '@/components/ui/BarraPasos';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { FormularioConTeclado } from '@/components/ui/FormularioConTeclado';
 import {
   crearSolicitud,
   type HogarSolicitante,
@@ -83,6 +85,8 @@ export function SolicitudModal({
   const [enviando, setEnviando] = useState(false);
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
   const [creada, setCreada] = useState<SolicitudDetalle | null>(null);
+  /** Alto del pie con Atrás/Siguiente, para que el scroll deje el campo enfocado encima. */
+  const [altoPie, setAltoPie] = useState(0);
 
   /**
    * Si el paso 2 muestra el formulario completo. Arranca en `false` cuando hay hogar
@@ -194,56 +198,59 @@ export function SolicitudModal({
                 onCerrar={cerrar}
               />
 
-              <KeyboardAvoidingView
+              <FormularioConTeclado
                 className="flex-1"
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 style={{ zIndex: 0, overflow: 'hidden' }}
+                contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 24 }}
+                altoPieFijo={altoPie}
               >
-                <ScrollView
-                  className="flex-1"
-                  contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 24 }}
-                  keyboardShouldPersistTaps="handled"
-                >
-                  <PasoActual
-                    borrador={borrador}
-                    errores={errores}
-                    mascota={mascota}
-                    editar={editar}
-                    hogarPrecargado={hogarPrecargado}
-                    editandoHogar={editandoHogar}
-                    onEditarHogar={() => setEditandoHogar(true)}
-                  />
+                <PasoActual
+                  borrador={borrador}
+                  errores={errores}
+                  mascota={mascota}
+                  editar={editar}
+                  hogarPrecargado={hogarPrecargado}
+                  editandoHogar={editandoHogar}
+                  onEditarHogar={() => setEditandoHogar(true)}
+                />
 
-                  {errorEnvio ? (
-                    <Text className="text-center text-[13px] text-red-500">{errorEnvio}</Text>
-                  ) : null}
-                </ScrollView>
-              </KeyboardAvoidingView>
+                {errorEnvio ? (
+                  <Text className="text-center text-[13px] text-red-500">{errorEnvio}</Text>
+                ) : null}
+              </FormularioConTeclado>
 
-              <View
-                className="flex-row gap-2.5 border-t border-organic-neutral-200 px-4 pb-2 pt-3"
+              {/* El pie sube pegado al teclado para que Siguiente se alcance sin cerrarlo. Ya
+                  está separado `insets.bottom` del borde, así que con el teclado abierto se
+                  descuenta eso para que quede apoyado justo encima. El fondo es el mismo del
+                  modal: con el teclado cerrado no cambia nada, y abierto tapa el contenido que
+                  pasa por detrás al desplazarse. */}
+              <KeyboardStickyView
+                offset={{ opened: insets.bottom }}
+                onLayout={(evento) => setAltoPie(evento.nativeEvent.layout.height)}
                 style={{ zIndex: 2 }}
               >
-                {paso > 1 ? (
-                  <View className="w-[112px]">
+                <View className="flex-row gap-2.5 border-t border-organic-neutral-200 bg-organic-bg px-4 pb-2 pt-3">
+                  {paso > 1 ? (
+                    <View className="w-[112px]">
+                      <CustomButton
+                        title="Atrás"
+                        variant="neutro"
+                        disabled={enviando}
+                        onPress={() => setPaso(paso - 1)}
+                      />
+                    </View>
+                  ) : null}
+
+                  <View className="flex-1">
                     <CustomButton
-                      title="Atrás"
-                      variant="neutro"
-                      disabled={enviando}
-                      onPress={() => setPaso(paso - 1)}
+                      title={paso === TOTAL_PASOS ? 'Confirmar Solicitud' : 'Siguiente'}
+                      variant="acento"
+                      loading={enviando}
+                      onPress={avanzar}
                     />
                   </View>
-                ) : null}
-
-                <View className="flex-1">
-                  <CustomButton
-                    title={paso === TOTAL_PASOS ? 'Confirmar Solicitud' : 'Siguiente'}
-                    variant="acento"
-                    loading={enviando}
-                    onPress={avanzar}
-                  />
                 </View>
-              </View>
+              </KeyboardStickyView>
             </>
           )}
         </View>
