@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CustomButton } from '@/components/CustomButton';
+import { CustomButton, FORMA_BOTON_ORGANIC_PRINCIPAL } from '@/components/CustomButton';
 import { CustomInput } from '@/components/CustomInput';
 import { useToast } from '@/components/feedback/Toast';
+import { BotonCircular } from '@/components/ui/BotonCircular';
 import { FormularioConTeclado } from '@/components/ui/FormularioConTeclado';
 import { PALETA } from '@/constants/theme';
 import {
@@ -17,6 +18,10 @@ import {
 import { ApiError } from '@/services/api';
 import { resetearPassword } from '@/services/auth';
 
+/**
+ * Recuperar contraseña, paso 2: código de 6 dígitos + contraseña nueva. Mismo estilo que
+ * `recuperar.tsx` (paleta Organic de las pantallas de acceso).
+ */
 export default function ResetearScreen() {
   const router = useRouter();
   const toast = useToast();
@@ -64,37 +69,53 @@ export default function ResetearScreen() {
   };
 
   return (
-    <View className="flex-1 bg-pethood-beige">
+    <View className="flex-1 bg-organic-bg">
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
+        <View className="flex-row items-center gap-3 border-b border-organic-neutral-300 bg-organic-neutral-100 px-[19px] py-[13px]">
+          <BotonCircular
+            icono="chevron-back"
+            etiqueta="Volver"
+            variante="neutro"
+            onPress={() => router.back()}
+          />
+          <Text className="font-titulo text-[24px] leading-[29px] text-organic-accent-600">
+            Nueva contraseña
+          </Text>
+        </View>
+
         <FormularioConTeclado
           showsVerticalScrollIndicator={false}
-          contentContainerClassName="flex-grow px-6 pb-8 pt-4"
+          contentContainerClassName="flex-grow px-6 pb-8 pt-8"
         >
-          <View className="mb-6 flex-row items-center">
-            <Pressable
-              onPress={() => router.back()}
-              className="mr-4 h-10 w-10 items-center justify-center rounded-full bg-white"
-              accessibilityRole="button"
-              accessibilityLabel="Volver"
-            >
-              <Ionicons name="arrow-back" size={22} color={PALETA.gris[700]} />
-            </Pressable>
-            <Text className="text-2xl font-bold text-pethood-orange">Nueva contraseña</Text>
+          <View className="mb-5 h-20 w-20 items-center justify-center self-center rounded-full bg-organic-accent-100">
+            <Ionicons name="key-outline" size={36} color={PALETA.accent[600]} />
           </View>
 
-          <Text className="mb-6 text-base text-gray-600">
-            Ingresá el código de 6 dígitos y elegí una contraseña nueva.
+          <Text className="mb-1 text-center font-titulo text-[26px] leading-[32px] text-organic-neutral-900">
+            Elegí tu nueva contraseña
+          </Text>
+          <Text className="mb-7 text-center font-cuerpo text-[17px] leading-[24px] text-organic-neutral-600">
+            Ingresá el código de 6 dígitos que te enviamos
+            {email ? (
+              <>
+                {' a '}
+                <Text className="font-cuerpo-semi text-organic-neutral-800">{email}</Text>
+              </>
+            ) : null}{' '}
+            y elegí una contraseña nueva.
           </Text>
 
           {params.codigo ? (
-            <View className="mb-4 rounded-2xl bg-orange-50 px-4 py-3">
-              <Text className="text-sm text-orange-800">
-                Código de prueba: <Text className="font-semibold">{params.codigo}</Text>
+            <View className="mb-5 rounded-2xl border border-organic-accent-200 bg-organic-accent-100 px-4 py-3">
+              <Text className="font-cuerpo text-[15px] text-organic-accent-800">
+                Código de prueba:{' '}
+                <Text className="font-cuerpo-bold tracking-widest">{params.codigo}</Text>
               </Text>
             </View>
           ) : null}
 
           <CustomInput
+            organic
             label="Código"
             placeholder="000000"
             value={codigo}
@@ -109,6 +130,7 @@ export default function ResetearScreen() {
           />
 
           <CustomInput
+            organic
             label="Nueva contraseña"
             placeholder="Mínimo 8 caracteres"
             value={password}
@@ -121,8 +143,8 @@ export default function ResetearScreen() {
             rightIcon={
               <Ionicons
                 name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                size={22}
-                color={PALETA.gris[400]}
+                size={24}
+                color={PALETA.neutral[500]}
               />
             }
             onRightIconPress={() => setShowPassword((prev) => !prev)}
@@ -130,6 +152,7 @@ export default function ResetearScreen() {
           />
 
           <CustomInput
+            organic
             label="Repetí tu contraseña"
             placeholder="Volvé a escribirla"
             value={confirmacion}
@@ -142,21 +165,28 @@ export default function ResetearScreen() {
             rightIcon={
               <Ionicons
                 name={showConfirmacion ? 'eye-off-outline' : 'eye-outline'}
-                size={22}
-                color={PALETA.gris[400]}
+                size={24}
+                color={PALETA.neutral[500]}
               />
             }
             onRightIconPress={() => setShowConfirmacion((prev) => !prev)}
             required
           />
 
-          {formError ? <Text className="mb-3 text-sm text-red-500">{formError}</Text> : null}
+          {formError ? (
+            <Text className="mb-3 font-cuerpo text-[15px] text-red-500">{formError}</Text>
+          ) : null}
 
-          <CustomButton
-            title="Guardar contraseña"
-            loading={loading}
-            onPress={() => void handleGuardar()}
-          />
+          <View className="mt-2">
+            <CustomButton
+              title="Guardar contraseña"
+              variant="acento"
+              grande
+              style={FORMA_BOTON_ORGANIC_PRINCIPAL}
+              loading={loading}
+              onPress={() => void handleGuardar()}
+            />
+          </View>
         </FormularioConTeclado>
       </SafeAreaView>
     </View>

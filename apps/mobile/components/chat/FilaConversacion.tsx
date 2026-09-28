@@ -99,7 +99,7 @@ export function FilaConversacion({ conversacion, ahora, onPress }: FilaConversac
           <Text
             numberOfLines={1}
             ellipsizeMode="tail"
-            className="min-w-0 flex-1 font-cuerpo-semi text-[16px] text-organic-neutral-900"
+            className="min-w-0 flex-1 font-cuerpo-semi text-[18px] text-organic-neutral-900"
           >
             {contacto.nombre}
           </Text>
@@ -108,7 +108,7 @@ export function FilaConversacion({ conversacion, ahora, onPress }: FilaConversac
               Va sobre `fechaUltimaActividad` y no sobre `ultimoMensaje.fecha` porque el
               contrato la garantiza no nula — en una sala todavía sin mensajes es la fecha
               en que se abrió, y así la fila nunca queda con el hueco de la hora vacío. */}
-          <Text className="flex-none font-cuerpo text-[11px] text-organic-neutral-500">
+          <Text className="flex-none font-cuerpo text-[15px] text-organic-neutral-500">
             {tiempoRelativo(new Date(conversacion.fechaUltimaActividad), ahora)}
           </Text>
         </View>
@@ -116,7 +116,7 @@ export function FilaConversacion({ conversacion, ahora, onPress }: FilaConversac
         <View className="mt-[3px] flex-row items-center gap-1">
           {/* "Vos:" sale de `esMio`, que ya manda el backend: el cliente no compara ids. */}
           {ultimoMensaje?.esMio ? (
-            <Text className="flex-none font-cuerpo text-[13px] text-organic-neutral-500">
+            <Text className="flex-none font-cuerpo text-[15px] text-organic-neutral-500">
               Vos:
             </Text>
           ) : null}
@@ -124,13 +124,13 @@ export function FilaConversacion({ conversacion, ahora, onPress }: FilaConversac
           {soloAdjunto ? (
             <Ionicons
               name={soloVideo ? 'videocam-outline' : 'image-outline'}
-              size={14}
+              size={16}
               color={PALETA.neutral[500]}
             />
           ) : null}
 
           {esSolicitud ? (
-            <Ionicons name="document-text-outline" size={14} color={PALETA.neutral[500]} />
+            <Ionicons name="document-text-outline" size={16} color={PALETA.neutral[500]} />
           ) : null}
 
           <Text
@@ -138,7 +138,7 @@ export function FilaConversacion({ conversacion, ahora, onPress }: FilaConversac
             ellipsizeMode="tail"
             // El diseño pinta el preview oscuro cuando hay mensajes nuevos y apagado cuando
             // ya se leyó: es lo que hace que un chat con novedades pese más en la lista.
-            className={`min-w-0 flex-1 font-cuerpo text-[13px] ${
+            className={`min-w-0 flex-1 font-cuerpo text-[15px] ${
               sinLeer ? 'text-organic-neutral-900' : 'text-organic-neutral-500'
             }`}
           >
@@ -149,7 +149,7 @@ export function FilaConversacion({ conversacion, ahora, onPress }: FilaConversac
         {/* El backend manda el hecho (`activo: false`), el texto lo pone la UI. La
             conversación se sigue pudiendo leer; bloquear el envío es de HU-5.2. */}
         {contacto.activo ? null : (
-          <Text className="mt-[3px] font-cuerpo text-[11px] italic text-organic-neutral-400">
+          <Text className="mt-[3px] font-cuerpo text-[13px] italic text-organic-neutral-400">
             Esta cuenta ya no está activa
           </Text>
         )}

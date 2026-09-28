@@ -4,15 +4,17 @@
  * para que la pantalla no mezcle estilos: textos sueltos, etiquetas sueltas, secciones con y
  * sin caja.
  *
- * Son solo presentación: la pantalla (`app/publicaciones/[id]/index.tsx`) decide qué mostrar.
+ * Son solo presentación: la pantalla decide qué mostrar. Las usan la ficha de la publicación
+ * (`app/publicaciones/[id]/index.tsx`) y la de la mascota (`app/mascotas/[id]/index.tsx`).
  */
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { ComponentProps, ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
 import { estiloDeBannerPublicacion } from '@/constants/EstadosPublicacion';
+import { etiquetaEdad, etiquetaGenero, etiquetaTamanio } from '@/constants/Mascotas';
 import { PALETA } from '@/constants/theme';
-import type { Genero } from '@/services/mascotas';
+import type { Genero, Tamanio } from '@/services/mascotas';
 import { textoSegunGenero } from '@/shared/genero';
 
 export type NombreIcono = ComponentProps<typeof MaterialCommunityIcons>['name'];
@@ -170,6 +172,47 @@ export interface DatoFicha {
   icono: NombreIcono;
   etiqueta: string;
   valor: string;
+}
+
+/** Ícono del cuadrante de especie: las dos que tienen dibujo propio, y la pata para el resto. */
+const ICONO_ESPECIE: Record<string, NombreIcono> = { perro: 'dog', gato: 'cat' };
+
+/**
+ * Los seis cuadrantes de «Características». Un dato opcional sin cargar dice «Sin dato». Lo
+ * usan la ficha de la publicación y la de la mascota, así las dos muestran lo mismo.
+ */
+export function datosDeMascota(mascota: {
+  especie: { nombre: string };
+  raza: { nombre: string };
+  fechaNacimiento: string | null;
+  tamanio: Tamanio | null;
+  peso: number | null;
+  genero: Genero;
+}): DatoFicha[] {
+  return [
+    {
+      icono: ICONO_ESPECIE[mascota.especie.nombre.trim().toLowerCase()] ?? 'paw',
+      etiqueta: 'Especie',
+      valor: mascota.especie.nombre,
+    },
+    { icono: 'tag', etiqueta: 'Raza', valor: mascota.raza.nombre },
+    {
+      icono: 'cake-variant',
+      etiqueta: 'Edad',
+      valor: etiquetaEdad(mascota.fechaNacimiento) ?? 'Sin dato',
+    },
+    { icono: 'ruler', etiqueta: 'Tamaño', valor: etiquetaTamanio(mascota.tamanio) ?? 'Sin dato' },
+    {
+      icono: 'weight-kilogram',
+      etiqueta: 'Peso',
+      valor: mascota.peso === null ? 'Sin dato' : `${String(mascota.peso).replace('.', ',')} kg`,
+    },
+    {
+      icono: mascota.genero === 'HEMBRA' ? 'gender-female' : 'gender-male',
+      etiqueta: 'Sexo',
+      valor: etiquetaGenero(mascota.genero),
+    },
+  ];
 }
 
 /** Grilla de características: cuadrantes de a dos por fila. */

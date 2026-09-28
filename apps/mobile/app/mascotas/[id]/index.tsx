@@ -5,44 +5,45 @@
  * cargó o un compañero del mismo refugio puede entrar — el backend vuelve a validarlo, esto
  * es solo para no ofrecer el toque a quien de todos modos va a recibir un 403.
  *
- * Reusa el mismo patrón de encabezado + tarjeta de datos que la ficha de historia clínica
- * (`historia-clinica/[registroId]/index.tsx`), no el de la publicación en adopción: acá no
- * hay galería ni CTA de solicitud, es la mascota en sí y no un anuncio.
+ * Copia el formato de la ficha de la publicación (`publicaciones/[id]/index.tsx`): foto
+ * arriba y una tarjeta montada encima con las mismas secciones y piezas
+ * (`components/publicaciones/FichaPublicacion.tsx`). No hay CTA de solicitud ni favoritos:
+ * es la mascota en sí y no un anuncio, y en Salud solo va castrado (desparasitado es de la
+ * publicación).
  */
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Image, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { GaleriaFotos } from '@/components/adoptar/GaleriaFotos';
 import { EstadoCargando, EstadoError } from '@/components/feedback/EstadosPantalla';
 import { useToast } from '@/components/feedback/Toast';
+import {
+  CajaDescripcion,
+  CuadranteSalud,
+  datosDeMascota,
+  GrillaDatos,
+  SeccionFicha,
+  SOLAPE_TARJETA,
+  Subtitulo,
+  TarjetaFicha,
+} from '@/components/publicaciones/FichaPublicacion';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { EstadoMascotaBadge } from '@/components/ui/EstadoMascotaBadge';
 import { PressableAnimado } from '@/components/ui/PressableAnimado';
 import { VacunasMascota } from '@/components/vacunas/VacunasMascota';
-import { etiquetaEdad, etiquetaGenero, etiquetaTamanio } from '@/constants/Mascotas';
 import { PALETA } from '@/constants/theme';
 import { useSesion } from '@/hooks/useSesion';
-import { ApiError, urlAbsoluta } from '@/services/api';
+import { ApiError } from '@/services/api';
 import { eliminarMascota, obtenerMascota, type FichaMascota } from '@/services/mascotas';
-import { textoSegunGenero } from '@/shared/genero';
-
-function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
-  return (
-    <View className="flex-1">
-      <Text className="font-cuerpo-semi text-[11px] uppercase tracking-wide text-organic-neutral-500">
-        {etiqueta}
-      </Text>
-      <Text className="mt-1 font-cuerpo text-lg text-organic-neutral-900">{valor}</Text>
-    </View>
-  );
-}
 
 export default function FichaMascotaScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const toast = useToast();
+  const insets = useSafeAreaInsets();
   const { usuario } = useSesion();
 
   const mascotaId = Number(id);
@@ -145,101 +146,47 @@ export default function FichaMascotaScreen() {
     );
   }
 
-  const foto = urlAbsoluta(mascota.imagenUrl);
-  const subtitulo = [
-    mascota.especie.nombre,
-    etiquetaEdad(mascota.fechaNacimiento),
-    etiquetaTamanio(mascota.tamanio),
-    etiquetaGenero(mascota.genero),
-  ]
-    .filter(Boolean)
-    .join(' · ');
-
   return (
-    <View className="flex-1 bg-organic-neutral-100">
-      <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="bg-organic-accent-600 px-4 pb-5 pt-3">
-          <View className="flex-row items-center gap-3">
-            <PressableAnimado
-              accessibilityRole="button"
-              accessibilityLabel="Volver"
-              onPress={() => router.back()}
-              hitSlop={8}
-              className="h-11 w-11 items-center justify-center rounded-full bg-white/20"
-            >
-              <Ionicons name="arrow-back" size={22} color={PALETA.blanco} />
-            </PressableAnimado>
+    <View className="flex-1 bg-pethood-beige">
+      <ScrollView contentContainerStyle={{ paddingBottom: 32 + insets.bottom }}>
+        <GaleriaFotos
+          imagenes={mascota.imagenUrl ? [mascota.imagenUrl] : []}
+          solapeInferior={SOLAPE_TARJETA}
+        />
 
-            <View className="flex-1">
-              <Text className="font-titulo text-2xl text-white" numberOfLines={1}>
-                {mascota.nombre ?? 'Sin nombre'}
-              </Text>
-              <Text className="font-cuerpo text-sm text-white/80" numberOfLines={1}>
-                {subtitulo}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        <ScrollView className="flex-1" contentContainerClassName="p-4 pb-8">
-          <View className="overflow-hidden rounded-[22px] bg-organic-neutral-200">
-            {foto ? (
-              <Image
-                source={{ uri: foto }}
-                className="w-full"
-                style={{ aspectRatio: 4 / 3 }}
-                resizeMode="cover"
-              />
-            ) : (
-              <View className="w-full items-center justify-center" style={{ aspectRatio: 4 / 3 }}>
-                <Ionicons name="paw-outline" size={48} color={PALETA.neutral[400]} />
-              </View>
-            )}
-          </View>
-
-          <View className="mt-3">
-            <EstadoMascotaBadge estado={mascota.estado.nombre} />
-          </View>
-
-          <View className="mt-4 overflow-hidden rounded-[22px] border border-organic-neutral-200 bg-organic-neutral-100">
-            <View className="flex-row gap-3 border-b border-organic-neutral-200 p-4">
-              <Dato etiqueta="Especie" valor={mascota.especie.nombre} />
-              <Dato etiqueta="Raza" valor={mascota.raza.nombre} />
-            </View>
-
-            <View className="flex-row gap-3 p-4">
-              <Dato
-                etiqueta="Peso"
-                valor={mascota.peso === null ? 'Sin dato' : `${mascota.peso} kg`}
-              />
-              <Dato
-                etiqueta={textoSegunGenero(mascota.genero, 'Castrado', 'Castrada')}
-                valor={mascota.castrado ? 'Sí' : 'No'}
-              />
-            </View>
-          </View>
-
-          {/* Salen de la historia clínica: se suman cargando un registro de tipo "Vacuna". */}
-          <View className="mt-4 rounded-[22px] border border-organic-neutral-200 bg-organic-neutral-100 p-4">
-            <Text className="font-cuerpo-semi text-[11px] uppercase tracking-wide text-organic-neutral-500">
-              Vacunas
+        <TarjetaFicha>
+          <View className="flex-row items-start justify-between gap-3">
+            <Text className="flex-1 font-titulo text-[34px] leading-[40px] text-organic-neutral-900">
+              {mascota.nombre ?? 'Sin nombre'}
             </Text>
-            <View className="mt-2">
-              <VacunasMascota vacunas={mascota.vacunas} />
+            <View className="mt-1.5">
+              <EstadoMascotaBadge estado={mascota.estado.nombre} tamanio="lg" />
             </View>
           </View>
+
+          <SeccionFicha icono="paw" titulo="Características">
+            <GrillaDatos datos={datosDeMascota(mascota)} />
+          </SeccionFicha>
+
+          {/* Solo castrado: desparasitado es de la publicación, así que el cuadrante ocupa
+              todo el ancho. Las vacunas salen de la historia clínica: se suman cargando un
+              registro de tipo "Vacuna". */}
+          <SeccionFicha icono="heart-pulse" titulo="Salud">
+            <View className="flex-row">
+              <CuadranteSalud tipo="CASTRADO" activo={mascota.castrado} genero={mascota.genero} />
+            </View>
+            <Subtitulo texto="Vacunas" />
+            <VacunasMascota vacunas={mascota.vacunas} grande />
+          </SeccionFicha>
 
           {mascota.descripcion ? (
-            <View className="mt-4 rounded-[22px] border border-organic-neutral-200 bg-organic-neutral-100 p-4">
-              <Text className="font-cuerpo-semi text-[11px] uppercase tracking-wide text-organic-neutral-500">
-                Descripción
-              </Text>
-              <Text className="mt-1.5 font-cuerpo text-base leading-6 text-organic-neutral-700">
-                {mascota.descripcion}
-              </Text>
-            </View>
+            <SeccionFicha icono="message-text" titulo="Descripción">
+              <CajaDescripcion texto={mascota.descripcion} />
+            </SeccionFicha>
           ) : null}
+        </TarjetaFicha>
 
+        <View className="px-3">
           {/* Los cuatro botones van apilados de ancho completo y en este orden fijo, para
               adoptante y refugio por igual: 1) historia clínica, 2) editar, 3) ver la
               publicación en adopción si tiene una, 4) eliminar — este último sin fondo, como
@@ -324,8 +271,27 @@ export default function FichaMascotaScreen() {
               </PressableAnimado>
             ) : null}
           </View>
-        </ScrollView>
-      </SafeAreaView>
+        </View>
+      </ScrollView>
+
+      {/* Después del ScrollView y con zIndex alto: en web la galería (transform) pintaba
+          encima de un overlay hermano y se comía la flecha (igual que en la publicación). */}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Volver"
+        onPress={() => router.back()}
+        hitSlop={12}
+        className="h-10 w-10 items-center justify-center rounded-full bg-white/90 active:opacity-70"
+        style={{
+          position: 'absolute',
+          top: insets.top + 8,
+          left: 12,
+          zIndex: 9999,
+          elevation: 9999,
+        }}
+      >
+        <Ionicons name="arrow-back" size={20} color={PALETA.grisCalido[900]} />
+      </Pressable>
 
       <ConfirmDialog
         visible={confirmarEliminar}
