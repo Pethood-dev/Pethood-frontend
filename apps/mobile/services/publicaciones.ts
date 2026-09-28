@@ -6,6 +6,7 @@
  */
 import { adjuntarArchivo, get, patch, putFormData } from './api';
 import type { Genero, Tamanio } from './mascotas';
+import type { VacunaAplicada } from './vacunas';
 
 export interface MascotaPublicada {
   id: number;
@@ -45,7 +46,8 @@ export interface PublicacionFeed {
   requisitos: string[];
   personalidad: string[];
   desparasitado: boolean;
-  vacunas: string | null;
+  /** Medallas de la mascota: salen de su historia clínica, no se cargan en la publicación. */
+  vacunas: VacunaAplicada[];
   /** En orden; la primera es la portada. Pasar por `urlAbsoluta` antes de mostrarlas. */
   imagenes: string[];
   fechaPublicacion: string;
@@ -53,6 +55,8 @@ export interface PublicacionFeed {
   mascota: MascotaPublicada;
   /** Null cuando publica un adoptante particular. */
   refugio: { id: number; nombre: string; direccion: string } | null;
+  /** Quien la publicó, solo si es una persona (`refugio` null). En una de refugio viene null. */
+  publicadoPor: { nombre: string; apellido: string } | null;
   enFavoritos: boolean;
   /**
    * Si la mascota es del usuario que consulta (o de su mismo refugio). El feed nunca la
@@ -171,7 +175,6 @@ export interface DatosEdicionPublicacion {
   requisitos: string[];
   personalidad: string[];
   desparasitado: boolean;
-  vacunas: string;
   /**
    * Galería final en orden (la primera es la portada): las que ya estaban traen `remota`, las
    * nuevas no. Vacía, vuelve a usar la foto de la mascota.
@@ -193,7 +196,6 @@ export async function editarPublicacion(
   formData.append('descripcion', datos.descripcion);
   formData.append('ubicacion', datos.ubicacion);
   formData.append('desparasitado', String(datos.desparasitado));
-  formData.append('vacunas', datos.vacunas);
 
   // Repetir la clave es como viaja una lista en multipart.
   for (const requisito of datos.requisitos) formData.append('requisitos', requisito);

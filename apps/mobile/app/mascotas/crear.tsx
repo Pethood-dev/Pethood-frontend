@@ -11,6 +11,9 @@
  * botón que la crea y vuelve al formulario de publicación con ella ya elegida
  * (`lib/mascotaParaPublicar.ts`).
  *
+ * Las vacunas que ya tiene se eligen del plan de su especie, cada una con su fecha, y el
+ * backend las guarda como registros de su historia clínica (spec 019).
+ *
  * La validación de acá es solo para UX: la fuente de verdad es el backend.
  */
 import { Ionicons } from '@expo/vector-icons';
@@ -33,6 +36,7 @@ import { SelectField, type OpcionSelect } from '@/components/ui/SelectField';
 import { TextAreaField } from '@/components/ui/TextAreaField';
 import { TextField } from '@/components/ui/TextField';
 import { ToggleField } from '@/components/ui/ToggleField';
+import { SelectorVacunas, type VacunaElegida } from '@/components/vacunas/SelectorVacunas';
 import { estiloDeEstado } from '@/constants/EstadosMascota';
 import { PALETA } from '@/constants/theme';
 import { useSesion } from '@/hooks/useSesion';
@@ -44,9 +48,10 @@ import {
   type OpcionCatalogo,
 } from '@/services/catalogos';
 import { crearMascota, type Destino, type Genero, type Mascota, type Tamanio } from '@/services/mascotas';
+import { listarVacunas, type TipoVacuna, type VacunaCatalogo } from '@/services/vacunas';
 import { avisarMascotaParaPublicar } from '@/lib/mascotaParaPublicar';
 import { textoSegunGenero } from '@/shared/genero';
-import { aFechaISO, validarFechaPasada } from '@/shared/validation/dates';
+import { aFechaISO, esDiaAnteriorA, validarFechaPasada } from '@/shared/validation/dates';
 import { LIMITES } from '@/shared/validation/limits';
 import { filtrarEntradaDecimal, validarDecimal } from '@/shared/validation/numbers';
 import { validarTexto } from '@/shared/validation/text';
@@ -79,6 +84,8 @@ interface ErroresFormulario {
   descripcion?: string;
   destino?: string;
   estadoMascotaId?: string;
+  /** Resumen: el detalle por vacuna va en `erroresVacunas`. */
+  vacunas?: string;
 }
 
 /** Nombre visible de cada campo, para poder decir qué falta al tocar el botón. */
@@ -94,6 +101,7 @@ const ETIQUETAS: Record<keyof ErroresFormulario, string> = {
   descripcion: 'la descripción',
   destino: 'si es para adopción',
   estadoMascotaId: 'el estado',
+  vacunas: 'la fecha de las vacunas',
 };
 
 export default function CrearMascotaScreen() {
@@ -115,13 +123,17 @@ export default function CrearMascotaScreen() {
   const [descripcion, setDescripcion] = useState('');
   const [destino, setDestino] = useState<Destino | null>(paraPublicar ? 'ADOPCION' : null);
   const [estadoMascotaId, setEstadoMascotaId] = useState<number | null>(null);
+  const [vacunas, setVacunas] = useState<VacunaElegida[]>([]);
 
   const [especies, setEspecies] = useState<OpcionCatalogo[]>([]);
   const [razas, setRazas] = useState<OpcionCatalogo[]>([]);
+  /** Plan de vacunación de la especie elegida. */
+  const [vacunasEspecie, setVacunasEspecie] = useState<VacunaCatalogo[]>([]);
   const [estados, setEstados] = useState<EstadoMascota[]>([]);
 
   const [cargandoCatalogos, setCargandoCatalogos] = useState(true);
   const [cargandoRazas, setCargandoRazas] = useState(false);
+  const [cargandoVacunas, setCargandoVacunas] = useState(false);
   const [guardando, setGuardando] = useState(false);
   /**
    * Mascota ya creada en este paso: se guarda para poder volver del alta de publicación sin
@@ -183,6 +195,43 @@ export default function CrearMascotaScreen() {
     void cargar();
   }, [especieId, toast]);
 
+  // Las vacunas también dependen de la especie: un perro y un gato tienen planes distintos.
+  useEffect(() => {
+    if (especieId === null) {
+      setVacunasEspecie([]);
+      return;
+    }
+
+    const cargar = async (): Promise<void> => {
+      setCargandoVacunas(true);
+      try {
+        setVacunasEspecie(await listarVacunas(especieId));
+      } catch {
+        toast.mostrarError('No pudimos cargar las vacunas de esa especie.');
+      } finally {
+        setCargandoVacunas(false);
+      }
+    };
+
+    void cargar();
+  }, [especieId, toast]);
+
+  /** Fecha de cada vacuna elegida: obligatoria, no futura y no anterior al nacimiento. */
+  const erroresVacunas = useMemo(() => {
+    const resultado: Partial<Record<TipoVacuna, string>> = {};
+
+    for (const vacuna of vacunas) {
+      const error = validarFechaPasada(vacuna.fecha, 'La fecha de la vacuna');
+
+      if (error) resultado[vacuna.tipo] = error;
+      else if (esDiaAnteriorA(vacuna.fecha, fechaNacimiento)) {
+        resultado[vacuna.tipo] = 'No puede ser anterior al nacimiento';
+      }
+    }
+
+    return resultado;
+  }, [vacunas, fechaNacimiento]);
+
   const errores = useMemo<ErroresFormulario>(() => {
     const resultado: ErroresFormulario = {};
 
@@ -219,6 +268,9 @@ export default function CrearMascotaScreen() {
       resultado.destino = 'Indicá si es tu mascota o si es para adopción';
     }
 
+    const primerErrorVacuna = Object.values(erroresVacunas)[0];
+    if (primerErrorVacuna) resultado.vacunas = primerErrorVacuna;
+
     return resultado;
   }, [
     foto,
@@ -233,6 +285,7 @@ export default function CrearMascotaScreen() {
     vistaRefugio,
     estadoMascotaId,
     destino,
+    erroresVacunas,
   ]);
 
   const formularioValido = Object.keys(errores).length === 0;
@@ -327,6 +380,7 @@ export default function CrearMascotaScreen() {
         descripcion: descripcion.trim(),
         destino: vistaRefugio ? undefined : destino!,
         estadoMascotaId: vistaRefugio ? estadoMascotaId! : undefined,
+        vacunas: vacunas.map((vacuna) => ({ tipo: vacuna.tipo, fecha: aFechaISO(vacuna.fecha!) })),
         foto,
       });
 
@@ -411,6 +465,8 @@ export default function CrearMascotaScreen() {
                     onChange={(nuevaEspecie) => {
                       setEspecieId(nuevaEspecie);
                       setRazaId(null);
+                      // Las vacunas elegidas eran del plan de la otra especie.
+                      if (nuevaEspecie !== especieId) setVacunas([]);
                     }}
                     onBlur={() => marcarTocado('especieId')}
                     error={errorDe('especieId')}
@@ -495,6 +551,24 @@ export default function CrearMascotaScreen() {
                   label={textoSegunGenero(genero, 'Castrado / Esterilizado', 'Castrada / Esterilizada')}
                   valor={castrado}
                   onChange={setCastrado}
+                  grande
+                />
+              </FormCardRow>
+
+              <FormCardRow>
+                <SelectorVacunas
+                  opciones={vacunasEspecie}
+                  elegidas={vacunas}
+                  onChange={setVacunas}
+                  especieElegida={especieId !== null}
+                  cargando={cargandoVacunas}
+                  // Una fecha recién elegida ya muestra su error; una vacía, recién al guardar.
+                  errores={Object.fromEntries(
+                    vacunas
+                      .filter((vacuna) => mostrarErrores || vacuna.fecha !== null)
+                      .map((vacuna) => [vacuna.tipo, erroresVacunas[vacuna.tipo]]),
+                  )}
+                  fechaMinima={fechaNacimiento ?? undefined}
                   grande
                 />
               </FormCardRow>

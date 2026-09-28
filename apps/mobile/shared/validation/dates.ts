@@ -217,6 +217,15 @@ export function aFechaVisible(fecha: Date): string {
   return `${dia}/${mes}/${fecha.getFullYear()}`;
 }
 
+/**
+ * Si `fecha` cae en un día anterior al de `desde` (ej. una vacuna antes del nacimiento). Sin
+ * alguna de las dos no hay nada que comparar.
+ */
+export function esDiaAnteriorA(fecha: Date | null, desde: Date | null): boolean {
+  if (!fecha || !desde) return false;
+  return inicioDelDia(fecha).getTime() < inicioDelDia(desde).getTime();
+}
+
 /** Fecha de algo que ya pasó: existente, no futura y ≥ al año mínimo. */
 export function validarFechaPasada(
   valor: string | Date | null | undefined,

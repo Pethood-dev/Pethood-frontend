@@ -1,4 +1,5 @@
 import { adjuntarArchivo, del, get, patchFormData, postFormData } from './api';
+import type { TipoVacuna, VacunaAplicada } from './vacunas';
 
 export type Tamanio = 'PEQUENO' | 'MEDIANO' | 'GRANDE';
 export type Genero = 'MACHO' | 'HEMBRA';
@@ -36,6 +37,11 @@ export interface DatosNuevaMascota {
   destino?: Destino;
   /** Solo el refugio lo manda. */
   estadoMascotaId?: number;
+  /**
+   * Vacunas que ya tiene, con su fecha `AAAA-MM-DD` (spec 019). El backend las da de alta en
+   * su historia clínica.
+   */
+  vacunas: { tipo: TipoVacuna; fecha: string }[];
   foto: { uri: string; nombre: string; tipo: string };
 }
 
@@ -54,6 +60,9 @@ export async function crearMascota(datos: DatosNuevaMascota): Promise<Mascota> {
 
   if (datos.destino) formData.append('destino', datos.destino);
   if (datos.estadoMascotaId) formData.append('estadoMascotaId', String(datos.estadoMascotaId));
+
+  // Una lista de pares no entra en un multipart, que solo sabe de strings: viaja como JSON.
+  if (datos.vacunas.length > 0) formData.append('vacunas', JSON.stringify(datos.vacunas));
 
   await adjuntarArchivo(formData, 'foto', datos.foto);
 
@@ -83,6 +92,8 @@ export function listarPublicables(): Promise<Mascota[]> {
 export interface FichaMascota extends Mascota {
   /** Id de la publicación activa de esta mascota, o `null` si no está publicada. */
   publicacionActivaId: number | null;
+  /** Medallas: una por vacuna de su historia clínica. */
+  vacunas: VacunaAplicada[];
 }
 
 /**
@@ -168,7 +179,6 @@ export interface DatosNuevaPublicacion {
   requisitos: string[];
   personalidad: string[];
   desparasitado: boolean;
-  vacunas: string;
   /** En orden: la primera es la portada. Si va vacío se usa la foto de la mascota. */
   fotos: { uri: string; nombre: string; tipo: string }[];
 }
@@ -181,7 +191,6 @@ export interface Publicacion {
   requisitos: string[];
   personalidad: string[];
   desparasitado: boolean;
-  vacunas: string | null;
   imagenes: string[];
   mascotaId: number;
   usuarioId: number;
@@ -194,7 +203,6 @@ export async function crearPublicacion(datos: DatosNuevaPublicacion): Promise<Pu
   formData.append('descripcion', datos.descripcion);
   formData.append('ubicacion', datos.ubicacion);
   formData.append('desparasitado', String(datos.desparasitado));
-  formData.append('vacunas', datos.vacunas);
 
   // Repetir la clave es como viaja una lista en multipart.
   for (const requisito of datos.requisitos) formData.append('requisitos', requisito);

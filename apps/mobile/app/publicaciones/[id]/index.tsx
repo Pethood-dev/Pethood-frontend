@@ -23,13 +23,31 @@ import { GaleriaFotos } from '@/components/adoptar/GaleriaFotos';
 import { CustomButton } from '@/components/CustomButton';
 import { EstadoCargando, EstadoError } from '@/components/feedback/EstadosPantalla';
 import { useToast } from '@/components/feedback/Toast';
+import {
+  BannerEstadoPublicacion,
+  CajaDescripcion,
+  ChipRasgo,
+  CuadranteSalud,
+  GrillaDatos,
+  MedallaRequisito,
+  PublicadoPor,
+  SeccionFicha,
+  SOLAPE_TARJETA,
+  Subtitulo,
+  TarjetaFicha,
+  type DatoFicha,
+  type NombreIcono,
+} from '@/components/publicaciones/FichaPublicacion';
 import { BotonSolicitar, solicitudEnviadaDe } from '@/components/solicitudes/BotonSolicitar';
-import { Chip } from '@/components/ui/Chip';
 import { ConfirmDialog, type TonoDialogo } from '@/components/ui/ConfirmDialog';
 import { EstadoMascotaBadge } from '@/components/ui/EstadoMascotaBadge';
-import { EstadoPublicacionBadge } from '@/components/ui/EstadoPublicacionBadge';
-import { SeccionTitulada } from '@/components/ui/SeccionTitulada';
-import { ESTADO_SOLICITABLE, resumenMascota } from '@/constants/Mascotas';
+import { VacunasMascota } from '@/components/vacunas/VacunasMascota';
+import {
+  ESTADO_SOLICITABLE,
+  etiquetaEdad,
+  etiquetaGenero,
+  etiquetaTamanio,
+} from '@/constants/Mascotas';
 import { PALETA } from '@/constants/theme';
 import { useSesion } from '@/hooks/useSesion';
 import { agregarFavorito, quitarFavorito } from '@/services/favoritos';
@@ -41,21 +59,7 @@ import {
   type PublicacionFeed,
 } from '@/services/publicaciones';
 import { obtenerElegibilidad } from '@/services/solicitudes';
-
-/** Ítem de una lista con viñeta, para requisitos y vacunas. */
-function Vinieta({ texto, icono }: { texto: string; icono: 'checkmark-circle' | 'ellipse' }) {
-  return (
-    <View className="mb-1.5 flex-row items-start gap-2">
-      <Ionicons
-        name={icono}
-        size={icono === 'ellipse' ? 7 : 16}
-        color={PALETA.pethood.naranja}
-        style={{ marginTop: icono === 'ellipse' ? 7 : 1 }}
-      />
-      <Text className="flex-1 text-[15px] leading-6 text-gray-700">{texto}</Text>
-    </View>
-  );
-}
+import { rasgoSegunGenero } from '@/shared/genero';
 
 /** Cartel de confirmación y aviso de éxito de cada cambio de estado manual. */
 const CAMBIOS_DE_ESTADO: Record<
@@ -99,14 +103,35 @@ const CAMBIOS_DE_ESTADO: Record<
   },
 };
 
-/** Dato suelto en la grilla de características. */
-function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
-  return (
-    <View className="flex-1 rounded-2xl bg-white p-3">
-      <Text className="text-[11px] uppercase tracking-wide text-gray-400">{etiqueta}</Text>
-      <Text className="mt-0.5 text-[15px] font-semibold text-gray-800">{valor}</Text>
-    </View>
-  );
+/** Ícono del cuadrante de especie: las dos que tienen dibujo propio, y la pata para el resto. */
+const ICONO_ESPECIE: Record<string, NombreIcono> = { perro: 'dog', gato: 'cat' };
+
+/** Los seis cuadrantes de «Características». Un dato opcional sin cargar dice «Sin dato». */
+function datosDe(mascota: PublicacionFeed['mascota']): DatoFicha[] {
+  return [
+    {
+      icono: ICONO_ESPECIE[mascota.especie.nombre.trim().toLowerCase()] ?? 'paw',
+      etiqueta: 'Especie',
+      valor: mascota.especie.nombre,
+    },
+    { icono: 'tag', etiqueta: 'Raza', valor: mascota.raza.nombre },
+    {
+      icono: 'cake-variant',
+      etiqueta: 'Edad',
+      valor: etiquetaEdad(mascota.fechaNacimiento) ?? 'Sin dato',
+    },
+    { icono: 'ruler', etiqueta: 'Tamaño', valor: etiquetaTamanio(mascota.tamanio) ?? 'Sin dato' },
+    {
+      icono: 'weight-kilogram',
+      etiqueta: 'Peso',
+      valor: mascota.peso === null ? 'Sin dato' : `${String(mascota.peso).replace('.', ',')} kg`,
+    },
+    {
+      icono: mascota.genero === 'HEMBRA' ? 'gender-female' : 'gender-male',
+      etiqueta: 'Sexo',
+      valor: etiquetaGenero(mascota.genero),
+    },
+  ];
 }
 
 export default function FichaPublicacionScreen() {
@@ -263,7 +288,6 @@ export default function FichaPublicacionScreen() {
   }
 
   const { mascota } = publicacion;
-  const vacunas = publicacion.vacunas?.trim();
   const estadoPublicacion = publicacion.estado.nombre;
   const cambioPendiente = accionPendiente ? CAMBIOS_DE_ESTADO[accionPendiente] : null;
 
@@ -279,106 +303,84 @@ export default function FichaPublicacionScreen() {
           que dejar pasar el alto del pie. */}
       <View className="flex-1">
       <ScrollView contentContainerStyle={{ paddingBottom: 32 + insets.bottom }}>
-        <GaleriaFotos imagenes={publicacion.imagenes} />
+        <GaleriaFotos imagenes={publicacion.imagenes} solapeInferior={SOLAPE_TARJETA} />
 
-        <View className="px-4 pt-4">
+        {/* Toda la ficha en una tarjeta montada sobre la foto. Cada sección usa el mismo
+            encabezado: ver `components/publicaciones/FichaPublicacion.tsx`. */}
+        <TarjetaFicha>
           <View className="flex-row items-start justify-between gap-3">
-            <View className="flex-1">
-              <Text className="text-2xl font-bold text-gray-900">
-                {mascota.nombre ?? 'Sin nombre'}
-              </Text>
-              <Text className="mt-1 text-sm text-gray-500">{resumenMascota(mascota)}</Text>
-            </View>
-
-            <View className="mt-1">
-              <EstadoMascotaBadge estado={mascota.estado.nombre} />
+            <Text className="flex-1 font-titulo text-[34px] leading-[40px] text-organic-neutral-900">
+              {mascota.nombre ?? 'Sin nombre'}
+            </Text>
+            <View className="mt-1.5">
+              <EstadoMascotaBadge estado={mascota.estado.nombre} tamanio="lg" />
             </View>
           </View>
 
-          {publicacion.refugio ? (
-            <View className="mt-3 flex-row items-center gap-1.5">
-              <Ionicons name="business-outline" size={14} color={PALETA.grisCalido[500]} />
-              <Text className="flex-1 text-[13px] text-gray-500">
-                {publicacion.refugio.nombre}
-                {publicacion.ubicacion ? ` · ${publicacion.ubicacion}` : ''}
-              </Text>
-            </View>
-          ) : publicacion.ubicacion ? (
-            <View className="mt-3 flex-row items-center gap-1.5">
-              <Ionicons name="location-outline" size={14} color={PALETA.grisCalido[500]} />
-              <Text className="flex-1 text-[13px] text-gray-500">{publicacion.ubicacion}</Text>
-            </View>
-          ) : null}
+          <PublicadoPor
+            refugio={publicacion.refugio}
+            persona={publicacion.publicadoPor}
+            ubicacion={publicacion.ubicacion}
+          />
 
           {/* Solo sobre lo propio: a quien adopta le alcanza con el estado de la mascota, y
               la publicación que ve en el feed siempre está activa. */}
-          {publicacion.esPropia ? (
-            <View className="mt-3 flex-row items-center justify-between rounded-2xl bg-white px-3.5 py-2.5">
-              <Text className="text-[13px] text-gray-500">Estado de la publicación</Text>
-              <EstadoPublicacionBadge estado={publicacion.estado.nombre} />
-            </View>
-          ) : null}
+          {publicacion.esPropia ? <BannerEstadoPublicacion estado={estadoPublicacion} /> : null}
 
           {publicacion.personalidad.length > 0 ? (
-            <View className="mt-3.5 flex-row flex-wrap gap-2">
-              {publicacion.personalidad.map((rasgo) => (
-                <Chip key={rasgo} etiqueta={rasgo} />
-              ))}
-            </View>
-          ) : null}
-
-          <SeccionTitulada className="mt-5" titulo="Características">
-            <View className="gap-2.5">
-              <View className="flex-row gap-2.5">
-                <Dato etiqueta="Especie" valor={mascota.especie.nombre} />
-                <Dato etiqueta="Raza" valor={mascota.raza.nombre} />
-              </View>
-              <View className="flex-row gap-2.5">
-                <Dato
-                  etiqueta="Peso"
-                  valor={mascota.peso === null ? 'Sin dato' : `${mascota.peso} kg`}
-                />
-                <Dato etiqueta="Castrado" valor={mascota.castrado ? 'Sí' : 'No'} />
-              </View>
-            </View>
-          </SeccionTitulada>
-
-          {publicacion.descripcion ? (
-            <SeccionTitulada className="mt-5" titulo={`Sobre ${mascota.nombre ?? 'la mascota'}`}>
-              <Text className="text-[15px] leading-6 text-gray-700">{publicacion.descripcion}</Text>
-            </SeccionTitulada>
-          ) : null}
-
-          <SeccionTitulada className="mt-5" titulo="Salud">
-            <View className="rounded-2xl bg-emerald-50 p-3.5">
-              {vacunas ? (
-                <Vinieta texto={`Vacunas: ${vacunas}`} icono="checkmark-circle" />
-              ) : (
-                <Vinieta texto="No se informaron vacunas" icono="ellipse" />
-              )}
-              <Vinieta
-                texto={publicacion.desparasitado ? 'Desparasitado' : 'Sin desparasitar'}
-                icono={publicacion.desparasitado ? 'checkmark-circle' : 'ellipse'}
-              />
-            </View>
-          </SeccionTitulada>
-
-          {publicacion.requisitos.length > 0 ? (
-            <SeccionTitulada className="mt-5" titulo="Requisitos para adoptar">
-              <View className="rounded-2xl bg-white p-3.5">
-                {publicacion.requisitos.map((requisito) => (
-                  <Vinieta key={requisito} texto={requisito} icono="ellipse" />
+            <SeccionFicha icono="creation" titulo="Personalidad">
+              <View className="flex-row flex-wrap gap-2">
+                {publicacion.personalidad.map((rasgo) => (
+                  <ChipRasgo key={rasgo} texto={rasgoSegunGenero(mascota.genero, rasgo)} />
                 ))}
               </View>
-            </SeccionTitulada>
+            </SeccionFicha>
           ) : null}
 
-          {/* Acciones de quien la gestiona, al final: primero se ve la publicación entera tal
-              como la ve quien adopta. Una finalizada ya no tiene ninguna: es terminal.
-              Pausar solo desde activa, reactivar solo desde pausada, finalizar desde las dos
-              (el backend vuelve a validar cada transición). */}
+          <SeccionFicha icono="paw" titulo="Características">
+            <GrillaDatos datos={datosDe(mascota)} />
+          </SeccionFicha>
+
+          {/* Castrado es de la mascota y desparasitado de la publicación, pero se leen juntos.
+              Las vacunas salen de la historia clínica de la mascota: se tocan para ver para
+              qué sirve cada una. */}
+          <SeccionFicha icono="heart-pulse" titulo="Salud">
+            <View className="flex-row gap-2.5">
+              <CuadranteSalud tipo="CASTRADO" activo={mascota.castrado} genero={mascota.genero} />
+              <CuadranteSalud
+                tipo="DESPARASITADO"
+                activo={publicacion.desparasitado}
+                genero={mascota.genero}
+              />
+            </View>
+            <Subtitulo texto="Vacunas" />
+            <VacunasMascota vacunas={publicacion.vacunas} grande />
+          </SeccionFicha>
+
+          {publicacion.descripcion ? (
+            <SeccionFicha icono="message-text" titulo={`Sobre ${mascota.nombre ?? 'la mascota'}`}>
+              <CajaDescripcion texto={publicacion.descripcion} />
+            </SeccionFicha>
+          ) : null}
+
+          {publicacion.requisitos.length > 0 ? (
+            <SeccionFicha icono="clipboard-check-outline" titulo="Requisitos para adoptar">
+              <View className="flex-row flex-wrap gap-2">
+                {publicacion.requisitos.map((requisito) => (
+                  <MedallaRequisito key={requisito} texto={requisito} />
+                ))}
+              </View>
+            </SeccionFicha>
+          ) : null}
+        </TarjetaFicha>
+
+        {/* Acciones de quien la gestiona, debajo de la tarjeta: primero se ve la publicación
+            entera tal como la ve quien adopta. Una finalizada ya no tiene ninguna: es
+            terminal. Pausar solo desde activa, reactivar solo desde pausada, finalizar desde
+            las dos (el backend vuelve a validar cada transición). */}
+        <View className="px-3">
           {publicacion.puedeEditar && estadoPublicacion !== ESTADO_PUBLICACION.FINALIZADA ? (
-            <View className="mt-6 gap-2.5">
+            <View className="mt-5 gap-2.5">
               <CustomButton
                 title="Editar publicación"
                 variant="acento"

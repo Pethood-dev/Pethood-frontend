@@ -5,6 +5,9 @@ module.exports = {
   content: [
     './app/**/*.{js,jsx,ts,tsx}',
     './components/**/*.{js,jsx,ts,tsx}',
+    // Los estilos por estado (EstadosMascota, EstadosPublicacion...) son clases escritas en
+    // constants/: si no se escanea, Tailwind no las genera y la pastilla sale sin color.
+    './constants/**/*.{js,jsx,ts,tsx}',
   ],
   presets: [require('nativewind/preset')],
   theme: {

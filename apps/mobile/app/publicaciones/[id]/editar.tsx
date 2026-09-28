@@ -57,7 +57,6 @@ function valoresDe(publicacion: PublicacionFeed): ValoresPublicacion {
     fotos: fotosExistentes(publicacion.imagenes),
     descripcion: publicacion.descripcion ?? '',
     desparasitado: publicacion.desparasitado,
-    vacunas: publicacion.vacunas ?? '',
     personalidad: publicacion.personalidad,
     requisitos: publicacion.requisitos,
     ubicacion: publicacion.ubicacion ?? '',
@@ -149,7 +148,6 @@ export default function EditarPublicacionScreen() {
         requisitos: valores.requisitos,
         personalidad: valores.personalidad,
         desparasitado: valores.desparasitado,
-        vacunas: valores.vacunas.trim(),
         fotos: valores.fotos,
       });
 
@@ -196,38 +194,38 @@ export default function EditarPublicacionScreen() {
           />
         ) : (
           <FormularioConTeclado
-            className="flex-1"
-            contentContainerClassName="px-4 pb-10"
-            showsVerticalScrollIndicator={false}
-          >
-            <CamposPublicacion
-              valores={valores}
-              onChange={(cambios) => setValores((previos) => ({ ...previos, ...cambios }))}
-              generoMascota={mascota.genero}
-              errorDe={errorDe}
-              onBlur={marcarTocado}
-              filaMascota={
-                // La mascota se elige al publicar y no se cambia: se muestra fija.
-                <TextField
-                  label="Mascota"
-                  value={`${mascota.nombre ?? 'Sin nombre'} (${mascota.especie.nombre})`}
-                  editable={false}
-                  ayuda="La mascota de una publicación no se puede cambiar."
-                  grande
-                />
-              }
-            />
-
-            <View className="mt-5">
-              <CustomButton
-                title="Guardar cambios"
-                variant="acento"
-                loading={guardando}
-                disabled={!formularioValido}
-                onPress={() => void guardar()}
-                onPressDeshabilitado={explicarQueFalta}
+              className="flex-1"
+              contentContainerClassName="px-4 pb-10"
+              showsVerticalScrollIndicator={false}
+            >
+              <CamposPublicacion
+                valores={valores}
+                onChange={(cambios) => setValores((previos) => ({ ...previos, ...cambios }))}
+                generoMascota={mascota.genero}
+                errorDe={errorDe}
+                onBlur={marcarTocado}
+                filaMascota={
+                  // La mascota se elige al publicar y no se cambia: se muestra fija.
+                  <TextField
+                    label="Mascota"
+                    value={`${mascota.nombre ?? 'Sin nombre'} (${mascota.especie.nombre})`}
+                    editable={false}
+                    ayuda="La mascota de una publicación no se puede cambiar."
+                    grande
+                  />
+                }
               />
-            </View>
+
+              <View className="mt-5">
+                <CustomButton
+                  title="Guardar cambios"
+                  variant="acento"
+                  loading={guardando}
+                  disabled={!formularioValido}
+                  onPress={() => void guardar()}
+                  onPressDeshabilitado={explicarQueFalta}
+                />
+              </View>
           </FormularioConTeclado>
         )}
       </SafeAreaView>

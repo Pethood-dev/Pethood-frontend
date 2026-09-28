@@ -20,11 +20,13 @@ import { useToast } from '@/components/feedback/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { EstadoMascotaBadge } from '@/components/ui/EstadoMascotaBadge';
 import { PressableAnimado } from '@/components/ui/PressableAnimado';
+import { VacunasMascota } from '@/components/vacunas/VacunasMascota';
 import { etiquetaEdad, etiquetaGenero, etiquetaTamanio } from '@/constants/Mascotas';
 import { PALETA } from '@/constants/theme';
 import { useSesion } from '@/hooks/useSesion';
 import { ApiError, urlAbsoluta } from '@/services/api';
 import { eliminarMascota, obtenerMascota, type FichaMascota } from '@/services/mascotas';
+import { textoSegunGenero } from '@/shared/genero';
 
 function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   return (
@@ -210,7 +212,20 @@ export default function FichaMascotaScreen() {
                 etiqueta="Peso"
                 valor={mascota.peso === null ? 'Sin dato' : `${mascota.peso} kg`}
               />
-              <Dato etiqueta="Castrado" valor={mascota.castrado ? 'Sí' : 'No'} />
+              <Dato
+                etiqueta={textoSegunGenero(mascota.genero, 'Castrado', 'Castrada')}
+                valor={mascota.castrado ? 'Sí' : 'No'}
+              />
+            </View>
+          </View>
+
+          {/* Salen de la historia clínica: se suman cargando un registro de tipo "Vacuna". */}
+          <View className="mt-4 rounded-[22px] border border-organic-neutral-200 bg-organic-neutral-100 p-4">
+            <Text className="font-cuerpo-semi text-[11px] uppercase tracking-wide text-organic-neutral-500">
+              Vacunas
+            </Text>
+            <View className="mt-2">
+              <VacunasMascota vacunas={mascota.vacunas} />
             </View>
           </View>
 

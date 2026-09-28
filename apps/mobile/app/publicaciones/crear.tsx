@@ -176,7 +176,6 @@ export default function CrearPublicacionScreen() {
         requisitos: valores.requisitos,
         personalidad: valores.personalidad,
         desparasitado: valores.desparasitado,
-        vacunas: valores.vacunas.trim(),
         fotos: valores.fotos,
       });
 
@@ -241,54 +240,54 @@ export default function CrearPublicacionScreen() {
           </EstadoVacio>
         ) : (
           <FormularioConTeclado
-            className="flex-1"
-            contentContainerClassName="px-4 pb-10"
-            showsVerticalScrollIndicator={false}
-          >
-            <CamposPublicacion
-              valores={valores}
-              onChange={(cambios) => setValores((previos) => ({ ...previos, ...cambios }))}
-              generoMascota={generoMascota}
-              errorDe={errorDe}
-              onBlur={marcarTocado}
-              filaMascota={
-                <SelectField
-                  label="Seleccionar mascota"
-                  obligatorio
-                  placeholder="Elegí una"
-                  opciones={[
-                    // Primera, para quien viene a publicar una que todavía no cargó.
-                    { valor: CREAR_MASCOTA, etiqueta: '＋ Crear mascota nueva' },
-                    ...publicables.map((mascota) => ({
-                      valor: mascota.id,
-                      etiqueta: `${mascota.nombre} (${mascota.especie.nombre} · ${estiloDeEstado(mascota.estado.nombre).etiqueta})`,
-                    })),
-                  ]}
-                  valor={mascotaId}
-                  onChange={(valor) => {
-                    if (valor === CREAR_MASCOTA) {
-                      irACargarMascota();
-                      return;
-                    }
-                    setMascotaId(valor);
-                  }}
-                  onBlur={() => marcarTocado('mascotaId')}
-                  error={errorDe('mascotaId')}
-                  grande
-                />
-              }
-            />
-
-            <View className="mt-5">
-              <CustomButton
-                title="Publicar en adopción"
-                variant="acento"
-                loading={publicando}
-                disabled={!formularioValido}
-                onPress={() => void publicar()}
-                onPressDeshabilitado={explicarQueFalta}
+              className="flex-1"
+              contentContainerClassName="px-4 pb-10"
+              showsVerticalScrollIndicator={false}
+            >
+              <CamposPublicacion
+                valores={valores}
+                onChange={(cambios) => setValores((previos) => ({ ...previos, ...cambios }))}
+                generoMascota={generoMascota}
+                errorDe={errorDe}
+                onBlur={marcarTocado}
+                filaMascota={
+                  <SelectField
+                    label="Seleccionar mascota"
+                    obligatorio
+                    placeholder="Elegí una"
+                    opciones={[
+                      // Primera, para quien viene a publicar una que todavía no cargó.
+                      { valor: CREAR_MASCOTA, etiqueta: '＋ Crear mascota nueva' },
+                      ...publicables.map((mascota) => ({
+                        valor: mascota.id,
+                        etiqueta: `${mascota.nombre} (${mascota.especie.nombre} · ${estiloDeEstado(mascota.estado.nombre).etiqueta})`,
+                      })),
+                    ]}
+                    valor={mascotaId}
+                    onChange={(valor) => {
+                      if (valor === CREAR_MASCOTA) {
+                        irACargarMascota();
+                        return;
+                      }
+                      setMascotaId(valor);
+                    }}
+                    onBlur={() => marcarTocado('mascotaId')}
+                    error={errorDe('mascotaId')}
+                    grande
+                  />
+                }
               />
-            </View>
+
+              <View className="mt-5">
+                <CustomButton
+                  title="Publicar en adopción"
+                  variant="acento"
+                  loading={publicando}
+                  disabled={!formularioValido}
+                  onPress={() => void publicar()}
+                  onPressDeshabilitado={explicarQueFalta}
+                />
+              </View>
           </FormularioConTeclado>
         )}
       </SafeAreaView>

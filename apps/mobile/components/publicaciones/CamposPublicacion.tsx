@@ -16,7 +16,7 @@ import { TextAreaField } from '@/components/ui/TextAreaField';
 import { TextField } from '@/components/ui/TextField';
 import { ToggleField } from '@/components/ui/ToggleField';
 import type { Genero } from '@/services/mascotas';
-import { textoSegunGenero } from '@/shared/genero';
+import { rasgoSegunGenero, textoSegunGenero } from '@/shared/genero';
 import { LIMITES } from '@/shared/validation/limits';
 import { validarTexto } from '@/shared/validation/text';
 
@@ -41,27 +41,11 @@ const RASGOS_DE_PERSONALIDAD = [
   'Bueno con otras mascotas',
 ];
 
-/**
- * Forma femenina de cada rasgo, solo para mostrar (ver `ChipMultiField.etiquetaDe`). Los dos
- * de compatibilidad se traducen igual que el resto: lo que cambia es la etiqueta, nunca el
- * texto que viaja al backend.
- */
-const RASGO_FEMENINO: Partial<Record<string, string>> = {
-  Juguetón: 'Juguetona',
-  Cariñoso: 'Cariñosa',
-  Tranquilo: 'Tranquila',
-  Activo: 'Activa',
-  Protector: 'Protectora',
-  'Bueno con chicos': 'Buena con chicos',
-  'Bueno con otras mascotas': 'Buena con otras mascotas',
-};
-
 export interface ValoresPublicacion {
   /** En orden: la primera es la portada. */
   fotos: FotoElegida[];
   descripcion: string;
   desparasitado: boolean;
-  vacunas: string;
   personalidad: string[];
   requisitos: string[];
   ubicacion: string;
@@ -71,7 +55,6 @@ export const VALORES_INICIALES: ValoresPublicacion = {
   fotos: [],
   descripcion: '',
   desparasitado: false,
-  vacunas: '',
   personalidad: [],
   requisitos: [],
   ubicacion: '',
@@ -129,8 +112,8 @@ export function CamposPublicacion({
   onBlur,
   filaMascota,
 }: CamposPublicacionProps) {
-  const etiquetaDeRasgo = (rasgo: string): string =>
-    textoSegunGenero(generoMascota, rasgo, RASGO_FEMENINO[rasgo] ?? rasgo);
+  // Solo la etiqueta (ver `ChipMultiField.etiquetaDe`): lo que se guarda es el rasgo en masculino.
+  const etiquetaDeRasgo = (rasgo: string): string => rasgoSegunGenero(generoMascota, rasgo);
 
   return (
     <>
@@ -162,17 +145,6 @@ export function CamposPublicacion({
             label={textoSegunGenero(generoMascota, 'Desparasitado', 'Desparasitada')}
             valor={valores.desparasitado}
             onChange={(desparasitado) => onChange({ desparasitado })}
-            grande
-          />
-        </FormCardRow>
-
-        <FormCardRow>
-          <TextField
-            label="Vacunas"
-            placeholder="Ej. Rabia, Parvovirus"
-            value={valores.vacunas}
-            onChangeText={(vacunas) => onChange({ vacunas })}
-            maxLength={LIMITES.publicacion.vacunas.max}
             grande
           />
         </FormCardRow>
