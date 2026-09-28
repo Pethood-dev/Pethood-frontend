@@ -187,18 +187,18 @@ export default function ChatScreen() {
         <View className="border-b border-organic-neutral-300 bg-organic-neutral-100 px-[21px] py-[13px]">
           {vistaRefugio ? (
             <>
-              <Text className="font-titulo text-[23px] leading-[28px] text-organic-accent-600">
+              <Text className="font-titulo text-[27px] leading-[33px] text-organic-accent-600">
                 Mensajes del Refugio
               </Text>
               <Text
                 numberOfLines={1}
-                className="mt-[4px] font-cuerpo text-[12px] text-organic-neutral-600"
+                className="mt-[4px] font-cuerpo text-[14px] text-organic-neutral-600"
               >
                 {subtituloRefugio(sinLeer, usuario?.refugio?.nombre ?? null)}
               </Text>
             </>
           ) : (
-            <Text className="font-titulo text-[24px] leading-[29px] text-organic-accent-600">
+            <Text className="font-titulo text-[28px] leading-[34px] text-organic-accent-600">
               Mensajes
             </Text>
           )}

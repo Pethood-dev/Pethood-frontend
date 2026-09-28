@@ -102,7 +102,7 @@ export function BarraBusqueda({
         // La tecla de acción cierra el teclado en vez de ofrecer "siguiente": el filtro ya
         // se aplicó solo mientras escribía, no hay nada que enviar.
         returnKeyType="search"
-        className="flex-1 p-0 font-cuerpo text-[14px] text-organic-neutral-900"
+        className="flex-1 p-0 font-cuerpo text-[16px] text-organic-neutral-900"
       />
 
       {mostrarLimpiar ? (

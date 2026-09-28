@@ -28,6 +28,7 @@ import {
   CajaDescripcion,
   ChipRasgo,
   CuadranteSalud,
+  datosDeMascota,
   GrillaDatos,
   MedallaRequisito,
   PublicadoPor,
@@ -35,19 +36,12 @@ import {
   SOLAPE_TARJETA,
   Subtitulo,
   TarjetaFicha,
-  type DatoFicha,
-  type NombreIcono,
 } from '@/components/publicaciones/FichaPublicacion';
 import { BotonSolicitar, solicitudEnviadaDe } from '@/components/solicitudes/BotonSolicitar';
 import { ConfirmDialog, type TonoDialogo } from '@/components/ui/ConfirmDialog';
 import { EstadoMascotaBadge } from '@/components/ui/EstadoMascotaBadge';
 import { VacunasMascota } from '@/components/vacunas/VacunasMascota';
-import {
-  ESTADO_SOLICITABLE,
-  etiquetaEdad,
-  etiquetaGenero,
-  etiquetaTamanio,
-} from '@/constants/Mascotas';
+import { ESTADO_SOLICITABLE } from '@/constants/Mascotas';
 import { PALETA } from '@/constants/theme';
 import { useSesion } from '@/hooks/useSesion';
 import { agregarFavorito, quitarFavorito } from '@/services/favoritos';
@@ -102,37 +96,6 @@ const CAMBIOS_DE_ESTADO: Record<
     exito: 'Finalizamos la publicación.',
   },
 };
-
-/** Ícono del cuadrante de especie: las dos que tienen dibujo propio, y la pata para el resto. */
-const ICONO_ESPECIE: Record<string, NombreIcono> = { perro: 'dog', gato: 'cat' };
-
-/** Los seis cuadrantes de «Características». Un dato opcional sin cargar dice «Sin dato». */
-function datosDe(mascota: PublicacionFeed['mascota']): DatoFicha[] {
-  return [
-    {
-      icono: ICONO_ESPECIE[mascota.especie.nombre.trim().toLowerCase()] ?? 'paw',
-      etiqueta: 'Especie',
-      valor: mascota.especie.nombre,
-    },
-    { icono: 'tag', etiqueta: 'Raza', valor: mascota.raza.nombre },
-    {
-      icono: 'cake-variant',
-      etiqueta: 'Edad',
-      valor: etiquetaEdad(mascota.fechaNacimiento) ?? 'Sin dato',
-    },
-    { icono: 'ruler', etiqueta: 'Tamaño', valor: etiquetaTamanio(mascota.tamanio) ?? 'Sin dato' },
-    {
-      icono: 'weight-kilogram',
-      etiqueta: 'Peso',
-      valor: mascota.peso === null ? 'Sin dato' : `${String(mascota.peso).replace('.', ',')} kg`,
-    },
-    {
-      icono: mascota.genero === 'HEMBRA' ? 'gender-female' : 'gender-male',
-      etiqueta: 'Sexo',
-      valor: etiquetaGenero(mascota.genero),
-    },
-  ];
-}
 
 export default function FichaPublicacionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -338,7 +301,7 @@ export default function FichaPublicacionScreen() {
           ) : null}
 
           <SeccionFicha icono="paw" titulo="Características">
-            <GrillaDatos datos={datosDe(mascota)} />
+            <GrillaDatos datos={datosDeMascota(mascota)} />
           </SeccionFicha>
 
           {/* Castrado es de la mascota y desparasitado de la publicación, pero se leen juntos.

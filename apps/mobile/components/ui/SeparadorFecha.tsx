@@ -4,7 +4,8 @@
  * agrupada por día (seguimiento, historia clínica).
  *
  * Medidas del artboard (sobre 262px, ×1,33): fondo `neutral-200`, texto `neutral-700` de
- * 8 → 11 semibold, padding 3/10 → 4/13, píldora.
+ * 8 → 11 semibold, padding 3/10 → 4/13, píldora. Después se agrandó a 13 (padding 5/15)
+ * para que se lea mejor junto a los mensajes, que también crecieron.
  *
  * No sabe de fechas: recibe la etiqueta ya armada (`etiquetaDia` en `shared/validation/dates`).
  */
@@ -17,8 +18,8 @@ interface SeparadorFechaProps {
 export function SeparadorFecha({ etiqueta }: SeparadorFechaProps) {
   return (
     <View className="items-center">
-      <View className="rounded-full bg-organic-neutral-200 px-[13px] py-[4px]">
-        <Text className="font-cuerpo-semi text-[11px] text-organic-neutral-700">{etiqueta}</Text>
+      <View className="rounded-full bg-organic-neutral-200 px-[15px] py-[5px]">
+        <Text className="font-cuerpo-semi text-[13px] text-organic-neutral-700">{etiqueta}</Text>
       </View>
     </View>
   );

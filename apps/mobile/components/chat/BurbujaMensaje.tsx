@@ -213,7 +213,7 @@ export function BurbujaMensaje({
           }`}
         >
           <Text
-            className={`font-cuerpo text-[14px] leading-[19px] ${
+            className={`font-cuerpo text-[16px] leading-[22px] ${
               propia ? 'text-white' : 'text-organic-neutral-900'
             }`}
           >
