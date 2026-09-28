@@ -4,7 +4,7 @@
  * Lista el historial médico de una mascota propia o del refugio (HU-8.2) y da acceso al
  * alta (HU-8.1, botón flotante) y al detalle de cada registro (HU-8.3).
  */
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { FlatList, Text, View } from 'react-native';
@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EstadoCargando, EstadoError, EstadoVacio } from '@/components/feedback/EstadosPantalla';
 import { PressableAnimado } from '@/components/ui/PressableAnimado';
+import { estiloDeVacuna } from '@/constants/Vacunas';
 import { PALETA } from '@/constants/theme';
 import { obtenerMiMascota, type Mascota } from '@/services/mascotas';
 import { listarHistorial, type HistoriaClinica } from '@/services/historia-clinica';
@@ -25,6 +26,9 @@ function TarjetaRegistro({
   onPress: () => void;
 }) {
   const fecha = parsearFecha(registro.fechaVisita);
+  // Una vacuna se pinta con el color de su medalla. Las cargadas antes de que existieran
+  // los tipos de vacuna (`tipoVacuna` nulo) siguen con el estilo genérico.
+  const vacuna = registro.tipoVacuna ? estiloDeVacuna(registro.tipoVacuna) : null;
 
   return (
     <PressableAnimado
@@ -34,17 +38,26 @@ function TarjetaRegistro({
       escala={0.97}
       className="mb-3.5 flex-row overflow-hidden rounded-[22px] bg-organic-neutral-100 shadow-sm"
     >
-      <View
-        className={`w-14 items-center justify-center ${
-          registro.documentoUrl ? 'bg-organic-accent-600' : 'bg-organic-neutral-200'
-        }`}
-      >
-        <Ionicons
-          name={registro.documentoUrl ? 'document-text' : 'medical-outline'}
-          size={24}
-          color={registro.documentoUrl ? PALETA.blanco : PALETA.neutral[400]}
-        />
-      </View>
+      {vacuna ? (
+        <View
+          className="w-14 items-center justify-center"
+          style={{ backgroundColor: vacuna.fondo }}
+        >
+          <MaterialCommunityIcons name="needle" size={24} color={vacuna.tinta} />
+        </View>
+      ) : (
+        <View
+          className={`w-14 items-center justify-center ${
+            registro.documentoUrl ? 'bg-organic-accent-600' : 'bg-organic-neutral-200'
+          }`}
+        >
+          <Ionicons
+            name={registro.documentoUrl ? 'document-text' : 'medical-outline'}
+            size={24}
+            color={registro.documentoUrl ? PALETA.blanco : PALETA.neutral[400]}
+          />
+        </View>
+      )}
 
       <View className="flex-1 justify-center px-4 py-3.5">
         <Text className="font-cuerpo-bold text-base text-organic-neutral-900">
@@ -66,8 +79,17 @@ function TarjetaRegistro({
 
           {registro.vacunacion ? (
             <View className="flex-row items-center gap-1.5">
-              <Ionicons name="shield-checkmark-outline" size={17} color={PALETA.accent[600]} />
-              <Text className="font-cuerpo-semi text-xs text-organic-accent-600">Vacuna</Text>
+              <Ionicons
+                name="shield-checkmark-outline"
+                size={17}
+                color={vacuna?.tinta ?? PALETA.accent[600]}
+              />
+              <Text
+                className="font-cuerpo-semi text-xs"
+                style={{ color: vacuna?.tinta ?? PALETA.accent[600] }}
+              >
+                Vacuna
+              </Text>
             </View>
           ) : null}
         </View>

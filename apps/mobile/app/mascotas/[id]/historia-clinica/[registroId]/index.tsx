@@ -4,7 +4,7 @@
  * HU-8.4 (eliminar) es una baja lógica simple, sin alta de reemplazo — a diferencia de
  * "Modificar" (HU-8.3), que da de baja y crea un registro nuevo.
  */
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import * as WebBrowser from 'expo-web-browser';
@@ -15,6 +15,7 @@ import { EstadoCargando, EstadoError } from '@/components/feedback/EstadosPantal
 import { useToast } from '@/components/feedback/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { PressableAnimado } from '@/components/ui/PressableAnimado';
+import { estiloDeVacuna } from '@/constants/Vacunas';
 import { PALETA } from '@/constants/theme';
 import { useSesion } from '@/hooks/useSesion';
 import { ApiError, urlAbsoluta } from '@/services/api';
@@ -142,6 +143,7 @@ export default function DetalleHistoriaClinicaScreen() {
 
   const fechaVisita = parsearFecha(registro.fechaVisita);
   const fechaProxima = parsearFecha(registro.fechaProxima);
+  const estiloVacuna = registro.tipoVacuna ? estiloDeVacuna(registro.tipoVacuna) : null;
 
   return (
     <View className="flex-1 bg-organic-neutral-100">
@@ -205,11 +207,25 @@ export default function DetalleHistoriaClinicaScreen() {
               />
             </View>
 
-            {registro.vacunacion ? (
+            {estiloVacuna ? (
+              <View
+                className="flex-row items-center gap-2 border-b border-organic-neutral-200 px-4 py-3"
+                style={{ backgroundColor: estiloVacuna.fondo }}
+              >
+                <MaterialCommunityIcons name="needle" size={18} color={estiloVacuna.tinta} />
+                <Text
+                  className="flex-1 font-cuerpo-semi text-sm"
+                  style={{ color: estiloVacuna.tinta }}
+                >
+                  Vacuna — visible como medalla en la ficha de la mascota
+                </Text>
+              </View>
+            ) : registro.vacunacion ? (
+              // Vacuna cargada antes de los tipos de vacuna: no tiene medalla.
               <View className="flex-row items-center gap-2 border-b border-organic-neutral-200 bg-organic-accent-100 px-4 py-3">
                 <Ionicons name="shield-checkmark-outline" size={18} color={PALETA.accent[700]} />
                 <Text className="flex-1 font-cuerpo-semi text-sm text-organic-accent-700">
-                  Vacuna — visible en la ficha de la mascota
+                  Vacuna
                 </Text>
               </View>
             ) : null}

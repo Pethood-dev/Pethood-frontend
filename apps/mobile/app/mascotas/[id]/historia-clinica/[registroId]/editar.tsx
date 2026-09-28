@@ -2,7 +2,8 @@
  * HU-8.3 Modificar historia clínica.
  *
  * El backend nunca actualiza el registro persistido: da de baja el que se edita y crea uno
- * nuevo con los campos fusionados (`vacunacion` no es editable y siempre se arrastra). Por
+ * nuevo con los campos fusionados (`vacunacion` y `tipoVacuna` no son editables y siempre se
+ * arrastran; en una vacuna el título tampoco, porque es el nombre de la vacuna). Por
  * eso el registro resultante tiene un id distinto al que se abrió acá.
  *
  * Edición parcial de verdad: se compara contra el registro original y solo viaja lo que
@@ -32,9 +33,11 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { DateField } from '@/components/ui/DateField';
 import { DocumentField, type DocumentoElegido } from '@/components/ui/DocumentField';
 import { FormCard, FormCardColumns, FormCardRow } from '@/components/ui/FormCard';
+import { FormField } from '@/components/ui/FormField';
 import { TextAreaField } from '@/components/ui/TextAreaField';
 import { TextField } from '@/components/ui/TextField';
 import { ToggleField } from '@/components/ui/ToggleField';
+import { MedallaVacuna } from '@/components/vacunas/MedallaVacuna';
 import { useSesion } from '@/hooks/useSesion';
 import {
   editarHistoriaClinica,
@@ -288,16 +291,25 @@ export default function EditarHistoriaClinicaScreen() {
           >
             <FormCard>
               <FormCardRow>
-                <TextField
-                  label="Título del registro"
-                  obligatorio
-                  placeholder="Ej. Vacunación anual"
-                  value={titulo}
-                  onChangeText={setTitulo}
-                  onBlur={() => marcarTocado('titulo')}
-                  maxLength={LIMITES.historiaClinica.titulo.max}
-                  error={errorDe('titulo')}
-                />
+                {original.tipoVacuna ? (
+                  // En una vacuna el título es su nombre y no se edita: se muestra la medalla.
+                  <FormField label="Vacuna" conCaja={false}>
+                    <View className="mt-1">
+                      <MedallaVacuna tipo={original.tipoVacuna} nombre={original.titulo} />
+                    </View>
+                  </FormField>
+                ) : (
+                  <TextField
+                    label="Título del registro"
+                    obligatorio
+                    placeholder="Ej. Vacunación anual"
+                    value={titulo}
+                    onChangeText={setTitulo}
+                    onBlur={() => marcarTocado('titulo')}
+                    maxLength={LIMITES.historiaClinica.titulo.max}
+                    error={errorDe('titulo')}
+                  />
+                )}
               </FormCardRow>
 
               <FormCardRow>

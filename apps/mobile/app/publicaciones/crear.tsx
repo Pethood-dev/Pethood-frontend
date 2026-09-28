@@ -182,7 +182,6 @@ export default function CrearPublicacionScreen() {
         requisitos: valores.requisitos,
         personalidad: valores.personalidad,
         desparasitado: valores.desparasitado,
-        vacunas: valores.vacunas.trim(),
         fotos: valores.fotos,
       });
 

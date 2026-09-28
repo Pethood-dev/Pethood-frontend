@@ -56,7 +56,6 @@ function valoresDe(publicacion: PublicacionFeed): ValoresPublicacion {
     fotos: fotosExistentes(publicacion.imagenes),
     descripcion: publicacion.descripcion ?? '',
     desparasitado: publicacion.desparasitado,
-    vacunas: publicacion.vacunas ?? '',
     personalidad: publicacion.personalidad,
     requisitos: publicacion.requisitos,
     ubicacion: publicacion.ubicacion ?? '',
@@ -148,7 +147,6 @@ export default function EditarPublicacionScreen() {
         requisitos: valores.requisitos,
         personalidad: valores.personalidad,
         desparasitado: valores.desparasitado,
-        vacunas: valores.vacunas.trim(),
         fotos: valores.fotos,
       });
 
