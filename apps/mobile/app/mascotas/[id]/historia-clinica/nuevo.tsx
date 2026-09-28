@@ -12,14 +12,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CustomButton } from '@/components/CustomButton';
@@ -27,6 +20,7 @@ import { useToast } from '@/components/feedback/Toast';
 import { DateField } from '@/components/ui/DateField';
 import { DocumentField, type DocumentoElegido } from '@/components/ui/DocumentField';
 import { FormCard, FormCardColumns, FormCardRow } from '@/components/ui/FormCard';
+import { FormularioConTeclado } from '@/components/ui/FormularioConTeclado';
 import { SegmentedField } from '@/components/ui/SegmentedField';
 import { SelectField } from '@/components/ui/SelectField';
 import { TextAreaField } from '@/components/ui/TextAreaField';
@@ -282,181 +276,175 @@ export default function NuevaHistoriaClinicaScreen() {
           </View>
         </View>
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        <FormularioConTeclado
           className="flex-1"
+          contentContainerClassName="px-4 pb-10"
+          showsVerticalScrollIndicator={false}
         >
-          <ScrollView
-            className="flex-1"
-            contentContainerClassName="px-4 pb-10"
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            <FormCard>
-              <FormCardRow ultima={tipoRegistro === null}>
-                <SegmentedField
-                  label="¿Qué vas a registrar?"
-                  obligatorio
-                  opciones={OPCIONES_TIPO}
-                  valor={tipoRegistro}
-                  onChange={elegirTipoRegistro}
-                  variante="tarjetas"
-                  error={errorDe('tipoRegistro')}
-                  grande
-                />
-                <Text className="mt-2 text-[13px] text-gray-400">
-                  {esVacuna
-                    ? 'Se va a mostrar como medalla en la ficha de la mascota'
-                    : 'Visitas, inyecciones, operaciones y demás van en «Otro registro»'}
-                </Text>
-              </FormCardRow>
+          <FormCard>
+            <FormCardRow ultima={tipoRegistro === null}>
+              <SegmentedField
+                label="¿Qué vas a registrar?"
+                obligatorio
+                opciones={OPCIONES_TIPO}
+                valor={tipoRegistro}
+                onChange={elegirTipoRegistro}
+                variante="tarjetas"
+                error={errorDe('tipoRegistro')}
+                grande
+              />
+              <Text className="mt-2 text-[13px] text-gray-400">
+                {esVacuna
+                  ? 'Se va a mostrar como medalla en la ficha de la mascota'
+                  : 'Visitas, inyecciones, operaciones y demás van en «Otro registro»'}
+              </Text>
+            </FormCardRow>
 
-              {esVacuna ? (
-                <>
-                  <FormCardRow>
-                    <SelectField
-                      label="Vacuna"
-                      obligatorio
-                      placeholder={cargandoVacunas ? 'Cargando…' : 'Elegí la vacuna'}
-                      opciones={vacunas.map((vacuna) => ({
-                        valor: vacuna.tipo,
-                        etiqueta: vacuna.nombre,
-                      }))}
-                      valor={tipoVacuna}
-                      onChange={elegirVacuna}
-                      onBlur={() => marcarTocado('tipoVacuna')}
-                      deshabilitado={cargandoVacunas || vacunas.length === 0}
-                      textoDeshabilitado={
-                        cargandoVacunas ? 'Cargando…' : 'Esta especie no tiene vacunas cargadas'
-                      }
-                      error={errorDe('tipoVacuna')}
-                      grande
-                    />
+            {esVacuna ? (
+              <>
+                <FormCardRow>
+                  <SelectField
+                    label="Vacuna"
+                    obligatorio
+                    placeholder={cargandoVacunas ? 'Cargando…' : 'Elegí la vacuna'}
+                    opciones={vacunas.map((vacuna) => ({
+                      valor: vacuna.tipo,
+                      etiqueta: vacuna.nombre,
+                    }))}
+                    valor={tipoVacuna}
+                    onChange={elegirVacuna}
+                    onBlur={() => marcarTocado('tipoVacuna')}
+                    deshabilitado={cargandoVacunas || vacunas.length === 0}
+                    textoDeshabilitado={
+                      cargandoVacunas ? 'Cargando…' : 'Esta especie no tiene vacunas cargadas'
+                    }
+                    error={errorDe('tipoVacuna')}
+                    grande
+                  />
 
-                    {vacunaElegida ? (
-                      <View className="mt-3">
-                        <MedallaVacuna tipo={vacunaElegida.tipo} nombre={vacunaElegida.nombre} />
-                      </View>
-                    ) : null}
-                  </FormCardRow>
+                  {vacunaElegida ? (
+                    <View className="mt-3">
+                      <MedallaVacuna tipo={vacunaElegida.tipo} nombre={vacunaElegida.nombre} />
+                    </View>
+                  ) : null}
+                </FormCardRow>
 
-                  <FormCardRow>
+                <FormCardRow>
+                  <DateField
+                    label="Fecha de aplicación"
+                    obligatorio
+                    placeholder="Elegí la fecha"
+                    valor={fechaVisita}
+                    onChange={setFechaVisita}
+                    onBlur={() => marcarTocado('fechaVisita')}
+                    mostrarEdad={false}
+                    fechaMinima={nacimiento ?? undefined}
+                    error={errorDe('fechaVisita')}
+                    grande
+                  />
+                </FormCardRow>
+
+                <FormCardRow ultima>
+                  <TextAreaField
+                    label="Descripción"
+                    obligatorio
+                    placeholder="Elegí la vacuna y se completa sola"
+                    value={descripcion}
+                    onChangeText={setDescripcion}
+                    onBlur={() => marcarTocado('descripcion')}
+                    maximo={LIMITES.historiaClinica.descripcion.max}
+                    error={errorDe('descripcion')}
+                    grande
+                  />
+                </FormCardRow>
+              </>
+            ) : null}
+
+            {tipoRegistro === 'OTRO' ? (
+              <>
+                <FormCardRow>
+                  <TextField
+                    label="Título del registro"
+                    placeholder="Ej. Vacunación anual"
+                    value={titulo}
+                    onChangeText={setTitulo}
+                    onBlur={() => marcarTocado('titulo')}
+                    maxLength={LIMITES.historiaClinica.titulo.max}
+                    error={errorDe('titulo')}
+                    grande
+                  />
+                </FormCardRow>
+
+                <FormCardRow>
+                  <FormCardColumns>
                     <DateField
-                      label="Fecha de aplicación"
+                      label="Fecha visita"
                       obligatorio
                       placeholder="Elegí la fecha"
                       valor={fechaVisita}
                       onChange={setFechaVisita}
                       onBlur={() => marcarTocado('fechaVisita')}
                       mostrarEdad={false}
-                      fechaMinima={nacimiento ?? undefined}
                       error={errorDe('fechaVisita')}
                       grande
                     />
-                  </FormCardRow>
 
-                  <FormCardRow ultima>
-                    <TextAreaField
-                      label="Descripción"
-                      obligatorio
-                      placeholder="Elegí la vacuna y se completa sola"
-                      value={descripcion}
-                      onChangeText={setDescripcion}
-                      onBlur={() => marcarTocado('descripcion')}
-                      maximo={LIMITES.historiaClinica.descripcion.max}
-                      error={errorDe('descripcion')}
+                    <DateField
+                      label="Fecha próxima"
+                      placeholder="Opcional"
+                      valor={fechaProxima}
+                      onChange={setFechaProxima}
+                      onBlur={() => marcarTocado('fechaProxima')}
+                      mostrarEdad={false}
+                      fechaMinima={MANANA}
+                      fechaMaxima={new Date(2100, 0, 1)}
+                      error={errorDe('fechaProxima')}
                       grande
                     />
-                  </FormCardRow>
-                </>
-              ) : null}
+                  </FormCardColumns>
+                </FormCardRow>
 
-              {tipoRegistro === 'OTRO' ? (
-                <>
-                  <FormCardRow>
-                    <TextField
-                      label="Título del registro"
-                      placeholder="Ej. Vacunación anual"
-                      value={titulo}
-                      onChangeText={setTitulo}
-                      onBlur={() => marcarTocado('titulo')}
-                      maxLength={LIMITES.historiaClinica.titulo.max}
-                      error={errorDe('titulo')}
-                      grande
-                    />
-                  </FormCardRow>
+                <FormCardRow>
+                  <ToggleField
+                    label="Requiere revisión"
+                    valor={requiereRevision}
+                    onChange={setRequiereRevision}
+                    grande
+                  />
+                </FormCardRow>
 
-                  <FormCardRow>
-                    <FormCardColumns>
-                      <DateField
-                        label="Fecha visita"
-                        obligatorio
-                        placeholder="Elegí la fecha"
-                        valor={fechaVisita}
-                        onChange={setFechaVisita}
-                        onBlur={() => marcarTocado('fechaVisita')}
-                        mostrarEdad={false}
-                        error={errorDe('fechaVisita')}
-                        grande
-                      />
+                <FormCardRow>
+                  <TextAreaField
+                    label="Descripción"
+                    obligatorio
+                    placeholder="Detalles de la visita veterinaria..."
+                    value={descripcion}
+                    onChangeText={setDescripcion}
+                    onBlur={() => marcarTocado('descripcion')}
+                    maximo={LIMITES.historiaClinica.descripcion.max}
+                    error={errorDe('descripcion')}
+                    grande
+                  />
+                </FormCardRow>
 
-                      <DateField
-                        label="Fecha próxima"
-                        placeholder="Opcional"
-                        valor={fechaProxima}
-                        onChange={setFechaProxima}
-                        onBlur={() => marcarTocado('fechaProxima')}
-                        mostrarEdad={false}
-                        fechaMinima={MANANA}
-                        fechaMaxima={new Date(2100, 0, 1)}
-                        error={errorDe('fechaProxima')}
-                        grande
-                      />
-                    </FormCardColumns>
-                  </FormCardRow>
+                <FormCardRow ultima>
+                  <DocumentField documento={documento} onChange={setDocumento} grande />
+                </FormCardRow>
+              </>
+            ) : null}
+          </FormCard>
 
-                  <FormCardRow>
-                    <ToggleField
-                      label="Requiere revisión"
-                      valor={requiereRevision}
-                      onChange={setRequiereRevision}
-                      grande
-                    />
-                  </FormCardRow>
-
-                  <FormCardRow>
-                    <TextAreaField
-                      label="Descripción"
-                      obligatorio
-                      placeholder="Detalles de la visita veterinaria..."
-                      value={descripcion}
-                      onChangeText={setDescripcion}
-                      onBlur={() => marcarTocado('descripcion')}
-                      maximo={LIMITES.historiaClinica.descripcion.max}
-                      error={errorDe('descripcion')}
-                      grande
-                    />
-                  </FormCardRow>
-
-                  <FormCardRow ultima>
-                    <DocumentField documento={documento} onChange={setDocumento} grande />
-                  </FormCardRow>
-                </>
-              ) : null}
-            </FormCard>
-
-            <View className="mt-5">
-              <CustomButton
-                title={esVacuna ? 'Guardar vacuna' : 'Guardar registro'}
-                variant="acento"
-                loading={guardando}
-                disabled={!formularioValido}
-                onPress={() => void guardar()}
-                onPressDeshabilitado={explicarQueFalta}
-              />
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
+          <View className="mt-5">
+            <CustomButton
+              title={esVacuna ? 'Guardar vacuna' : 'Guardar registro'}
+              variant="acento"
+              loading={guardando}
+              disabled={!formularioValido}
+              onPress={() => void guardar()}
+              onPressDeshabilitado={explicarQueFalta}
+            />
+          </View>
+        </FormularioConTeclado>
       </SafeAreaView>
     </View>
   );

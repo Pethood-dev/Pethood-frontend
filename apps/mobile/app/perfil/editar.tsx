@@ -15,16 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { ImagePickerAsset } from 'expo-image-picker';
 import { useNavigation, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -37,6 +28,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { BotonCircular } from '@/components/ui/BotonCircular';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { FormCard, FormCardRow } from '@/components/ui/FormCard';
+import { FormularioConTeclado } from '@/components/ui/FormularioConTeclado';
 import { TextField } from '@/components/ui/TextField';
 import { PALETA } from '@/constants/theme';
 import { useSesion } from '@/hooks/useSesion';
@@ -323,188 +315,182 @@ export default function EditarPerfilScreen() {
             <ActivityIndicator color={PALETA.accent[600]} />
           </View>
         ) : (
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            className="flex-1"
+          <FormularioConTeclado
+            showsVerticalScrollIndicator={false}
+            contentContainerClassName="px-5 pb-8 pt-4"
           >
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              contentContainerClassName="px-5 pb-8 pt-4"
-            >
-              <View className="mb-6 items-center">
-                <Pressable
-                  onPress={abrirSelectorFoto}
-                  accessibilityRole="button"
-                  accessibilityLabel="Cambiar foto de perfil"
-                  className="relative"
-                >
-                  <Avatar
-                    uri={fotoVisible}
-                    nombre={form.nombre}
-                    apellido={form.apellido}
-                    tamanio={112}
-                    variante="organic"
-                    tono="neutro"
-                  />
-                  <View className="absolute bottom-0 right-0 h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-organic-accent-600">
-                    <Ionicons name="camera" size={16} color={PALETA.blanco} />
-                  </View>
-                </Pressable>
-              </View>
-
-              <FormCard organic>
-                <FormCardRow>
-                  <TextField
-                    label="Nombre"
-                    obligatorio
-                    lapiz
-                    grande
-                    value={form.nombre}
-                    onChangeText={handleNombreChange}
-                    onBlur={() =>
-                      setFieldError('nombre', validarNombrePersona(form.nombre, 'nombre'))
-                    }
-                    error={errors.nombre}
-                    autoCapitalize="words"
-                    autoCorrect={false}
-                    autoComplete="given-name"
-                    textContentType="givenName"
-                    maxLength={50}
-                  />
-                </FormCardRow>
-                <FormCardRow>
-                  <TextField
-                    label="Apellido"
-                    obligatorio
-                    lapiz
-                    grande
-                    value={form.apellido}
-                    onChangeText={handleApellidoChange}
-                    onBlur={() =>
-                      setFieldError('apellido', validarNombrePersona(form.apellido, 'apellido'))
-                    }
-                    error={errors.apellido}
-                    autoCapitalize="words"
-                    autoCorrect={false}
-                    autoComplete="family-name"
-                    textContentType="familyName"
-                    maxLength={50}
-                  />
-                </FormCardRow>
-                <FormCardRow>
-                  <TextField
-                    label="Correo"
-                    obligatorio
-                    lapiz
-                    grande
-                    value={form.email}
-                    onChangeText={handleEmailChange}
-                    onBlur={() => setFieldError('email', validarEmail(form.email))}
-                    error={errors.email}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    textContentType="emailAddress"
-                  />
-                </FormCardRow>
-                <FormCardRow>
-                  <TextField
-                    label="Teléfono"
-                    obligatorio
-                    lapiz
-                    grande
-                    value={form.telefono}
-                    onChangeText={handleTelefonoChange}
-                    onBlur={() => setFieldError('telefono', validarTelefono(form.telefono))}
-                    error={errors.telefono}
-                    keyboardType="phone-pad"
-                    autoComplete="tel"
-                    textContentType="telephoneNumber"
-                    maxLength={16}
-                  />
-                </FormCardRow>
-                <FormCardRow ultima>
-                  <TextField
-                    label="Barrio / ciudad"
-                    obligatorio
-                    lapiz
-                    grande
-                    value={form.ubicacion}
-                    onChangeText={handleUbicacionChange}
-                    onBlur={() => setFieldError('ubicacion', validarUbicacion(form.ubicacion))}
-                    error={errors.ubicacion}
-                    autoCapitalize="words"
-                    maxLength={80}
-                  />
-                </FormCardRow>
-              </FormCard>
-
-              {formError ? (
-                <Text className="mt-3 text-center text-sm text-red-500">{formError}</Text>
-              ) : null}
-
-              {/* Botones mutuamente excluyentes con los de guardado: mientras hay cambios sin
-                  guardar no tiene sentido ofrecer cerrar sesión o dar de baja la cuenta a
-                  mitad de una edición, así que un set reemplaza al otro por completo. */}
-              {hayCambios ? (
-                <View className="mt-6 flex-row gap-3">
-                  <View className="flex-1">
-                    <CustomButton
-                      title="Cancelar"
-                      variant="acento-borde"
-                      style={FORMA_BOTON_ORGANIC}
-                      onPress={cancelarEdicion}
-                    />
-                  </View>
-                  <View className="flex-1">
-                    <CustomButton
-                      title="Guardar cambios"
-                      variant="acento"
-                      style={FORMA_BOTON_ORGANIC_PRINCIPAL}
-                      loading={guardando}
-                      disabled={!formularioValido}
-                      onPress={() => void guardar()}
-                      onPressDeshabilitado={explicarQueFalta}
-                    />
-                  </View>
+            <View className="mb-6 items-center">
+              <Pressable
+                onPress={abrirSelectorFoto}
+                accessibilityRole="button"
+                accessibilityLabel="Cambiar foto de perfil"
+                className="relative"
+              >
+                <Avatar
+                  uri={fotoVisible}
+                  nombre={form.nombre}
+                  apellido={form.apellido}
+                  tamanio={112}
+                  variante="organic"
+                  tono="neutro"
+                />
+                <View className="absolute bottom-0 right-0 h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-organic-accent-600">
+                  <Ionicons name="camera" size={16} color={PALETA.blanco} />
                 </View>
-              ) : (
-                <View className="mt-6 gap-3">
+              </Pressable>
+            </View>
+
+            <FormCard organic>
+              <FormCardRow>
+                <TextField
+                  label="Nombre"
+                  obligatorio
+                  lapiz
+                  grande
+                  value={form.nombre}
+                  onChangeText={handleNombreChange}
+                  onBlur={() =>
+                    setFieldError('nombre', validarNombrePersona(form.nombre, 'nombre'))
+                  }
+                  error={errors.nombre}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  autoComplete="given-name"
+                  textContentType="givenName"
+                  maxLength={50}
+                />
+              </FormCardRow>
+              <FormCardRow>
+                <TextField
+                  label="Apellido"
+                  obligatorio
+                  lapiz
+                  grande
+                  value={form.apellido}
+                  onChangeText={handleApellidoChange}
+                  onBlur={() =>
+                    setFieldError('apellido', validarNombrePersona(form.apellido, 'apellido'))
+                  }
+                  error={errors.apellido}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  autoComplete="family-name"
+                  textContentType="familyName"
+                  maxLength={50}
+                />
+              </FormCardRow>
+              <FormCardRow>
+                <TextField
+                  label="Correo"
+                  obligatorio
+                  lapiz
+                  grande
+                  value={form.email}
+                  onChangeText={handleEmailChange}
+                  onBlur={() => setFieldError('email', validarEmail(form.email))}
+                  error={errors.email}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  textContentType="emailAddress"
+                />
+              </FormCardRow>
+              <FormCardRow>
+                <TextField
+                  label="Teléfono"
+                  obligatorio
+                  lapiz
+                  grande
+                  value={form.telefono}
+                  onChangeText={handleTelefonoChange}
+                  onBlur={() => setFieldError('telefono', validarTelefono(form.telefono))}
+                  error={errors.telefono}
+                  keyboardType="phone-pad"
+                  autoComplete="tel"
+                  textContentType="telephoneNumber"
+                  maxLength={16}
+                />
+              </FormCardRow>
+              <FormCardRow ultima>
+                <TextField
+                  label="Barrio / ciudad"
+                  obligatorio
+                  lapiz
+                  grande
+                  value={form.ubicacion}
+                  onChangeText={handleUbicacionChange}
+                  onBlur={() => setFieldError('ubicacion', validarUbicacion(form.ubicacion))}
+                  error={errors.ubicacion}
+                  autoCapitalize="words"
+                  maxLength={80}
+                />
+              </FormCardRow>
+            </FormCard>
+
+            {formError ? (
+              <Text className="mt-3 text-center text-sm text-red-500">{formError}</Text>
+            ) : null}
+
+            {/* Botones mutuamente excluyentes con los de guardado: mientras hay cambios sin
+                guardar no tiene sentido ofrecer cerrar sesión o dar de baja la cuenta a
+                mitad de una edición, así que un set reemplaza al otro por completo. */}
+            {hayCambios ? (
+              <View className="mt-6 flex-row gap-3">
+                <View className="flex-1">
+                  <CustomButton
+                    title="Cancelar"
+                    variant="acento-borde"
+                    style={FORMA_BOTON_ORGANIC}
+                    onPress={cancelarEdicion}
+                  />
+                </View>
+                <View className="flex-1">
+                  <CustomButton
+                    title="Guardar cambios"
+                    variant="acento"
+                    style={FORMA_BOTON_ORGANIC_PRINCIPAL}
+                    loading={guardando}
+                    disabled={!formularioValido}
+                    onPress={() => void guardar()}
+                    onPressDeshabilitado={explicarQueFalta}
+                  />
+                </View>
+              </View>
+            ) : (
+              <View className="mt-6 gap-3">
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => void salir()}
+                  style={FORMA_BOTON_ORGANIC}
+                  className="flex-row items-center justify-center gap-2 border border-organic-neutral-300 bg-organic-neutral-100 py-4 active:opacity-80"
+                >
+                  <Ionicons name="log-out-outline" size={20} color={PALETA.estado.error} />
+                  <Text className="font-cuerpo-semi text-base text-red-600">Cerrar sesión</Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => router.push('/perfil/password' as Href)}
+                  className="items-center py-2"
+                >
+                  <Text className="font-cuerpo-semi text-base text-organic-accent-600">
+                    Cambiar contraseña
+                  </Text>
+                </Pressable>
+
+                {!(usuario?.roles ?? []).includes('ADMIN') ? (
                   <Pressable
                     accessibilityRole="button"
-                    onPress={() => void salir()}
-                    style={FORMA_BOTON_ORGANIC}
-                    className="flex-row items-center justify-center gap-2 border border-organic-neutral-300 bg-organic-neutral-100 py-4 active:opacity-80"
+                    onPress={() => setConfirmarBaja(true)}
+                    className="items-center py-3 active:opacity-70"
                   >
-                    <Ionicons name="log-out-outline" size={20} color={PALETA.estado.error} />
-                    <Text className="font-cuerpo-semi text-base text-red-600">Cerrar sesión</Text>
-                  </Pressable>
-
-                  <Pressable
-                    onPress={() => router.push('/perfil/password' as Href)}
-                    className="items-center py-2"
-                  >
-                    <Text className="font-cuerpo-semi text-base text-organic-accent-600">
-                      Cambiar contraseña
+                    <Text className="font-cuerpo text-base text-red-500">
+                      Dar de baja mi cuenta
                     </Text>
                   </Pressable>
-
-                  {!(usuario?.roles ?? []).includes('ADMIN') ? (
-                    <Pressable
-                      accessibilityRole="button"
-                      onPress={() => setConfirmarBaja(true)}
-                      className="items-center py-3 active:opacity-70"
-                    >
-                      <Text className="font-cuerpo text-base text-red-500">
-                        Dar de baja mi cuenta
-                      </Text>
-                    </Pressable>
-                  ) : null}
-                </View>
-              )}
-            </ScrollView>
-          </KeyboardAvoidingView>
+                ) : null}
+              </View>
+            )}
+          </FormularioConTeclado>
         )}
       </SafeAreaView>
 

@@ -19,14 +19,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CustomButton } from '@/components/CustomButton';
@@ -35,6 +28,7 @@ import { useToast } from '@/components/feedback/Toast';
 import { ChipGroupField } from '@/components/ui/ChipGroupField';
 import { DateField } from '@/components/ui/DateField';
 import { FormCard, FormCardColumns, FormCardRow } from '@/components/ui/FormCard';
+import { FormularioConTeclado } from '@/components/ui/FormularioConTeclado';
 import { Nota } from '@/components/ui/Nota';
 import { PhotoPicker, type FotoElegida } from '@/components/ui/PhotoPicker';
 import { SegmentedField } from '@/components/ui/SegmentedField';
@@ -429,249 +423,243 @@ export default function CrearMascotaScreen() {
         {cargandoCatalogos ? (
           <EstadoCargando />
         ) : (
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          <FormularioConTeclado
             className="flex-1"
+            contentContainerClassName="px-4 pb-10"
+            showsVerticalScrollIndicator={false}
           >
-            <ScrollView
-              className="flex-1"
-              contentContainerClassName="px-4 pb-10"
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
+            {paraPublicar ? (
+              <View className="mt-4">
+                <Nota texto="Esta mascota se carga para darla en adopción. Cuando la crees, volvés a la publicación con ella ya elegida." />
+              </View>
+            ) : null}
+
+            <PhotoPicker foto={foto} onChange={setFoto} error={errorDe('foto')} grande />
+
+            <FormCard>
+              <FormCardRow>
+                <TextField
+                  label="Nombre"
+                  obligatorio
+                  placeholder="Nombre de la mascota"
+                  value={nombre}
+                  onChangeText={setNombre}
+                  onBlur={() => marcarTocado('nombre')}
+                  maxLength={LIMITES.mascota.nombre.max}
+                  error={errorDe('nombre')}
+                  grande
+                />
+              </FormCardRow>
+
+              <FormCardRow>
+                <FormCardColumns>
+                  <SelectField
+                    label="Especie"
+                    obligatorio
+                    placeholder="Elegí"
+                    opciones={especies.map((especie) => ({
+                      valor: especie.id,
+                      etiqueta: especie.nombre,
+                    }))}
+                    valor={especieId}
+                    onChange={(nuevaEspecie) => {
+                      setEspecieId(nuevaEspecie);
+                      setRazaId(null);
+                      // Las vacunas elegidas eran del plan de la otra especie.
+                      if (nuevaEspecie !== especieId) setVacunas([]);
+                    }}
+                    onBlur={() => marcarTocado('especieId')}
+                    error={errorDe('especieId')}
+                    grande
+                  />
+
+                  <SelectField
+                    label="Sexo"
+                    obligatorio
+                    placeholder="Elegí"
+                    opciones={OPCIONES_GENERO}
+                    valor={genero}
+                    onChange={setGenero}
+                    onBlur={() => marcarTocado('genero')}
+                    error={errorDe('genero')}
+                    grande
+                  />
+                </FormCardColumns>
+              </FormCardRow>
+
+              <FormCardRow>
+                <FormCardColumns>
+                  <SelectField
+                    label="Raza"
+                    obligatorio
+                    placeholder={cargandoRazas ? 'Cargando…' : 'Elegí'}
+                    opciones={razas.map((raza) => ({ valor: raza.id, etiqueta: raza.nombre }))}
+                    valor={razaId}
+                    onChange={setRazaId}
+                    onBlur={() => marcarTocado('razaId')}
+                    deshabilitado={especieId === null || cargandoRazas}
+                    textoDeshabilitado="Elegí la especie"
+                    error={errorDe('razaId')}
+                    grande
+                  />
+
+                  <DateField
+                    label="Nacimiento"
+                    obligatorio
+                    placeholder="Elegí la fecha"
+                    valor={fechaNacimiento}
+                    onChange={setFechaNacimiento}
+                    onBlur={() => marcarTocado('fechaNacimiento')}
+                    error={errorDe('fechaNacimiento')}
+                    grande
+                  />
+                </FormCardColumns>
+              </FormCardRow>
+
+              <FormCardRow>
+                <FormCardColumns>
+                  <SelectField
+                    label="Tamaño"
+                    obligatorio
+                    placeholder="Elegí"
+                    opciones={OPCIONES_TAMANIO}
+                    valor={tamanio}
+                    onChange={setTamanio}
+                    onBlur={() => marcarTocado('tamanio')}
+                    error={errorDe('tamanio')}
+                    grande
+                  />
+
+                  <TextField
+                    label="Peso (kg)"
+                    obligatorio
+                    placeholder="Ej. 12,5"
+                    keyboardType="decimal-pad"
+                    value={peso}
+                    onChangeText={(texto) =>
+                      setPeso(filtrarEntradaDecimal(texto, LIMITES.mascota.peso.decimales))
+                    }
+                    onBlur={() => marcarTocado('peso')}
+                    error={errorDe('peso')}
+                    grande
+                  />
+                </FormCardColumns>
+              </FormCardRow>
+
+              <FormCardRow>
+                <ToggleField
+                  label={textoSegunGenero(genero, 'Castrado / Esterilizado', 'Castrada / Esterilizada')}
+                  valor={castrado}
+                  onChange={setCastrado}
+                  grande
+                />
+              </FormCardRow>
+
+              <FormCardRow>
+                <SelectorVacunas
+                  opciones={vacunasEspecie}
+                  elegidas={vacunas}
+                  onChange={setVacunas}
+                  especieElegida={especieId !== null}
+                  cargando={cargandoVacunas}
+                  // Una fecha recién elegida ya muestra su error; una vacía, recién al guardar.
+                  errores={Object.fromEntries(
+                    vacunas
+                      .filter((vacuna) => mostrarErrores || vacuna.fecha !== null)
+                      .map((vacuna) => [vacuna.tipo, erroresVacunas[vacuna.tipo]]),
+                  )}
+                  fechaMinima={fechaNacimiento ?? undefined}
+                  grande
+                />
+              </FormCardRow>
+
+              {vistaRefugio ? (
+                <FormCardRow>
+                  <ChipGroupField
+                    label="Estado"
+                    obligatorio
+                    opciones={estados.map((estado) => ({
+                      valor: estado.id,
+                      etiqueta: estiloDeEstado(estado.nombre).etiqueta,
+                    }))}
+                    valor={estadoMascotaId}
+                    onChange={(nuevo) => {
+                      setEstadoMascotaId(nuevo);
+                      marcarTocado('estadoMascotaId');
+                    }}
+                    error={errorDe('estadoMascotaId')}
+                    grande
+                  />
+                </FormCardRow>
+              ) : paraPublicar ? null : (
+                // Para publicar, el destino va fijo en "Para adopción": no se pregunta.
+                <FormCardRow>
+                  <SegmentedField
+                    label="¿Para adopción o es propia?"
+                    obligatorio
+                    opciones={OPCIONES_DESTINO}
+                    valor={destino}
+                    onChange={(nuevo) => {
+                      setDestino(nuevo);
+                      marcarTocado('destino');
+                    }}
+                    error={errorDe('destino')}
+                    grande
+                  />
+                </FormCardRow>
+              )}
+
+              <FormCardRow ultima>
+                <TextAreaField
+                  label="Descripción"
+                  placeholder="Contanos sobre su personalidad…"
+                  value={descripcion}
+                  onChangeText={setDescripcion}
+                  onBlur={() => marcarTocado('descripcion')}
+                  maximo={LIMITES.mascota.descripcion.max}
+                  error={errorDe('descripcion')}
+                  grande
+                />
+              </FormCardRow>
+            </FormCard>
+
+            <View className="mt-5 gap-3">
               {paraPublicar ? (
-                <View className="mt-4">
-                  <Nota texto="Esta mascota se carga para darla en adopción. Cuando la crees, volvés a la publicación con ella ya elegida." />
-                </View>
+                <CustomButton
+                  title="Crear mascota y volver a la publicación"
+                  variant="acento"
+                  loading={guardando}
+                  disabled={!formularioValido || !permitePublicar}
+                  onPress={() => void guardar(true)}
+                  onPressDeshabilitado={explicarQueFalta}
+                />
               ) : null}
 
-              <PhotoPicker foto={foto} onChange={setFoto} error={errorDe('foto')} grande />
+              {mostrarCrearMascota ? (
+                <CustomButton
+                  title="Crear mascota"
+                  variant="acento"
+                  loading={guardando}
+                  disabled={!formularioValido}
+                  onPress={() => void guardar(false)}
+                  onPressDeshabilitado={explicarQueFalta}
+                />
+              ) : null}
 
-              <FormCard>
-                <FormCardRow>
-                  <TextField
-                    label="Nombre"
-                    obligatorio
-                    placeholder="Nombre de la mascota"
-                    value={nombre}
-                    onChangeText={setNombre}
-                    onBlur={() => marcarTocado('nombre')}
-                    maxLength={LIMITES.mascota.nombre.max}
-                    error={errorDe('nombre')}
-                    grande
-                  />
-                </FormCardRow>
-
-                <FormCardRow>
-                  <FormCardColumns>
-                    <SelectField
-                      label="Especie"
-                      obligatorio
-                      placeholder="Elegí"
-                      opciones={especies.map((especie) => ({
-                        valor: especie.id,
-                        etiqueta: especie.nombre,
-                      }))}
-                      valor={especieId}
-                      onChange={(nuevaEspecie) => {
-                        setEspecieId(nuevaEspecie);
-                        setRazaId(null);
-                        // Las vacunas elegidas eran del plan de la otra especie.
-                        if (nuevaEspecie !== especieId) setVacunas([]);
-                      }}
-                      onBlur={() => marcarTocado('especieId')}
-                      error={errorDe('especieId')}
-                      grande
-                    />
-
-                    <SelectField
-                      label="Sexo"
-                      obligatorio
-                      placeholder="Elegí"
-                      opciones={OPCIONES_GENERO}
-                      valor={genero}
-                      onChange={setGenero}
-                      onBlur={() => marcarTocado('genero')}
-                      error={errorDe('genero')}
-                      grande
-                    />
-                  </FormCardColumns>
-                </FormCardRow>
-
-                <FormCardRow>
-                  <FormCardColumns>
-                    <SelectField
-                      label="Raza"
-                      obligatorio
-                      placeholder={cargandoRazas ? 'Cargando…' : 'Elegí'}
-                      opciones={razas.map((raza) => ({ valor: raza.id, etiqueta: raza.nombre }))}
-                      valor={razaId}
-                      onChange={setRazaId}
-                      onBlur={() => marcarTocado('razaId')}
-                      deshabilitado={especieId === null || cargandoRazas}
-                      textoDeshabilitado="Elegí la especie"
-                      error={errorDe('razaId')}
-                      grande
-                    />
-
-                    <DateField
-                      label="Nacimiento"
-                      obligatorio
-                      placeholder="Elegí la fecha"
-                      valor={fechaNacimiento}
-                      onChange={setFechaNacimiento}
-                      onBlur={() => marcarTocado('fechaNacimiento')}
-                      error={errorDe('fechaNacimiento')}
-                      grande
-                    />
-                  </FormCardColumns>
-                </FormCardRow>
-
-                <FormCardRow>
-                  <FormCardColumns>
-                    <SelectField
-                      label="Tamaño"
-                      obligatorio
-                      placeholder="Elegí"
-                      opciones={OPCIONES_TAMANIO}
-                      valor={tamanio}
-                      onChange={setTamanio}
-                      onBlur={() => marcarTocado('tamanio')}
-                      error={errorDe('tamanio')}
-                      grande
-                    />
-
-                    <TextField
-                      label="Peso (kg)"
-                      obligatorio
-                      placeholder="Ej. 12,5"
-                      keyboardType="decimal-pad"
-                      value={peso}
-                      onChangeText={(texto) =>
-                        setPeso(filtrarEntradaDecimal(texto, LIMITES.mascota.peso.decimales))
-                      }
-                      onBlur={() => marcarTocado('peso')}
-                      error={errorDe('peso')}
-                      grande
-                    />
-                  </FormCardColumns>
-                </FormCardRow>
-
-                <FormCardRow>
-                  <ToggleField
-                    label={textoSegunGenero(genero, 'Castrado / Esterilizado', 'Castrada / Esterilizada')}
-                    valor={castrado}
-                    onChange={setCastrado}
-                    grande
-                  />
-                </FormCardRow>
-
-                <FormCardRow>
-                  <SelectorVacunas
-                    opciones={vacunasEspecie}
-                    elegidas={vacunas}
-                    onChange={setVacunas}
-                    especieElegida={especieId !== null}
-                    cargando={cargandoVacunas}
-                    // Una fecha recién elegida ya muestra su error; una vacía, recién al guardar.
-                    errores={Object.fromEntries(
-                      vacunas
-                        .filter((vacuna) => mostrarErrores || vacuna.fecha !== null)
-                        .map((vacuna) => [vacuna.tipo, erroresVacunas[vacuna.tipo]]),
-                    )}
-                    fechaMinima={fechaNacimiento ?? undefined}
-                    grande
-                  />
-                </FormCardRow>
-
-                {vistaRefugio ? (
-                  <FormCardRow>
-                    <ChipGroupField
-                      label="Estado"
-                      obligatorio
-                      opciones={estados.map((estado) => ({
-                        valor: estado.id,
-                        etiqueta: estiloDeEstado(estado.nombre).etiqueta,
-                      }))}
-                      valor={estadoMascotaId}
-                      onChange={(nuevo) => {
-                        setEstadoMascotaId(nuevo);
-                        marcarTocado('estadoMascotaId');
-                      }}
-                      error={errorDe('estadoMascotaId')}
-                      grande
-                    />
-                  </FormCardRow>
-                ) : paraPublicar ? null : (
-                  // Para publicar, el destino va fijo en "Para adopción": no se pregunta.
-                  <FormCardRow>
-                    <SegmentedField
-                      label="¿Para adopción o es propia?"
-                      obligatorio
-                      opciones={OPCIONES_DESTINO}
-                      valor={destino}
-                      onChange={(nuevo) => {
-                        setDestino(nuevo);
-                        marcarTocado('destino');
-                      }}
-                      error={errorDe('destino')}
-                      grande
-                    />
-                  </FormCardRow>
-                )}
-
-                <FormCardRow ultima>
-                  <TextAreaField
-                    label="Descripción"
-                    placeholder="Contanos sobre su personalidad…"
-                    value={descripcion}
-                    onChangeText={setDescripcion}
-                    onBlur={() => marcarTocado('descripcion')}
-                    maximo={LIMITES.mascota.descripcion.max}
-                    error={errorDe('descripcion')}
-                    grande
-                  />
-                </FormCardRow>
-              </FormCard>
-
-              <View className="mt-5 gap-3">
-                {paraPublicar ? (
-                  <CustomButton
-                    title="Crear mascota y volver a la publicación"
-                    variant="acento"
-                    loading={guardando}
-                    disabled={!formularioValido || !permitePublicar}
-                    onPress={() => void guardar(true)}
-                    onPressDeshabilitado={explicarQueFalta}
-                  />
-                ) : null}
-
-                {mostrarCrearMascota ? (
-                  <CustomButton
-                    title="Crear mascota"
-                    variant="acento"
-                    loading={guardando}
-                    disabled={!formularioValido}
-                    onPress={() => void guardar(false)}
-                    onPressDeshabilitado={explicarQueFalta}
-                  />
-                ) : null}
-
-                {mostrarCrearPublicacion ? (
-                  <CustomButton
-                    title="Crear publicación"
-                    // Llamativo cuando es la única acción posible (adoptante que eligió
-                    // "Para adopción"); en el refugio conviven las dos, así que se mantiene
-                    // como acción secundaria.
-                    variant={mostrarCrearMascota ? 'acento-borde' : 'acento'}
-                    disabled={!formularioValido || !permitePublicar || guardando}
-                    onPress={() => void guardar(true)}
-                    onPressDeshabilitado={explicarQueFalta}
-                  />
-                ) : null}
-              </View>
-            </ScrollView>
-          </KeyboardAvoidingView>
+              {mostrarCrearPublicacion ? (
+                <CustomButton
+                  title="Crear publicación"
+                  // Llamativo cuando es la única acción posible (adoptante que eligió
+                  // "Para adopción"); en el refugio conviven las dos, así que se mantiene
+                  // como acción secundaria.
+                  variant={mostrarCrearMascota ? 'acento-borde' : 'acento'}
+                  disabled={!formularioValido || !permitePublicar || guardando}
+                  onPress={() => void guardar(true)}
+                  onPressDeshabilitado={explicarQueFalta}
+                />
+              ) : null}
+            </View>
+          </FormularioConTeclado>
         )}
       </SafeAreaView>
     </View>

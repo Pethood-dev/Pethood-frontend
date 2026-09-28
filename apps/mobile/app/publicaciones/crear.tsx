@@ -17,14 +17,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { type Href, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -39,6 +32,7 @@ import {
   type ErroresCamposPublicacion,
   type ValoresPublicacion,
 } from '@/components/publicaciones/CamposPublicacion';
+import { FormularioConTeclado } from '@/components/ui/FormularioConTeclado';
 import { SelectField } from '@/components/ui/SelectField';
 import { estiloDeEstado } from '@/constants/EstadosMascota';
 import { tomarMascotaParaPublicar } from '@/lib/mascotaParaPublicar';
@@ -245,14 +239,9 @@ export default function CrearPublicacionScreen() {
             <CustomButton title="Cargar mascota" variant="acento" onPress={irACargarMascota} />
           </EstadoVacio>
         ) : (
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            className="flex-1"
-          >
-            <ScrollView
+          <FormularioConTeclado
               className="flex-1"
               contentContainerClassName="px-4 pb-10"
-              keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
               <CamposPublicacion
@@ -299,8 +288,7 @@ export default function CrearPublicacionScreen() {
                   onPressDeshabilitado={explicarQueFalta}
                 />
               </View>
-            </ScrollView>
-          </KeyboardAvoidingView>
+          </FormularioConTeclado>
         )}
       </SafeAreaView>
     </Animated.View>

@@ -12,13 +12,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CustomButton } from '@/components/CustomButton';
 import { EstadoCargando, EstadoError } from '@/components/feedback/EstadosPantalla';
 import { useToast } from '@/components/feedback/Toast';
 import { FormCard, FormCardRow } from '@/components/ui/FormCard';
+import { FormularioConTeclado } from '@/components/ui/FormularioConTeclado';
 import { Nota } from '@/components/ui/Nota';
 import { TextAreaField } from '@/components/ui/TextAreaField';
 import { PALETA } from '@/constants/theme';
@@ -168,51 +169,45 @@ export default function NuevaPreguntaSeguimientoScreen() {
             onAccion={() => router.back()}
           />
         ) : (
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          <FormularioConTeclado
             className="flex-1"
+            contentContainerClassName="px-4 pb-10 pt-4"
+            showsVerticalScrollIndicator={false}
           >
-            <ScrollView
-              className="flex-1"
-              contentContainerClassName="px-4 pb-10 pt-4"
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              <View className="mb-3.5">
-                <Nota texto={explicacion(detalle)} />
-              </View>
+            <View className="mb-3.5">
+              <Nota texto={explicacion(detalle)} />
+            </View>
 
-              <FormCard>
-                <FormCardRow ultima>
-                  <TextAreaField
-                    label="Tu pregunta"
-                    obligatorio
-                    placeholder={`¿Qué querés saber de ${detalle.mascota.nombre ?? 'la mascota'}?`}
-                    value={texto}
-                    onChangeText={setTexto}
-                    onBlur={() => setTocado(true)}
-                    maximo={LIMITES.seguimiento.pregunta.max}
-                    error={mostrarErrores || tocado ? (errorTexto ?? undefined) : undefined}
-                    grande
-                  />
-                </FormCardRow>
-              </FormCard>
-
-              <View className="mt-5">
-                <CustomButton
-                  title="Enviar pregunta"
-                  variant="acento"
-                  loading={enviando}
-                  disabled={Boolean(errorTexto)}
-                  onPress={() => void enviar()}
-                  onPressDeshabilitado={() => {
-                    setMostrarErrores(true);
-                    toast.mostrarAdvertencia(errorTexto ?? 'Revisá la pregunta.');
-                  }}
+            <FormCard>
+              <FormCardRow ultima>
+                <TextAreaField
+                  label="Tu pregunta"
+                  obligatorio
+                  placeholder={`¿Qué querés saber de ${detalle.mascota.nombre ?? 'la mascota'}?`}
+                  value={texto}
+                  onChangeText={setTexto}
+                  onBlur={() => setTocado(true)}
+                  maximo={LIMITES.seguimiento.pregunta.max}
+                  error={mostrarErrores || tocado ? (errorTexto ?? undefined) : undefined}
+                  grande
                 />
-              </View>
-            </ScrollView>
-          </KeyboardAvoidingView>
+              </FormCardRow>
+            </FormCard>
+
+            <View className="mt-5">
+              <CustomButton
+                title="Enviar pregunta"
+                variant="acento"
+                loading={enviando}
+                disabled={Boolean(errorTexto)}
+                onPress={() => void enviar()}
+                onPressDeshabilitado={() => {
+                  setMostrarErrores(true);
+                  toast.mostrarAdvertencia(errorTexto ?? 'Revisá la pregunta.');
+                }}
+              />
+            </View>
+          </FormularioConTeclado>
         )}
       </SafeAreaView>
     </View>

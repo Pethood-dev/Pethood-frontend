@@ -15,7 +15,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -30,6 +30,7 @@ import {
   type CampoValidado,
   type ValoresPublicacion,
 } from '@/components/publicaciones/CamposPublicacion';
+import { FormularioConTeclado } from '@/components/ui/FormularioConTeclado';
 import type { FotoElegida } from '@/components/ui/PhotosPickerField';
 import { TextField } from '@/components/ui/TextField';
 import { PALETA } from '@/constants/theme';
@@ -192,14 +193,9 @@ export default function EditarPublicacionScreen() {
             etiquetaAccion="Volver"
           />
         ) : (
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            className="flex-1"
-          >
-            <ScrollView
+          <FormularioConTeclado
               className="flex-1"
               contentContainerClassName="px-4 pb-10"
-              keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
               <CamposPublicacion
@@ -230,8 +226,7 @@ export default function EditarPublicacionScreen() {
                   onPressDeshabilitado={explicarQueFalta}
                 />
               </View>
-            </ScrollView>
-          </KeyboardAvoidingView>
+          </FormularioConTeclado>
         )}
       </SafeAreaView>
     </Animated.View>
