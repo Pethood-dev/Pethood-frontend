@@ -129,13 +129,13 @@ export default function Landing() {
 
         <section className="why">
           <div className="wrap grid2">
-            <div
-              className="ph wide"
-              role="img"
-              aria-label="Imagen pendiente: captura del panel web"
-            >
-              Imagen pendiente: captura del panel web / dashboard — 16:9
-            </div>
+            <Image
+              src="/img/panel.jpg"
+              alt="Perro junto a una notebook mostrando su foto"
+              width={1200}
+              height={800}
+              style={{ width: "100%", height: "auto", borderRadius: 20 }}
+            />
             <div>
               <h2>Por qué existe</h2>
               <p>
@@ -163,13 +163,13 @@ export default function Landing() {
                 completar el perfil, pero no publicar hasta que el equipo de
                 administración la apruebe.
               </p>
-              <div
-                className="ph"
-                role="img"
-                aria-label="Imagen pendiente: foto del refugio"
-              >
-                Imagen pendiente: foto del refugio
-              </div>
+              <Image
+                src="/img/refugio.jpg"
+                alt="Perro sonriendo esperando un hogar"
+                width={1200}
+                height={800}
+                style={{ width: "100%", height: "auto", borderRadius: 14 }}
+              />
             </div>
 
             <form aria-label="Registro de refugio u ONG">

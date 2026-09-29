@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import type { ReactNode } from "react";
 import { Mail, MapPin, MessageCircle } from "lucide-react";
 import { EQUIPO, SiteFooter } from "@/components/landing/SiteFooter";
@@ -31,7 +32,13 @@ const VALORES = [
   { t: "Comunidad", d: "Refugios, ONGs y adoptantes en un mismo lugar, con reglas claras y moderación del equipo de administración." },
 ];
 
-const iniciales = (n: string) => n.split(" ").map((p) => p[0]).slice(0, 2).join("");
+const FOTOS: Record<string, string> = {
+  "Agustín Leyes": "Agustin-leyes.jpeg",
+  "Camila Fabián": "Camila-Fabian.jpeg",
+  "Juan Ignacio Castro": "Juan-Ignacio-Castro.jpeg",
+  "Matías Hansen": "Matias-Hansen.jpeg",
+  "Nicolás Correa": "Nicolas-Correa.png",
+};
 
 export default function EquipoPage() {
   return (
@@ -42,13 +49,10 @@ export default function EquipoPage() {
         <p>Las personas detrás de PetHood y las formas de escribirnos.</p>
 
         <section className="bloque">
-          <div className="grid2">
-            <div className="muted">
-              <h2>Quiénes somos</h2>
-              <p>Somos estudiantes de Ingeniería en Sistemas de Información de la UTN Regional Mendoza. PetHood nació como proyecto final, pero lo pensamos desde el primer día para funcionar como un producto real.</p>
-              <p style={{ marginTop: 12 }}>Trabajamos junto a refugios y ONGs para que cada adopción sea responsable, trazable y acompañada en el tiempo.</p>
-            </div>
-            <div className="ph wide" role="img" aria-label="Imagen pendiente: foto del equipo">Imagen pendiente: foto del equipo</div>
+          <div className="muted">
+            <h2>Quiénes somos</h2>
+            <p>Somos estudiantes de Ingeniería en Sistemas de Información de la UTN Regional Mendoza. PetHood nació como proyecto final, pero lo pensamos desde el primer día para funcionar como un producto real.</p>
+            <p style={{ marginTop: 12 }}>Trabajamos junto a refugios y ONGs para que cada adopción sea responsable, trazable y acompañada en el tiempo.</p>
           </div>
         </section>
 
@@ -69,7 +73,7 @@ export default function EquipoPage() {
           <ul className="miembros">
             {EQUIPO.map((n) => (
               <li key={n} className="miembro">
-                <span className="avatar" aria-hidden>{iniciales(n)}</span>
+                <Image className="avatar" src={`/team/${FOTOS[n]}`} alt={n} width={72} height={72} />
                 <strong>{n}</strong>
                 <span>Ing. en Sistemas · UTN FRM</span>
               </li>

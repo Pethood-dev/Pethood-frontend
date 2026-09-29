@@ -127,7 +127,7 @@ export function RefugiosTabla({
       {exito && <Feedback tipo="exito" mensaje={exito} />}
 
       <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white">
-        <table className="w-full text-left text-sm">
+        <table className="tabla-apilable w-full text-left text-sm">
           <thead className="border-b border-neutral-200 bg-neutral-50 text-xs uppercase text-neutral-500">
             <tr>
               <th className="px-4 py-3 text-center">Nombre</th>
@@ -147,7 +147,7 @@ export function RefugiosTabla({
             )}
             {lista.refugios.map((refugio) => (
               <tr key={refugio.id} className="border-b border-neutral-100 last:border-0">
-                <td className="px-4 py-3 text-center">
+                <td data-label="Nombre" className="px-4 py-3 text-center">
                   <button
                     type="button"
                     onClick={() => setModalDetalle(refugio.id)}
@@ -156,12 +156,12 @@ export function RefugiosTabla({
                     {refugio.nombre}
                   </button>
                 </td>
-                <td className="px-4 py-3 text-center text-neutral-600">{refugio.email ?? refugio.telefono ?? "—"}</td>
-                <td className="px-4 py-3 text-center">
+                <td data-label="Contacto" className="px-4 py-3 text-center text-neutral-600">{refugio.email ?? refugio.telefono ?? "—"}</td>
+                <td data-label="Estado" className="px-4 py-3 text-center">
                   <EstadoBadge estado={refugio.estado} />
                 </td>
-                <td className="px-4 py-3 text-center text-neutral-600">{refugio.verificado ? "Sí" : "No"}</td>
-                <td className="px-4 py-3">
+                <td data-label="Verificado" className="px-4 py-3 text-center text-neutral-600">{refugio.verificado ? "Sí" : "No"}</td>
+                <td data-label="Acciones" className="px-4 py-3">
                   <div className="flex flex-wrap justify-center gap-2">
                     {refugio.estado === "Pendiente_Verificacion" && (
                       <AccionButton

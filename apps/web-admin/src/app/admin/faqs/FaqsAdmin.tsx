@@ -45,7 +45,11 @@ export function FaqsAdmin({ categorias, token }: { categorias: CategoriaConFaqs[
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-neutral-900">Preguntas frecuentes</h1>
+          <p className="text-sm text-neutral-700">Categorías y preguntas que ve el público en /faq y en la app.</p>
+        </div>
         <Button onClick={() => setDialogo({ tipo: "categoria" })}>Nueva categoría</Button>
       </div>
 
