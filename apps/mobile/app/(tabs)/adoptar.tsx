@@ -12,7 +12,7 @@
  * oculta (ver `(tabs)/_layout.tsx`) y, si igual se llega por un link, se vuelve a Inicio.
  */
 import { Ionicons } from '@expo/vector-icons';
-import { Redirect, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -63,6 +63,15 @@ function MazoAdopcion() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalFiltros, setModalFiltros] = useState(false);
+
+  // El botón de filtros de la tarjeta de Inicio llega con `?filtros=abrir`. El parámetro se
+  // limpia al usarlo: la pestaña queda montada, y si no, volver a tocarlo no haría nada.
+  const { filtros: pedidoFiltros } = useLocalSearchParams<{ filtros?: string }>();
+  useEffect(() => {
+    if (pedidoFiltros !== 'abrir') return;
+    setModalFiltros(true);
+    router.setParams({ filtros: undefined });
+  }, [pedidoFiltros, router]);
 
   /**
    * Cuántas tarjetas descartó el usuario en esta sesión de la pantalla.

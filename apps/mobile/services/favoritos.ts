@@ -18,6 +18,8 @@ export interface MascotaFavorita {
   raza: { id: number; nombre: string };
   /** Estado actual de la mascota. Viene con guión bajo (`En_Transito`). */
   estado: { id: number; nombre: string };
+  /** Refugio dueño de la mascota, o null si es de un adoptante particular. */
+  refugio: { id: number; nombre: string } | null;
   /**
    * Publicación activa de la mascota, o null si ya no está publicada. Sin publicación no
    * hay nada que solicitar y la tarjeta no muestra el botón (HU-7.1).
