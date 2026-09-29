@@ -16,6 +16,7 @@ import { FlatList, Image, Pressable, RefreshControl, Text, View } from 'react-na
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EstadoCargando, EstadoError } from '@/components/feedback/EstadosPantalla';
+import { BotonFlotante } from '@/components/ui/BotonFlotante';
 import { EstadoMascotaBadge } from '@/components/ui/EstadoMascotaBadge';
 import { FiltroEstados, type OpcionEstado } from '@/components/ui/FiltroEstados';
 import { estiloDeEstado } from '@/constants/EstadosMascota';
@@ -313,13 +314,9 @@ export default function MisMascotasScreen() {
 
         {/* Burbuja de creación: lleva al formulario de alta. */}
         <Link href="/mascotas/crear" asChild>
-          <Pressable
-            accessibilityRole="button"
+          <BotonFlotante
             accessibilityLabel={vistaRefugio ? 'Crear mascota del refugio' : 'Crear mascota'}
-            className="absolute bottom-6 right-6 h-[68px] w-[68px] items-center justify-center rounded-full bg-organic-accent-600 shadow-lg active:opacity-90"
-          >
-            <Ionicons name="add" size={34} color={PALETA.blanco} />
-          </Pressable>
+          />
         </Link>
       </SafeAreaView>
     </View>

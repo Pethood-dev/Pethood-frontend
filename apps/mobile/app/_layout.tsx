@@ -83,6 +83,10 @@ function RootNavigator() {
         {/* GUI-12. Va en el stack y no en las tabs porque se entra desde la Home y desde
             el Perfil, y el back tiene que volver al origen real. */}
         <Stack.Screen name="favoritos" />
+        {/* GUI-06 (HU-13.1). También en el stack: se entra desde las dos vistas de Inicio. */}
+        <Stack.Screen name="perdidos/index" />
+        {/* GUI-25. Pantalla y no modal, como en el diseño (pantalla 26). */}
+        <Stack.Screen name="perdidos/nuevo" options={{ presentation: 'card' }} />
         <Stack.Screen name="mascotas/crear" options={{ presentation: 'card' }} />
         {/* HU-6.4. Se abre tocando una tarjeta de "Mis mascotas". */}
         <Stack.Screen name="mascotas/[id]/index" options={{ presentation: 'card' }} />

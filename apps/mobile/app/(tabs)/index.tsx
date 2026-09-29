@@ -7,7 +7,8 @@
  * interruptor de Perfil (`vistaRefugio`), no de esta pantalla.
  *
  * Cada sección trae sus propios datos y falla por separado (ver `useDatosInicio`).
- * Campañas y Mascotas perdidas todavía no tienen módulo: ver `SeccionesProximamente.tsx`.
+ * Campañas todavía no tiene módulo: ver `SeccionesProximamente.tsx`. Mascotas perdidas lleva
+ * al portal (GUI-06) desde `PerdidasInicio.tsx`.
  */
 import { useRouter } from 'expo-router';
 import type { ReactNode } from 'react';
@@ -20,11 +21,8 @@ import {
   type ResumenSolicitudesRefugio,
 } from '@/components/home/PanelSolicitudesRefugio';
 import { PublicacionesInicio } from '@/components/home/PublicacionesInicio';
-import {
-  CampaniasAdoptante,
-  PerdidasAdoptante,
-  PerdidasRefugio,
-} from '@/components/home/SeccionesProximamente';
+import { PerdidasAdoptante, PerdidasRefugio } from '@/components/home/PerdidasInicio';
+import { CampaniasAdoptante } from '@/components/home/SeccionesProximamente';
 import { TarjetaAdoptar } from '@/components/home/TarjetaAdoptar';
 import { TarjetasAdoptante } from '@/components/home/TarjetasAdoptante';
 import { TarjetasRefugio } from '@/components/home/TarjetasRefugio';
@@ -128,13 +126,14 @@ function InicioAdoptante({ subtitulo }: { subtitulo: string }) {
         seguimientos={secciones.seguimientos.datos}
         errorSeguimientos={secciones.seguimientos.error}
       />
-      <PerdidasAdoptante />
+      <PerdidasAdoptante onPress={() => router.push('/perdidos')} />
       <CampaniasAdoptante />
     </PantallaInicio>
   );
 }
 
 function InicioRefugio({ subtitulo }: { subtitulo: string }) {
+  const router = useRouter();
   const { secciones, cargando, refrescando, refrescar } = useDatosInicio(CARGADORES_REFUGIO);
 
   return (
@@ -156,7 +155,7 @@ function InicioRefugio({ subtitulo }: { subtitulo: string }) {
         seguimientos={secciones.seguimientos.datos}
         errorSeguimientos={secciones.seguimientos.error}
       />
-      <PerdidasRefugio />
+      <PerdidasRefugio onPress={() => router.push('/perdidos')} />
     </PantallaInicio>
   );
 }

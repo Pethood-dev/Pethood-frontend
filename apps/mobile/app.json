@@ -45,6 +45,12 @@
         }
       ],
       "@react-native-community/datetimepicker",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "PetHood usa tu ubicación al publicar un aviso de una mascota perdida o encontrada."
+        }
+      ],
       "expo-video"
     ],
     "experiments": {
