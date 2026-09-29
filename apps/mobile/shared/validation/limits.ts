@@ -143,4 +143,21 @@ export const LIMITES = {
    * coincide con nada, que es el resultado correcto.
    */
   busquedaChat: { min: 1, max: 50 },
+
+  /**
+   * Aviso de mascota perdida o encontrada (spec 020, HU-13.1). El nombre es obligatorio sólo
+   * en un aviso "Perdido"; eso lo decide el backend según el estado, no el largo.
+   */
+  animalPerdido: {
+    nombre: { max: 30 },
+    descripcion: { max: 300 },
+    /** Texto libre, como la ubicación del perfil, hasta que exista el catálogo de localidades. */
+    ubicacion: { max: 80 },
+    /** Fotos por aviso: la primera es la portada de la tarjeta, el resto va en la galería. */
+    imagenes: { max: 5 },
+    /** Cuántas ubicaciones se pueden elegir a la vez en el filtro del portal. */
+    filtroUbicaciones: { maximo: 20 },
+    /** Tamaño de página del portal (paginación por cursor). El backend acepta hasta 50. */
+    pagina: { porDefecto: 20, maximo: 50 },
+  },
 } as const;

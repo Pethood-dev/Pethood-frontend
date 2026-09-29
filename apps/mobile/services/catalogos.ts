@@ -29,3 +29,13 @@ export function listarEstadosMascota(): Promise<EstadoMascota[]> {
 export function listarEstadosPublicacion(): Promise<OpcionCatalogo[]> {
   return get('/estados-publicacion');
 }
+
+export interface EstadoAnimalPerdido extends OpcionCatalogo {
+  /** Si un aviso nuevo puede nacer con este estado (Perdido y Encontrado sí, Resuelto no). */
+  seleccionableEnAlta: boolean;
+}
+
+/** Estados del aviso de mascota perdida: el filtro del portal y el selector del alta. */
+export function listarEstadosAnimalPerdido(): Promise<EstadoAnimalPerdido[]> {
+  return get('/estados-animal-perdido');
+}

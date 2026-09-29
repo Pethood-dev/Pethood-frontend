@@ -1,0 +1,94 @@
+/**
+ * Permiso de ubicación y coordenadas del teléfono, para el alta de un aviso de mascota
+ * perdida (GUI-25). La precondición de HU-13.1 es tener la ubicación habilitada, y el backend
+ * exige las coordenadas: son las del dispositivo al momento de publicar, no las del animal.
+ *
+ * Nunca deja al usuario trabado:
+ * - El permiso se pide al entrar, pero el formulario se puede completar igual sin él.
+ * - "denegado" se puede volver a pedir; "bloqueado" (el sistema ya no muestra el diálogo)
+ *   lleva a Ajustes, y al volver a la app se revisa solo.
+ * - Las coordenadas se piden recién al publicar, así el GPS no se enciende de más.
+ */
+import * as Location from 'expo-location';
+import { useCallback, useEffect, useState } from 'react';
+import { AppState, Linking } from 'react-native';
+
+export type EstadoPermisoUbicacion = 'verificando' | 'concedido' | 'denegado' | 'bloqueado';
+
+export interface Coordenadas {
+  latitud: number;
+  longitud: number;
+}
+
+/** Una posición de hace unos minutos alcanza: nadie cambió de barrio mientras completaba. */
+const ANTIGUEDAD_MAXIMA_MS = 5 * 60_000;
+
+function estadoDe(permiso: Location.LocationPermissionResponse): EstadoPermisoUbicacion {
+  if (permiso.granted) return 'concedido';
+  return permiso.canAskAgain ? 'denegado' : 'bloqueado';
+}
+
+export function useUbicacionDispositivo() {
+  const [estado, setEstado] = useState<EstadoPermisoUbicacion>('verificando');
+
+  /** Mira el permiso sin pedirlo: sirve para enterarse de lo que se cambió en Ajustes. */
+  const revisar = useCallback(async (): Promise<Location.LocationPermissionResponse> => {
+    const actual = await Location.getForegroundPermissionsAsync();
+    setEstado(estadoDe(actual));
+    return actual;
+  }, []);
+
+  /** Lo pide si todavía se puede; si el sistema ya no muestra el diálogo, no insiste. */
+  const pedir = useCallback(async (): Promise<void> => {
+    try {
+      const actual = await revisar();
+      if (actual.granted || !actual.canAskAgain) return;
+
+      setEstado(estadoDe(await Location.requestForegroundPermissionsAsync()));
+    } catch {
+      setEstado('denegado');
+    }
+  }, [revisar]);
+
+  useEffect(() => {
+    void pedir();
+
+    // Al volver de Ajustes la app pasa a primer plano: ahí se ve si el usuario lo habilitó.
+    const suscripcion = AppState.addEventListener('change', (estadoApp) => {
+      if (estadoApp === 'active') void revisar().catch(() => undefined);
+    });
+
+    return () => suscripcion.remove();
+  }, [pedir, revisar]);
+
+  /** La acción de la nota: vuelve a pedir el permiso, o abre Ajustes si ya no se puede. */
+  const permitir = useCallback((): void => {
+    if (estado === 'bloqueado') {
+      void Linking.openSettings();
+      return;
+    }
+    void pedir();
+  }, [estado, pedir]);
+
+  /**
+   * Coordenadas actuales. Lanza con un mensaje para mostrar tal cual si la ubicación del
+   * teléfono está apagada o no se pudo obtener.
+   */
+  const obtenerCoordenadas = useCallback(async (): Promise<Coordenadas> => {
+    if (!(await Location.hasServicesEnabledAsync())) {
+      throw new Error('Activá la ubicación del teléfono para poder publicar el aviso.');
+    }
+
+    try {
+      const posicion =
+        (await Location.getLastKnownPositionAsync({ maxAge: ANTIGUEDAD_MAXIMA_MS })) ??
+        (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }));
+
+      return { latitud: posicion.coords.latitude, longitud: posicion.coords.longitude };
+    } catch {
+      throw new Error('No pudimos obtener tu ubicación. Intentalo de nuevo en unos segundos.');
+    }
+  }, []);
+
+  return { estado, permitir, obtenerCoordenadas };
+}

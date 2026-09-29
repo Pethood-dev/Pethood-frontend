@@ -164,6 +164,24 @@ export function etiquetaDia(fecha: Date, ahora: Date = new Date()): string {
 }
 
 /**
+ * Hace cuánto se publicó un aviso de mascota perdida, con el formato de la pantalla 06 del
+ * diseño: "Hoy", "Ayer", "2 días". Pasado un mes la cuenta en días deja de servir y se
+ * muestra la fecha.
+ *
+ * Es por día calendario, como `etiquetaDia`: un aviso de anoche es "Ayer" aunque hayan
+ * pasado dos horas, porque lo que le importa a quien lee es de qué día es el reporte.
+ */
+export function antiguedadEnDias(fecha: Date, ahora: Date = new Date()): string {
+  const dias = diasCalendarioEntre(fecha, ahora);
+
+  if (dias <= 0) return 'Hoy';
+  if (dias === 1) return 'Ayer';
+  if (dias < 30) return `${dias} días`;
+
+  return aFechaVisible(fecha);
+}
+
+/**
  * Lo que falta para una fecha futura, sin preposición: "12 min", "5 horas", "3 días".
  * Devuelve `null` si la fecha ya pasó, para que quien llama muestre el estado vencido en
  * lugar de una cuenta regresiva en cero.

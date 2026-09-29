@@ -1,6 +1,10 @@
 /**
- * Varias fotos con orden: la primera es la portada. Se agregan de a una desde galería o
- * cámara, se reordenan con las flechas y se quitan con la cruz.
+ * Varias fotos con orden: la primera es la portada. Se agregan desde galería o cámara, se
+ * reordenan con las flechas y se quitan con la cruz.
+ *
+ * De dónde sacarlas se pregunta con la `HojaOpciones` de la app, no con el diálogo del
+ * sistema. Ninguno de los dos orígenes usa el recorte nativo (`allowsEditing`): cada foto pasa
+ * directo a la vista previa, que es donde se gira.
  */
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -11,6 +15,7 @@ import { LIMITES } from '../../shared/validation/limits';
 import { PALETA } from '@/constants/theme';
 
 import { FotoPreviewModal } from './FotoPreviewModal';
+import { HojaOpciones } from './HojaOpciones';
 
 export interface FotoElegida {
   uri: string;
@@ -54,6 +59,7 @@ export function PhotosPickerField({ fotos, onChange, maximo, error }: PhotosPick
   const [cargando, setCargando] = useState(false);
   /** Fotos recién elegidas, en revisión de a una en el modal de vista previa. */
   const [cola, setCola] = useState<FotoElegida[]>([]);
+  const [hojaAbierta, setHojaAbierta] = useState(false);
 
   const lleno = fotos.length >= maximo;
 
@@ -115,8 +121,7 @@ export function PhotosPickerField({ fotos, onChange, maximo, error }: PhotosPick
 
     setCargando(true);
     try {
-      // Foto única: acá sí hay recorte nativo antes de pasar a la vista previa.
-      procesar(await ImagePicker.launchCameraAsync({ quality: 0.8, allowsEditing: true }));
+      procesar(await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8 }));
     } finally {
       setCargando(false);
     }
@@ -135,11 +140,13 @@ export function PhotosPickerField({ fotos, onChange, maximo, error }: PhotosPick
       return;
     }
 
-    Alert.alert('Agregar foto', '¿De dónde la sacamos?', [
-      { text: 'Cámara', onPress: () => void abrirCamara() },
-      { text: 'Galería', onPress: () => void abrirGaleria() },
-      { text: 'Cancelar', style: 'cancel' },
-    ]);
+    setHojaAbierta(true);
+  };
+
+  /** Cierra la hoja antes de abrir el selector nativo, para no taparlo. */
+  const desdeLaHoja = (abrir: () => Promise<void>) => (): void => {
+    setHojaAbierta(false);
+    void abrir();
   };
 
   const mover = (desde: number, hacia: number): void => {
@@ -257,6 +264,21 @@ export function PhotosPickerField({ fotos, onChange, maximo, error }: PhotosPick
       )}
 
       {error ? <Text className="mt-1.5 text-xs text-red-500">{error}</Text> : null}
+
+      <HojaOpciones
+        visible={hojaAbierta}
+        titulo="Agregar fotos"
+        subtitulo="¿De dónde las sacamos?"
+        opciones={[
+          { icono: 'camera-outline', etiqueta: 'Sacar una foto', onPress: desdeLaHoja(abrirCamara) },
+          {
+            icono: 'images-outline',
+            etiqueta: 'Elegir de la galería',
+            onPress: desdeLaHoja(abrirGaleria),
+          },
+        ]}
+        onCerrar={() => setHojaAbierta(false)}
+      />
 
       <FotoPreviewModal
         visible={cola.length > 0}
