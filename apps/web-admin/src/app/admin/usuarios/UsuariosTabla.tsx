@@ -134,7 +134,7 @@ export function UsuariosTabla({
       {exito && <Feedback tipo="exito" mensaje={exito} />}
 
       <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white">
-        <table className="w-full text-left text-sm">
+        <table className="tabla-apilable w-full text-left text-sm">
           <thead className="border-b border-neutral-200 bg-neutral-50 text-xs uppercase text-neutral-500">
             <tr>
               <th className="px-4 py-3 text-center">Usuario</th>
@@ -157,22 +157,22 @@ export function UsuariosTabla({
               const esAdmin = usuario.roles.includes("ADMIN");
               return (
                 <tr key={usuario.id} className="border-b border-neutral-100 last:border-0">
-                  <td className="px-4 py-3 text-center text-neutral-900">
+                  <td data-label="Usuario" className="px-4 py-3 text-center text-neutral-900">
                     {usuario.nombre} {usuario.apellido}
                   </td>
-                  <td className="px-4 py-3 text-center text-neutral-600">{usuario.email}</td>
-                  <td className="px-4 py-3">
+                  <td data-label="Email" className="px-4 py-3 text-center text-neutral-600">{usuario.email}</td>
+                  <td data-label="Roles" className="px-4 py-3">
                     <div className="flex flex-wrap justify-center gap-1">
                       {usuario.roles.map((rol) => (
                         <RolBadge key={rol} rol={rol} />
                       ))}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td data-label="Estado" className="px-4 py-3 text-center">
                     <EstadoBadge estado={usuario.estado} />
                   </td>
-                  <td className="px-4 py-3 text-center text-neutral-600">{usuario.verificado ? "Sí" : "No"}</td>
-                  <td className="px-4 py-3">
+                  <td data-label="Verificado" className="px-4 py-3 text-center text-neutral-600">{usuario.verificado ? "Sí" : "No"}</td>
+                  <td data-label="Acciones" className="px-4 py-3">
                     <div className="flex flex-wrap justify-center gap-2">
                       {usuario.estado === "Pendiente_Verificacion" && (
                         <AccionButton
