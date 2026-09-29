@@ -3,9 +3,10 @@
  * antes: consultar las precondiciones, mostrar el cartel del bloqueo si no se cumplen y
  * abrir el modal si se cumplen.
  *
- * Está en un componente y no en cada pantalla porque son dos entradas al mismo flujo (la
- * ficha del animal y la grilla de Favoritos) y las reglas son las mismas: si estuviera
- * escrito dos veces, el día que cambie un mensaje quedaría distinto según de dónde entrás.
+ * Está en un componente y no en cada pantalla porque son tres entradas al mismo flujo (la
+ * ficha del animal, la grilla de Favoritos y el carrusel de Inicio) y las reglas son las
+ * mismas: si estuviera escrito varias veces, el día que cambie un mensaje quedaría distinto
+ * según de dónde entrás.
  *
  * Las precondiciones se consultan al TOCAR y no al montar: en una grilla de favoritos
  * serían tantas peticiones como tarjetas, y ninguna sirve hasta que el usuario decide.
@@ -118,7 +119,9 @@ export type VarianteBotonSolicitar =
   /** Botón ancho al pie de la ficha del animal (GUI-10). */
   | 'ficha'
   /** Botón bajo, dentro de la tarjeta de la grilla de Favoritos (GUI-12). */
-  | 'tarjeta';
+  | 'tarjeta'
+  /** Pastilla del carrusel de favoritos de Inicio. */
+  | 'inicio';
 
 interface BotonSolicitarProps {
   mascota: MascotaDeSolicitud;
@@ -335,6 +338,25 @@ function BotonAbrir({ variante, cargando, onPress }: BotonAbrirProps) {
     );
   }
 
+  if (variante === 'inicio') {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Solicitar adopción"
+        accessibilityState={{ busy: cargando }}
+        disabled={cargando}
+        onPress={onPress}
+        className={`h-[38px] items-center justify-center rounded-full bg-organic-accent-600 px-2 active:opacity-90 ${
+          cargando ? 'opacity-60' : ''
+        }`}
+      >
+        <Text numberOfLines={1} className="font-cuerpo-bold text-[13.5px] text-organic-accent-100">
+          {cargando ? 'Abriendo…' : 'Solicitar adopción'}
+        </Text>
+      </Pressable>
+    );
+  }
+
   // En la tarjeta el botón compite con la foto y el badge: va más bajo y con menos texto.
   return (
     <Pressable
@@ -374,6 +396,22 @@ function EstadoEnviada({
 
         <CustomButton title="Ver mi solicitud" variant="acento-borde" onPress={onVer} />
       </View>
+    );
+  }
+
+  if (variante === 'inicio') {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Ya solicitada. Ver mi solicitud"
+        onPress={onVer}
+        className="h-[38px] flex-row items-center justify-center gap-1.5 rounded-full bg-organic-neutral-200 px-2 active:opacity-80"
+      >
+        <Ionicons name="checkmark" size={14} color={PALETA.neutral[700]} />
+        <Text numberOfLines={1} className="font-cuerpo-bold text-[13px] text-organic-neutral-700">
+          Ya solicitada
+        </Text>
+      </Pressable>
     );
   }
 

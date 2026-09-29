@@ -1,83 +1,244 @@
 /**
- * Home autenticada — grilla de acceso a las secciones principales.
+ * Home autenticada — pestaña Inicio.
  *
- * Tiene dos vistas con la misma estética y distintas secciones: la del adoptante y la del
- * refugio. Cuál se muestra sale del interruptor de Perfil, no de esta pantalla.
+ * Tiene dos vistas con la misma estética y distintas secciones: la del adoptante (adoptar,
+ * favoritos, solicitudes, seguimiento, perdidas, campañas) y la del refugio (solicitudes
+ * recibidas, publicaciones, campañas, seguimientos, perdidas). Cuál se muestra sale del
+ * interruptor de Perfil (`vistaRefugio`), no de esta pantalla.
+ *
+ * Cada sección trae sus propios datos y falla por separado (ver `useDatosInicio`).
+ * Campañas y Mascotas perdidas todavía no tienen módulo: ver `SeccionesProximamente.tsx`.
  */
 import { useRouter } from 'expo-router';
-import { Text, View } from 'react-native';
+import type { ReactNode } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { TarjetaAcceso } from '@/components/home/TarjetaAcceso';
+import { FavoritosInicio } from '@/components/home/FavoritosInicio';
+import {
+  PanelSolicitudesRefugio,
+  type ResumenSolicitudesRefugio,
+} from '@/components/home/PanelSolicitudesRefugio';
+import { PublicacionesInicio } from '@/components/home/PublicacionesInicio';
+import {
+  CampaniasAdoptante,
+  PerdidasAdoptante,
+  PerdidasRefugio,
+} from '@/components/home/SeccionesProximamente';
+import { TarjetaAdoptar } from '@/components/home/TarjetaAdoptar';
+import { TarjetasAdoptante } from '@/components/home/TarjetasAdoptante';
+import { TarjetasRefugio } from '@/components/home/TarjetasRefugio';
 import { BotonCircular } from '@/components/ui/BotonCircular';
-import { ACCESOS_ADOPTANTE, ACCESOS_REFUGIO } from '@/constants/home';
+import { PALETA } from '@/constants/theme';
+import { useDatosInicio } from '@/hooks/useDatosInicio';
 import { useSesion } from '@/hooks/useSesion';
 import { saludoPara } from '@/lib/saludo';
+import { listarFavoritos } from '@/services/favoritos';
+import { listarFeed, listarMisPublicaciones, SIN_FILTROS } from '@/services/publicaciones';
+import { listarMisSeguimientos } from '@/services/seguimiento';
+import { listarMias, listarRecibidas } from '@/services/solicitudes';
+
+/** Fotos del abanico de la tarjeta de Adoptar. El `total` del feed viene igual. */
+const FOTOS_ADOPTAR = 3;
+
+const CARGADORES_ADOPTANTE = {
+  feed: () => listarFeed(SIN_FILTROS, 0, FOTOS_ADOPTAR),
+  favoritos: listarFavoritos,
+  solicitudes: () => listarMias({ estados: ['Pendiente', 'En_Revision'] }),
+  seguimientos: listarMisSeguimientos,
+};
+
+/**
+ * Los contadores salen del `total` de cada filtro (no hay endpoint de resumen): cuatro
+ * pedidos chicos en paralelo, y de las pendientes se aprovechan además las dos filas.
+ */
+async function resumenSolicitudesRefugio(): Promise<ResumenSolicitudesRefugio> {
+  const hoy = new Date();
+  const inicioDeMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+
+  const [pendientes, enRevision, aprobadas, deHoy] = await Promise.all([
+    listarRecibidas({ estados: ['Pendiente'] }),
+    listarRecibidas({ estados: ['En_Revision'] }),
+    listarRecibidas({ estados: ['Aprobada'], fechaDesde: inicioDeMes, fechaHasta: hoy }),
+    listarRecibidas({ fechaDesde: hoy, fechaHasta: hoy }),
+  ]);
+
+  return {
+    pendientes,
+    enRevision: enRevision.total,
+    aprobadasDelMes: aprobadas.total,
+    llegadasHoy: deHoy.total,
+  };
+}
+
+const CARGADORES_REFUGIO = {
+  solicitudes: resumenSolicitudesRefugio,
+  publicaciones: () => listarMisPublicaciones(),
+  seguimientos: listarMisSeguimientos,
+};
 
 export default function InicioScreen() {
   const { usuario, vistaRefugio } = useSesion();
-  const router = useRouter();
-
-  const accesos = vistaRefugio ? ACCESOS_REFUGIO : ACCESOS_ADOPTANTE;
-  // Dos filas de dos: la grilla del diseño, armada con flex para que las tarjetas se
-  // repartan el alto que sobra entre el encabezado y la barra inferior.
-  const filas = [accesos.slice(0, 2), accesos.slice(2)];
 
   return (
     <View className="flex-1 bg-organic-bg">
       <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="flex-row items-start justify-between gap-3 px-[22px] pb-2 pt-2">
-          <View className="flex-1">
-            <Text className="font-titulo text-[27px] leading-[27px] text-organic-accent-600">
-              PetHood
-            </Text>
-            {vistaRefugio ? (
-              <Text className="mt-[5px] font-cuerpo-semi text-[15px] text-organic-neutral-700">
-                {nombreVisible(usuario?.nombre, usuario?.apellido)}
-              </Text>
-            ) : (
-              <Text className="mt-[5px] font-cuerpo text-[13.5px] text-organic-neutral-700">
-                {saludoPara(usuario?.nombre)}
-              </Text>
-            )}
-          </View>
-
-          <View className="flex-row items-center gap-2">
-            {/* El refugio no adopta: su encabezado no lleva favoritos. */}
-            {vistaRefugio ? null : (
-              <BotonCircular
-                icono="heart-outline"
-                etiqueta="Favoritos"
-                onPress={() => router.push('/favoritos')}
-              />
-            )}
-            {/* Todavía no hay pantalla de notificaciones: se ve, pero no navega. Es del
-                Módulo 4, y de ahí cuelga el pendiente de HU-9.3 (entrar a una actualización
-                de seguimiento desde su notificación): ver "Pendientes por dependencias de
-                otros módulos" en el README. */}
-            <BotonCircular icono="notifications-outline" etiqueta="Notificaciones" />
-          </View>
-        </View>
-
-        <View className="flex-1 gap-[14px] px-[22px] pb-4">
-          {filas.map((fila) => (
-            <View key={fila[0].titulo} className="flex-1 flex-row gap-[14px]">
-              {fila.map((acceso) => (
-                <TarjetaAcceso
-                  key={acceso.titulo}
-                  acceso={acceso}
-                  onPress={acceso.destino ? () => router.push(acceso.destino!) : undefined}
-                />
-              ))}
-            </View>
-          ))}
-        </View>
+        {/* Una vista por perfil, con su propio estado: al cambiar el switch se desmonta la
+            otra y no queda aplicando respuestas del perfil anterior. */}
+        {vistaRefugio ? (
+          <InicioRefugio
+            subtitulo={usuario?.refugio?.nombre ?? nombreVisible(usuario?.nombre, usuario?.apellido)}
+          />
+        ) : (
+          <InicioAdoptante subtitulo={saludoPara(usuario?.nombre)} />
+        )}
       </SafeAreaView>
     </View>
   );
 }
 
-/** En la vista de refugio el encabezado identifica la cuenta en vez de saludar. */
+function InicioAdoptante({ subtitulo }: { subtitulo: string }) {
+  const router = useRouter();
+  const { secciones, cargando, refrescando, refrescar, recargar } =
+    useDatosInicio(CARGADORES_ADOPTANTE);
+
+  return (
+    <PantallaInicio
+      encabezado={<Encabezado subtitulo={subtitulo} />}
+      cargando={cargando}
+      refrescando={refrescando}
+      onRefrescar={refrescar}
+    >
+      <TarjetaAdoptar
+        feed={secciones.feed.datos}
+        error={secciones.feed.error}
+        onSwipear={() => router.push('/(tabs)/adoptar')}
+        onFiltros={() =>
+          router.push({ pathname: '/(tabs)/adoptar', params: { filtros: 'abrir' } })
+        }
+      />
+      <FavoritosInicio
+        favoritos={secciones.favoritos.datos}
+        error={secciones.favoritos.error}
+        onSolicitada={() => void recargar()}
+      />
+      <TarjetasAdoptante
+        solicitudes={secciones.solicitudes.datos}
+        errorSolicitudes={secciones.solicitudes.error}
+        seguimientos={secciones.seguimientos.datos}
+        errorSeguimientos={secciones.seguimientos.error}
+      />
+      <PerdidasAdoptante />
+      <CampaniasAdoptante />
+    </PantallaInicio>
+  );
+}
+
+function InicioRefugio({ subtitulo }: { subtitulo: string }) {
+  const { secciones, cargando, refrescando, refrescar } = useDatosInicio(CARGADORES_REFUGIO);
+
+  return (
+    <PantallaInicio
+      encabezado={<Encabezado subtitulo={subtitulo} destacado />}
+      cargando={cargando}
+      refrescando={refrescando}
+      onRefrescar={refrescar}
+    >
+      <PanelSolicitudesRefugio
+        resumen={secciones.solicitudes.datos}
+        error={secciones.solicitudes.error}
+      />
+      <PublicacionesInicio
+        publicaciones={secciones.publicaciones.datos}
+        error={secciones.publicaciones.error}
+      />
+      <TarjetasRefugio
+        seguimientos={secciones.seguimientos.datos}
+        errorSeguimientos={secciones.seguimientos.error}
+      />
+      <PerdidasRefugio />
+    </PantallaInicio>
+  );
+}
+
+interface PantallaInicioProps {
+  encabezado: ReactNode;
+  cargando: boolean;
+  refrescando: boolean;
+  onRefrescar: () => void;
+  children: ReactNode;
+}
+
+/**
+ * El scroll completo: encabezado y secciones se desplazan juntos, como en el diseño.
+ *
+ * El margen de abajo deja libre el botón redondo amarillo de la barra, que sobresale por
+ * encima de ella: sin él, la última tarjeta queda tapada al final del scroll.
+ */
+function PantallaInicio({
+  encabezado,
+  cargando,
+  refrescando,
+  onRefrescar,
+  children,
+}: PantallaInicioProps) {
+  return (
+    <ScrollView
+      className="flex-1"
+      contentContainerStyle={{ paddingBottom: 48 }}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refrescando}
+          onRefresh={onRefrescar}
+          tintColor={PALETA.accent[600]}
+          colors={[PALETA.accent[600]]}
+        />
+      }
+    >
+      {encabezado}
+      {cargando ? (
+        <View className="items-center py-16">
+          <ActivityIndicator size="large" color={PALETA.accent[600]} />
+        </View>
+      ) : (
+        <View className="gap-[14px] px-[22px] pt-2.5">{children}</View>
+      )}
+    </ScrollView>
+  );
+}
+
+/**
+ * "PetHood" y, debajo, el saludo (adoptante) o el nombre del refugio. El de refugio va más
+ * grande y en semi: identifica la cuenta en vez de saludar.
+ */
+function Encabezado({ subtitulo, destacado = false }: { subtitulo: string; destacado?: boolean }) {
+  return (
+    <View className="flex-row items-start justify-between gap-3 px-[22px] pb-2 pt-2">
+      <View className="min-w-0 flex-1">
+        <Text className="font-titulo text-[27px] leading-[27px] text-organic-accent-600">
+          PetHood
+        </Text>
+        <Text
+          numberOfLines={1}
+          className={`mt-[5px] text-organic-neutral-700 ${
+            destacado ? 'font-cuerpo-semi text-[15px]' : 'font-cuerpo text-[13.5px]'
+          }`}
+        >
+          {subtitulo}
+        </Text>
+      </View>
+
+      {/* Todavía no hay pantalla de notificaciones: se ve, pero no navega. Es del
+          Módulo 4, y de ahí cuelga el pendiente de HU-9.3 (entrar a una actualización
+          de seguimiento desde su notificación): ver "Pendientes por dependencias de
+          otros módulos" en el README. */}
+      <BotonCircular icono="notifications-outline" etiqueta="Notificaciones" />
+    </View>
+  );
+}
+
+/** Si la sesión guardada no trae el refugio (es de antes de que se mandara), el nombre de la cuenta. */
 function nombreVisible(nombre?: string, apellido?: string): string {
   return [nombre, apellido].filter(Boolean).join(' ').trim() || 'Mi refugio';
 }

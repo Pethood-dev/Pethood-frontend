@@ -30,8 +30,8 @@ const CIRCULO = 32;
  * render y compite con el contexto de navegación de expo-router: la app revienta con
  * "Couldn't find a navigation context" (nativewind#1557). Acá la clase se alterna con el
  * estado del pedido, así que justo al responder — cuando el hito pasa de PENDIENTE a
- * COMPLETADO — se disparaba el error. Es el mismo motivo por el que `TarjetaAcceso` define
- * su sombra en `style`.
+ * COMPLETADO — se disparaba el error. Es el mismo motivo por el que las tarjetas de Inicio
+ * (`components/home/PiezasInicio.tsx`) definen su sombra en `style`.
  */
 const SOMBRA_TARJETA = {
   shadowColor: PALETA.neutral[900],
