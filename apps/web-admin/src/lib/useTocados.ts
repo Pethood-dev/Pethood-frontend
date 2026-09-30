@@ -13,5 +13,10 @@ export function useTocados() {
     ver: (campo: string, error: string | null) => (intentado || tocados.has(campo) ? error : null),
     tocar: (campo: string) => setTocados((prev) => new Set(prev).add(campo)),
     intentarEnviar: () => setIntentado(true),
+    /** Vuelve al estado limpio (ej. después de un envío exitoso que vacía el form). */
+    reiniciar: () => {
+      setTocados(new Set());
+      setIntentado(false);
+    },
   };
 }
