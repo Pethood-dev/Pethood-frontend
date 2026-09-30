@@ -22,14 +22,14 @@ export const FOTO_FAQ_GOLDEN: FotoData = {
   posicion: "60% center",
 };
 
-export const FOTO_EQUIPO: FotoData = {
-  src: "/img/equipo-cachorros.jpg",
-  alt: "Dos cachorros jugando al atardecer",
-  width: 1400,
-  height: 1050,
-  autor: "Basile Morin",
-  licencia: "CC BY-SA 4.0",
-  url: "https://commons.wikimedia.org/wiki/File:Two_puppies_playing_together_one_standing_over_the_other_at_golden_hour_in_Don_Det_Laos.jpg",
+export const FOTO_EQUIPO_FONDO: FotoData = {
+  src: "/img/equipo-fondo.jpg",
+  alt: "Persona paseando a su perro por la orilla al atardecer",
+  width: 1920,
+  height: 956,
+  autor: "marneejill",
+  licencia: "CC BY-SA 2.0",
+  url: "https://commons.wikimedia.org/wiki/File:Dog-walker_at_twilight_(52275804490).jpg",
 };
 
 export const FOTO_REGISTRO: FotoData = {
@@ -40,14 +40,4 @@ export const FOTO_REGISTRO: FotoData = {
   autor: "AWeith",
   licencia: "CC BY-SA 4.0",
   url: "https://commons.wikimedia.org/wiki/File:Sled_dog_on_Svalbard_with_heterochromia.jpg",
-};
-
-export const FOTO_EQUIPO_FONDO: FotoData = {
-  src: "/img/equipo-fondo.jpg",
-  alt: "Persona paseando a su perro por la orilla al atardecer",
-  width: 1920,
-  height: 956,
-  autor: "marneejill",
-  licencia: "CC BY-SA 2.0",
-  url: "https://commons.wikimedia.org/wiki/File:Dog-walker_at_twilight_(52275804490).jpg",
 };
