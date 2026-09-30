@@ -67,8 +67,8 @@ export default function Landing() {
             </article>
             <article className="card">
               <Image
-                src="/img/puppy.jpg"
-                alt="Cachorro bernés en el pasto"
+                src="/img/refugio.jpg"
+                alt="Perro sonriendo esperando un hogar"
                 width={640}
                 height={480}
               />
