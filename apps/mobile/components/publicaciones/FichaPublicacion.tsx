@@ -8,8 +8,9 @@
  * (`app/publicaciones/[id]/index.tsx`) y la de la mascota (`app/mascotas/[id]/index.tsx`).
  */
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Linking from 'expo-linking';
 import type { ComponentProps, ReactNode } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { estiloDeBannerPublicacion } from '@/constants/EstadosPublicacion';
 import { etiquetaEdad, etiquetaGenero, etiquetaTamanio } from '@/constants/Mascotas';
@@ -85,16 +86,23 @@ function Rotulo({ texto, className = 'text-organic-neutral-500' }: { texto: stri
 
 /**
  * Quién publicó: el refugio (con su ícono) o la persona (con sus iniciales), y la zona que
- * cargó en la publicación.
+ * cargó en la publicación. Si hay coordenadas del usuario se muestra la distancia, el enlace
+ * a Google Maps del refugio y la fecha de publicación (Módulo 11).
  */
 export function PublicadoPor({
   refugio,
   persona,
   ubicacion,
+  distanciaTexto,
+  mapaUrl,
+  fechaTexto,
 }: {
-  refugio: { nombre: string } | null;
+  refugio: { nombre: string; mapaUrl?: string | null } | null;
   persona: { nombre: string; apellido: string } | null;
   ubicacion: string | null;
+  distanciaTexto?: string | null;
+  mapaUrl?: string | null;
+  fechaTexto?: string | null;
 }) {
   const nombre = refugio?.nombre ?? (persona ? `${persona.nombre} ${persona.apellido}` : null);
   if (!nombre) return null;
@@ -102,6 +110,9 @@ export function PublicadoPor({
   const iniciales = persona
     ? `${persona.nombre.charAt(0)}${persona.apellido.charAt(0)}`.toUpperCase()
     : '';
+
+  const enlaceMapa = mapaUrl ?? refugio?.mapaUrl ?? null;
+  const zona = [ubicacion, distanciaTexto].filter(Boolean).join(' · ');
 
   return (
     <View className="mt-4 flex-row items-center gap-3 rounded-2xl border border-organic-neutral-300 p-3">
@@ -115,10 +126,29 @@ export function PublicadoPor({
 
       <View className="flex-1">
         <Rotulo texto="Publicado por" />
-        <Text className="font-cuerpo-bold text-base text-organic-neutral-900" numberOfLines={1}>
-          {nombre}
-        </Text>
-        {ubicacion ? (
+        <View className="flex-row items-center gap-2">
+          <Text
+            className="shrink font-cuerpo-bold text-base text-organic-neutral-900"
+            numberOfLines={1}
+          >
+            {nombre}
+          </Text>
+          {enlaceMapa ? (
+            <Pressable
+              accessibilityRole="link"
+              accessibilityLabel={`Ver la ubicación de ${nombre} en Google Maps`}
+              onPress={() => {
+                if (enlaceMapa) void Linking.openURL(enlaceMapa);
+              }}
+              hitSlop={8}
+              className="flex-row items-center gap-1 self-start rounded-full bg-organic-accent-100 px-2.5 py-1 active:opacity-70"
+            >
+              <MaterialCommunityIcons name="map-marker" size={14} color={PALETA.accent[600]} />
+              <Text className="font-cuerpo-semi text-[12px] text-organic-accent-700">Mapa</Text>
+            </Pressable>
+          ) : null}
+        </View>
+        {zona ? (
           <View className="flex-row items-center gap-1">
             <MaterialCommunityIcons
               name="map-marker-outline"
@@ -126,7 +156,19 @@ export function PublicadoPor({
               color={PALETA.neutral[500]}
             />
             <Text className="flex-1 font-cuerpo text-[13px] text-organic-neutral-600" numberOfLines={1}>
-              {ubicacion}
+              {zona}
+            </Text>
+          </View>
+        ) : null}
+        {fechaTexto ? (
+          <View className="mt-1 flex-row items-center gap-1">
+            <MaterialCommunityIcons
+              name="calendar-outline"
+              size={13}
+              color={PALETA.neutral[500]}
+            />
+            <Text className="font-cuerpo text-[13px] text-organic-neutral-600">
+              Publicado el {fechaTexto}
             </Text>
           </View>
         ) : null}
