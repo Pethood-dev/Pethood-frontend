@@ -26,10 +26,10 @@ export default async function UsuariosAdminPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-neutral-900">Usuarios</h1>
-          <p className="text-sm text-neutral-700">Verificación, roles, suspensión y baja de cuentas.</p>
+          <h1 className="font-heading text-2xl text-neutral-900">Usuarios</h1>
+          <p className="text-base text-neutral-700">Verificación, roles, suspensión y baja de cuentas.</p>
         </div>
         <ExportacionAdmin entidad="usuarios" token={token} />
       </div>

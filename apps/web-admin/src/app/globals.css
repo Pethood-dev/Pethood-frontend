@@ -111,8 +111,38 @@ body {
   animation: dashboard-fade-in 0.3s ease-out;
 }
 
+/* Deslizamiento lateral al cambiar de catálogo: entra desde el lado hacia el que se avanza. */
+@keyframes slide-desde-derecha {
+  from {
+    opacity: 0;
+    transform: translateX(32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes slide-desde-izquierda {
+  from {
+    opacity: 0;
+    transform: translateX(-32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.animate-slide-desde-derecha {
+  animation: slide-desde-derecha 0.3s ease-out;
+}
+.animate-slide-desde-izquierda {
+  animation: slide-desde-izquierda 0.3s ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .animate-dashboard-in {
+  .animate-dashboard-in,
+  .animate-slide-desde-derecha,
+  .animate-slide-desde-izquierda {
     animation: none;
   }
 }

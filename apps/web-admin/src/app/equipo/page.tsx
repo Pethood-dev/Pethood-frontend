@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import type { ReactNode } from "react";
 import { Mail, MapPin, MessageCircle } from "lucide-react";
+import { FOTO_EQUIPO_FONDO } from "@/components/landing/fotos";
 import { EQUIPO, SiteFooter } from "@/components/landing/SiteFooter";
 import { SiteHeader } from "@/components/landing/SiteHeader";
 
@@ -44,30 +45,41 @@ export default function EquipoPage() {
   return (
     <div className="lp">
       <SiteHeader />
+      {/* Banda con la foto de fondo: solo detrás de Equipo, Quiénes somos y Qué nos mueve. */}
+      <div className="banda-foto">
+        <div className="banda-foto-fondo" aria-hidden>
+          <Image src={FOTO_EQUIPO_FONDO.src} alt="" width={FOTO_EQUIPO_FONDO.width} height={FOTO_EQUIPO_FONDO.height} priority sizes="100vw" />
+        </div>
+        <a className="banda-foto-credito" href={FOTO_EQUIPO_FONDO.url} target="_blank" rel="noreferrer">
+          Foto: {FOTO_EQUIPO_FONDO.autor} / {FOTO_EQUIPO_FONDO.licencia}
+        </a>
+        <div className="wrap page banda-foto-contenido">
+          <h1>Equipo</h1>
+          <p>Las personas detrás de PetHood y las formas de escribirnos.</p>
+
+          <section className="bloque">
+            <div className="muted">
+              <h2>Quiénes somos</h2>
+              <p>Somos estudiantes de Ingeniería en Sistemas de Información de la UTN Regional Mendoza. PetHood nació como proyecto final, pero lo pensamos desde el primer día para funcionar como un producto real.</p>
+              <p style={{ marginTop: 12 }}>Trabajamos junto a refugios y ONGs para que cada adopción sea responsable, trazable y acompañada en el tiempo.</p>
+            </div>
+          </section>
+
+          <section className="bloque">
+            <h2>Qué nos mueve</h2>
+            <div className="cards">
+              {VALORES.map(({ t, d }) => (
+                <article key={t} className="card">
+                  <h3>{t}</h3>
+                  <p>{d}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+        </div>
+      </div>
+
       <main className="wrap page">
-        <h1>Equipo</h1>
-        <p>Las personas detrás de PetHood y las formas de escribirnos.</p>
-
-        <section className="bloque">
-          <div className="muted">
-            <h2>Quiénes somos</h2>
-            <p>Somos estudiantes de Ingeniería en Sistemas de Información de la UTN Regional Mendoza. PetHood nació como proyecto final, pero lo pensamos desde el primer día para funcionar como un producto real.</p>
-            <p style={{ marginTop: 12 }}>Trabajamos junto a refugios y ONGs para que cada adopción sea responsable, trazable y acompañada en el tiempo.</p>
-          </div>
-        </section>
-
-        <section className="bloque">
-          <h2>Qué nos mueve</h2>
-          <div className="cards">
-            {VALORES.map(({ t, d }) => (
-              <article key={t} className="card">
-                <h3>{t}</h3>
-                <p>{d}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
         <section className="bloque">
           <h2>Integrantes</h2>
           <ul className="miembros">
