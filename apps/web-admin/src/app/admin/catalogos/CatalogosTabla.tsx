@@ -14,7 +14,6 @@ import {
   editarItemCatalogo,
   reactivarItemCatalogo,
 } from "@/services/admin-catalogos";
-import { ApiError } from "@/services/api";
 import { CATALOGOS } from "@/types/admin-catalogos";
 import type { BodyCatalogo, Catalogo, FiltrosCatalogo, ItemCatalogo, ListaCatalogo } from "@/types/admin-catalogos";
 import { CatalogoFormModal } from "./CatalogoFormModal";
@@ -25,12 +24,14 @@ const REACTIVABLES: Catalogo[] = ["especies", "razas"];
 const CAMPO = "w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-900 sm:w-auto";
 
 function CatalogoContenido({
+  direccion,
   catalogo,
   lista,
   filtros,
   especies,
   token,
 }: {
+  direccion: "derecha" | "izquierda";
   catalogo: Catalogo;
   lista: ListaCatalogo;
   filtros: FiltrosCatalogo;
@@ -55,7 +56,7 @@ function CatalogoContenido({
   }
 
   return (
-    <div className="animate-dashboard-in space-y-4">
+    <div className={`animate-slide-desde-${direccion} space-y-4`}>
       <div className="flex flex-wrap items-end gap-3 rounded-lg border border-neutral-200 bg-white p-4">
         <label className="w-full text-xs font-medium text-neutral-600 sm:w-auto">
           <span className="mb-1 block">Buscar</span>
@@ -186,7 +187,7 @@ function CatalogoContenido({
 }
 
 // El chip de navegación queda fuera del contenido keyed: al cambiar de catálogo se remonta y
-// anima solo lo de abajo (filtros + tabla), sin parpadear los chips ni arrastrar estado del anterior.
+// desliza solo lo de abajo (filtros + tabla), sin parpadear los chips ni arrastrar estado del anterior.
 export function CatalogosTabla(props: {
   catalogo: Catalogo;
   lista: ListaCatalogo;
@@ -194,8 +195,18 @@ export function CatalogosTabla(props: {
   especies: ItemCatalogo[];
   token: string;
 }) {
+  // La dirección sale de comparar el índice del chip nuevo con el anterior (patrón "estado derivado en render").
+  const indice = CATALOGOS.findIndex((c) => c.id === props.catalogo);
+  const [previo, setPrevio] = useState(indice);
+  const [direccion, setDireccion] = useState<"derecha" | "izquierda">("derecha");
+  if (indice !== previo) {
+    setDireccion(indice > previo ? "derecha" : "izquierda");
+    setPrevio(indice);
+  }
+
   return (
-    <div className="space-y-4">
+    // overflow-x-clip: el deslizamiento no debe generar scroll horizontal mientras entra.
+    <div className="space-y-4 overflow-x-clip">
       <nav aria-label="Catálogos" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 md:flex-wrap md:overflow-visible">
         {CATALOGOS.map((c) => (
           <Link
@@ -212,7 +223,7 @@ export function CatalogosTabla(props: {
           </Link>
         ))}
       </nav>
-      <CatalogoContenido key={props.catalogo} {...props} />
+      <CatalogoContenido key={props.catalogo} direccion={direccion} {...props} />
     </div>
   );
 }
