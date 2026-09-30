@@ -57,9 +57,29 @@ export default function LoginPage() {
         </div>
       </aside>
 
-      <main className="flex flex-col justify-center px-6 py-10 sm:px-12 lg:px-16">
+      {/* Mobile/tablet: la foto ocupa todo el header (el panel lateral solo aparece desde lg). */}
+      <div className="relative h-72 w-full overflow-hidden sm:h-96 lg:hidden">
+        <Image src="/img/login-gato.jpg" alt="" fill priority sizes="100vw" className="object-cover object-[35%_30%]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-neutral-900/80 via-neutral-900/20 to-transparent" />
+        <div className="animate-dashboard-in absolute inset-x-0 bottom-0 space-y-1.5 px-6 pb-5 text-white sm:px-12">
+          <h2 className="font-heading text-2xl leading-tight sm:text-3xl">Cada mascota merece un hogar.</h2>
+          <p className="max-w-md text-sm text-white/85 sm:text-base">
+            Gestioná refugios, publicaciones y solicitudes de adopción desde un solo lugar.
+          </p>
+        </div>
+        <a
+          href="https://commons.wikimedia.org/wiki/File:Black_and_white_cat%E2%80%93IMG_6332_02.jpg"
+          target="_blank"
+          rel="noreferrer"
+          className="absolute right-3 top-2 text-[10px] text-white/80 hover:text-white"
+        >
+          Foto: Kızıl / CC BY-SA 4.0
+        </a>
+      </div>
+
+      <main className="flex flex-col justify-start px-6 pb-8 pt-4 sm:px-12 lg:justify-center lg:px-16 lg:py-10">
         <div className="animate-dashboard-in mx-auto w-full max-w-sm">
-          <Link href="/" className="mb-10 flex items-center gap-2.5">
+          <Link href="/" className="mb-4 flex items-center gap-2.5 lg:mb-8">
             <Image src="/img/logo.png" alt="" width={44} height={44} priority />
             <span className="font-heading text-2xl text-neutral-900">PetHood</span>
           </Link>
@@ -91,7 +111,7 @@ export default function LoginPage() {
               aria-describedby="email-error"
               className={`${INPUT} ${bordeCampo(ver("email", errorEmail))}`}
             />
-            <div className="mb-4">
+            <div className="mb-5 min-h-4">
               <ErrorCampo id="email" error={ver("email", errorEmail)} />
             </div>
 
@@ -120,7 +140,7 @@ export default function LoginPage() {
                 {verPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            <div className="mb-6">
+            <div className="mb-8 min-h-4">
               <ErrorCampo id="password" error={ver("password", errorPassword)} />
             </div>
 
