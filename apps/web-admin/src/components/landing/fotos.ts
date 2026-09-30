@@ -31,3 +31,13 @@ export const FOTO_EQUIPO: FotoData = {
   licencia: "CC BY-SA 4.0",
   url: "https://commons.wikimedia.org/wiki/File:Two_puppies_playing_together_one_standing_over_the_other_at_golden_hour_in_Don_Det_Laos.jpg",
 };
+
+export const FOTO_REGISTRO: FotoData = {
+  src: "/img/registro-husky.jpg",
+  alt: "Perro de trineo de ojos claros sonriendo",
+  width: 1200,
+  height: 675,
+  autor: "AWeith",
+  licencia: "CC BY-SA 4.0",
+  url: "https://commons.wikimedia.org/wiki/File:Sled_dog_on_Svalbard_with_heterochromia.jpg",
+};

@@ -1,4 +1,6 @@
 import Image from "next/image";
+import { Foto } from "./Foto";
+import { FOTO_REGISTRO } from "./fotos";
 import { RegistroRefugioForm } from "./RegistroRefugioForm";
 import { SiteFooter } from "./SiteFooter";
 import { SiteHeader } from "./SiteHeader";
@@ -126,19 +128,13 @@ export default function Landing() {
           <div className="wrap grid2">
             <div>
               <h2>Registrá tu refugio u ONG</h2>
-              <p className="lead">
+              <p className="lead" style={{ marginBottom: 24 }}>
                 Completá tus datos y los del refugio. Tu cuenta queda{" "}
                 <strong>pendiente de verificación</strong>: mientras tanto podés
                 completar el perfil, pero no publicar hasta que el equipo de
                 administración la apruebe.
               </p>
-              <Image
-                src="/img/refugio.jpg"
-                alt="Perro sonriendo esperando un hogar"
-                width={1200}
-                height={800}
-                style={{ width: "100%", height: "auto", borderRadius: 14 }}
-              />
+              <Foto {...FOTO_REGISTRO} />
             </div>
 
             <RegistroRefugioForm />
