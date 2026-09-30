@@ -1,4 +1,4 @@
-import { apiFetch } from "./api";
+import { apiFetch, aQueryString } from "./api";
 import type {
   AltaRefugioBody,
   DetalleRefugio,
@@ -10,15 +10,6 @@ import type {
   RolesBody,
   UsuarioAdmin,
 } from "@/types/admin-usuarios";
-
-function aQueryString(filtros: object): string {
-  const params = new URLSearchParams();
-  for (const [clave, valor] of Object.entries(filtros as Record<string, string | number | undefined>)) {
-    if (valor !== undefined && valor !== "") params.set(clave, String(valor));
-  }
-  const query = params.toString();
-  return query ? `?${query}` : "";
-}
 
 // --- Usuarios ----------------------------------------------------------------------------
 

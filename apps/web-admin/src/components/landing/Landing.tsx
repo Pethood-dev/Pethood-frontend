@@ -1,5 +1,5 @@
 import Image from "next/image";
-import type { ReactNode } from "react";
+import { RegistroRefugioForm } from "./RegistroRefugioForm";
 import { SiteFooter } from "./SiteFooter";
 import { SiteHeader } from "./SiteHeader";
 
@@ -13,39 +13,6 @@ const FUNCIONES = [
   "Campañas de donación para refugios",
   "Red de mascotas perdidas y encontradas",
 ];
-
-function Campo({
-  id,
-  label,
-  tipo = "text",
-  full,
-  hint,
-  auto,
-}: {
-  id: string;
-  label: string;
-  tipo?: string;
-  full?: boolean;
-  hint?: string;
-  auto?: string;
-}) {
-  return (
-    <div className={full ? "full" : undefined}>
-      <label htmlFor={id}>{label}</label>
-      <input id={id} type={tipo} autoComplete={auto} />
-      {hint && <p className="hint">{hint}</p>}
-    </div>
-  );
-}
-
-function Grupo({ titulo, children }: { titulo: string; children: ReactNode }) {
-  return (
-    <fieldset>
-      <legend>{titulo}</legend>
-      <div className="fields">{children}</div>
-    </fieldset>
-  );
-}
 
 export default function Landing() {
   return (
@@ -172,62 +139,7 @@ export default function Landing() {
               />
             </div>
 
-            <form aria-label="Registro de refugio u ONG">
-              <Grupo titulo="Tus datos">
-                <Campo id="nombre" label="Nombre *" auto="given-name" />
-                <Campo id="apellido" label="Apellido *" auto="family-name" />
-                <Campo
-                  id="email"
-                  label="Email *"
-                  tipo="email"
-                  auto="email"
-                  full
-                />
-                <Campo
-                  id="pass"
-                  label="Contraseña *"
-                  tipo="password"
-                  auto="new-password"
-                  hint="Mínimo 8 caracteres, con una mayúscula y un número."
-                />
-                <Campo
-                  id="pass2"
-                  label="Confirmar contraseña *"
-                  tipo="password"
-                  auto="new-password"
-                />
-              </Grupo>
-              <Grupo titulo="Datos del refugio">
-                <Campo id="rnombre" label="Nombre del refugio / ONG *" full />
-                <Campo
-                  id="rdir"
-                  label="Dirección *"
-                  auto="street-address"
-                  full
-                />
-                <Campo id="rtel" label="Teléfono" tipo="tel" />
-                <Campo id="remail" label="Email del refugio" tipo="email" />
-                <div className="full">
-                  <label htmlFor="rdesc">Descripción</label>
-                  <textarea id="rdesc" rows={3} />
-                </div>
-                <div className="full">
-                  <label htmlFor="rimg">Logo o foto del refugio</label>
-                  <input
-                    id="rimg"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                  />
-                  <p className="hint">JPG, PNG o WEBP, hasta 5 MB.</p>
-                </div>
-              </Grupo>
-              <div className="actions">
-                <p className="hint">Maqueta: todavía no envía datos.</p>
-                <button type="button" className="btn">
-                  Registrar refugio
-                </button>
-              </div>
-            </form>
+            <RegistroRefugioForm />
           </div>
         </section>
       </main>
