@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import type { ReactNode } from "react";
 import { Mail, MapPin, MessageCircle } from "lucide-react";
+import { Foto } from "@/components/landing/Foto";
+import { FOTO_EQUIPO } from "@/components/landing/fotos";
 import { EQUIPO, SiteFooter } from "@/components/landing/SiteFooter";
 import { SiteHeader } from "@/components/landing/SiteHeader";
 
@@ -49,10 +51,15 @@ export default function EquipoPage() {
         <p>Las personas detrás de PetHood y las formas de escribirnos.</p>
 
         <section className="bloque">
-          <div className="muted">
-            <h2>Quiénes somos</h2>
-            <p>Somos estudiantes de Ingeniería en Sistemas de Información de la UTN Regional Mendoza. PetHood nació como proyecto final, pero lo pensamos desde el primer día para funcionar como un producto real.</p>
-            <p style={{ marginTop: 12 }}>Trabajamos junto a refugios y ONGs para que cada adopción sea responsable, trazable y acompañada en el tiempo.</p>
+          <div className="con-foto izquierda">
+            <div className="muted">
+              <h2>Quiénes somos</h2>
+              <p>Somos estudiantes de Ingeniería en Sistemas de Información de la UTN Regional Mendoza. PetHood nació como proyecto final, pero lo pensamos desde el primer día para funcionar como un producto real.</p>
+              <p style={{ marginTop: 12 }}>Trabajamos junto a refugios y ONGs para que cada adopción sea responsable, trazable y acompañada en el tiempo.</p>
+            </div>
+            <aside>
+              <Foto {...FOTO_EQUIPO} />
+            </aside>
           </div>
         </section>
 
