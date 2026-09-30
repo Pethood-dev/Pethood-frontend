@@ -98,13 +98,6 @@ export default function Landing() {
 
         <section className="why">
           <div className="wrap grid2">
-            <Image
-              src="/img/panel.jpg"
-              alt="Perro junto a una notebook mostrando su foto"
-              width={1200}
-              height={800}
-              style={{ width: "100%", height: "auto", borderRadius: 20 }}
-            />
             <div>
               <h2>Por qué existe</h2>
               <p>
@@ -119,6 +112,13 @@ export default function Landing() {
                 adoptantes como de refugios.
               </p>
             </div>
+            <Image
+              src="/img/panel.jpg"
+              alt="Perro junto a una notebook mostrando su foto"
+              width={1200}
+              height={800}
+              style={{ width: "100%", height: "auto", borderRadius: 20 }}
+            />
           </div>
         </section>
 
