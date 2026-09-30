@@ -795,3 +795,89 @@ html {
     height: 36px;
   }
 }
+
+/*
+ * Bloque de contenido con una foto (con crédito de autor) al costado; `.izquierda` la pasa al otro lado.
+ * La foto ocupa `--filas` filas, o sea que puede acompañar a varios grupos de preguntas seguidos.
+ */
+.lp .con-foto {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 0 40px;
+  align-items: start;
+}
+.lp .con-foto > :not(aside) {
+  grid-column: 1;
+}
+.lp .con-foto > aside {
+  grid-column: 2;
+  grid-row: 1 / span var(--filas, 1);
+  /* Anclada arriba y sin estirarse: al abrir una pregunta el contenido crece, la foto no se mueve. */
+  align-self: start;
+  margin-top: 32px;
+}
+.lp .con-foto.izquierda {
+  grid-template-columns: 300px minmax(0, 1fr);
+}
+.lp .con-foto.izquierda > :not(aside) {
+  grid-column: 2;
+}
+.lp .con-foto.izquierda > aside {
+  grid-column: 1;
+}
+/* Foto que abarca varios bloques: columna más ancha, más alta, con alto fijo y recortada. */
+.lp .con-foto:has(> aside.alta) {
+  grid-template-columns: minmax(0, 1fr) 560px;
+}
+.lp .con-foto.izquierda:has(> aside.alta) {
+  grid-template-columns: 560px minmax(0, 1fr);
+}
+.lp .con-foto > aside.alta .foto img {
+  height: 480px;
+  max-height: none;
+}
+.lp .foto {
+  position: relative;
+  margin: 0;
+  overflow: hidden;
+  border-radius: var(--radius);
+  border: 1px solid var(--n-200);
+}
+.lp .foto img {
+  width: 100%;
+  height: auto;
+  max-height: 380px;
+  object-fit: cover;
+}
+.lp .foto figcaption {
+  position: absolute;
+  right: 12px;
+  bottom: 8px;
+  font-size: 11px;
+  color: rgb(255 255 255 / 0.9);
+  text-shadow: 0 1px 3px rgb(0 0 0 / 0.7);
+}
+.lp .foto figcaption a:hover {
+  text-decoration: underline;
+}
+@media (max-width: 900px) {
+  .lp .con-foto,
+  .lp .con-foto.izquierda,
+  .lp .con-foto:has(> aside.alta),
+  .lp .con-foto.izquierda:has(> aside.alta) {
+    grid-template-columns: 1fr;
+  }
+  .lp .con-foto > :not(aside),
+  .lp .con-foto > aside {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  /* En mobile la foto va arriba de su bloque. */
+  .lp .con-foto > aside {
+    order: -1;
+    margin-top: 16px;
+  }
+  .lp .con-foto > aside.alta .foto img {
+    height: 260px;
+  }
+}
