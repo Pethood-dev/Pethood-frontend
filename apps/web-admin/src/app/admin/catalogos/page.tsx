@@ -1,8 +1,8 @@
 import { cookies } from "next/headers";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { listarCatalogo } from "@/services/admin-catalogos";
-import type { Catalogo, FiltrosCatalogo } from "@/types/admin-catalogos";
-import { CATALOGOS, CatalogosTabla } from "./CatalogosTabla";
+import { CATALOGOS, type Catalogo, type FiltrosCatalogo } from "@/types/admin-catalogos";
+import { CatalogosTabla } from "./CatalogosTabla";
 
 interface PageProps {
   searchParams: Promise<Record<string, string | undefined>>;

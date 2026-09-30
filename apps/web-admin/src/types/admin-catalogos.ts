@@ -11,6 +11,19 @@ export type Catalogo =
   | "estados-animal-perdido"
   | "tipos-solicitud";
 
+export const CATALOGOS: { id: Catalogo; label: string }[] = [
+  { id: "especies", label: "Especies" },
+  { id: "razas", label: "Razas" },
+  { id: "vacunas", label: "Vacunas" },
+  { id: "estados-mascota", label: "Estados de mascota" },
+  { id: "estados-publicacion", label: "Estados de publicación" },
+  { id: "estados-solicitud", label: "Estados de solicitud" },
+  { id: "estados-campania", label: "Estados de campaña" },
+  { id: "estados-refugio", label: "Estados de refugio" },
+  { id: "estados-animal-perdido", label: "Estados de animal perdido" },
+  { id: "tipos-solicitud", label: "Tipos de solicitud" },
+];
+
 export type CodigoBloqueoBaja = "CATALOGO_SIN_BAJA" | "CATALOGO_EN_USO" | "YA_DE_BAJA";
 
 export interface ItemCatalogo {

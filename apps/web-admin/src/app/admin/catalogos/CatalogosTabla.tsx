@@ -15,21 +15,9 @@ import {
   reactivarItemCatalogo,
 } from "@/services/admin-catalogos";
 import { ApiError } from "@/services/api";
+import { CATALOGOS } from "@/types/admin-catalogos";
 import type { BodyCatalogo, Catalogo, FiltrosCatalogo, ItemCatalogo, ListaCatalogo } from "@/types/admin-catalogos";
 import { CatalogoFormModal } from "./CatalogoFormModal";
-
-export const CATALOGOS: { id: Catalogo; label: string }[] = [
-  { id: "especies", label: "Especies" },
-  { id: "razas", label: "Razas" },
-  { id: "vacunas", label: "Vacunas" },
-  { id: "estados-mascota", label: "Estados de mascota" },
-  { id: "estados-publicacion", label: "Estados de publicación" },
-  { id: "estados-solicitud", label: "Estados de solicitud" },
-  { id: "estados-campania", label: "Estados de campaña" },
-  { id: "estados-refugio", label: "Estados de refugio" },
-  { id: "estados-animal-perdido", label: "Estados de animal perdido" },
-  { id: "tipos-solicitud", label: "Tipos de solicitud" },
-];
 
 // Solo estos dos admiten reactivar (api-admin-catalogos.md).
 const REACTIVABLES: Catalogo[] = ["especies", "razas"];
