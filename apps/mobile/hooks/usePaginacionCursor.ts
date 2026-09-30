@@ -172,6 +172,12 @@ export function usePaginacionCursor<T>({
     [claveDe],
   );
 
+  // Estables a propósito: las pantallas las ponen como dependencia de `useFocusEffect`, y una
+  // función nueva en cada render volvería a correr ese efecto en cada render.
+  const recargar = useCallback((): void => void primeraPagina('cargando'), [primeraPagina]);
+  const refrescar = useCallback((): void => void primeraPagina('refrescando'), [primeraPagina]);
+  const reintentarMas = useCallback((): void => void siguientePagina(), [siguientePagina]);
+
   return {
     items,
     cargando,
@@ -180,10 +186,10 @@ export function usePaginacionCursor<T>({
     error,
     errorMas,
     hayMas,
-    recargar: () => void primeraPagina('cargando'),
-    refrescar: () => void primeraPagina('refrescando'),
+    recargar,
+    refrescar,
     cargarMas,
-    reintentarMas: () => void siguientePagina(),
+    reintentarMas,
     agregarAlPrincipio,
   };
 }
