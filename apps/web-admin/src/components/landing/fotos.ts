@@ -41,3 +41,13 @@ export const FOTO_REGISTRO: FotoData = {
   licencia: "CC BY-SA 4.0",
   url: "https://commons.wikimedia.org/wiki/File:Sled_dog_on_Svalbard_with_heterochromia.jpg",
 };
+
+export const FOTO_EQUIPO_FONDO: FotoData = {
+  src: "/img/equipo-fondo.jpg",
+  alt: "Persona paseando a su perro por la orilla al atardecer",
+  width: 1920,
+  height: 956,
+  autor: "marneejill",
+  licencia: "CC BY-SA 2.0",
+  url: "https://commons.wikimedia.org/wiki/File:Dog-walker_at_twilight_(52275804490).jpg",
+};
