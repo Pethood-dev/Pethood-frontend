@@ -424,6 +424,10 @@
   outline: 2px solid var(--orange);
   border-color: var(--orange);
 }
+.lp input[aria-invalid="true"],
+.lp textarea[aria-invalid="true"] {
+  border-color: #dc2626;
+}
 .lp .hint {
   font-size: 12px;
   color: var(--n-500);
