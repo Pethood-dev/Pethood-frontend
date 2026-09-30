@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useState } from "react";
 import { Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { AccionButton } from "@/components/ui/AccionButton";
@@ -37,7 +37,6 @@ export function CatalogosTabla({
   especies: ItemCatalogo[];
   token: string;
 }) {
-  const router = useRouter();
   const { cargando, error, exito, ejecutar, aplicarFiltros, irAPagina } = useTablaAdmin("/admin/catalogos", {
     ...filtros,
     catalogo,
@@ -57,21 +56,24 @@ export function CatalogosTabla({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end gap-3 rounded-lg border border-neutral-200 bg-white p-4">
-        <label className="text-xs font-medium text-neutral-600">
-          <span className="mb-1 block">Catálogo</span>
-          <select
-            value={catalogo}
-            className={CAMPO}
-            onChange={(e) => router.push(`/admin/catalogos?catalogo=${e.target.value}`)}
+      <nav aria-label="Catálogos" className="flex flex-wrap gap-2">
+        {CATALOGOS.map((c) => (
+          <Link
+            key={c.id}
+            href={`/admin/catalogos?catalogo=${c.id}`}
+            aria-current={c.id === catalogo ? "page" : undefined}
+            className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+              c.id === catalogo
+                ? "border-pethood-orange bg-pethood-orange text-white"
+                : "border-neutral-300 bg-neutral-100 text-neutral-700 hover:border-pethood-orange hover:text-pethood-orange-dark"
+            }`}
           >
-            {CATALOGOS.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-        </label>
+            {c.label}
+          </Link>
+        ))}
+      </nav>
+
+      <div className="flex flex-wrap items-end gap-3 rounded-lg border border-neutral-200 bg-white p-4">
         <label className="text-xs font-medium text-neutral-600">
           <span className="mb-1 block">Buscar</span>
           <input
