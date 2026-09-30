@@ -22,7 +22,7 @@ import { CatalogoFormModal } from "./CatalogoFormModal";
 // Solo estos dos admiten reactivar (api-admin-catalogos.md).
 const REACTIVABLES: Catalogo[] = ["especies", "razas"];
 
-const CAMPO = "rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-900";
+const CAMPO = "w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-900 sm:w-auto";
 
 export function CatalogosTabla({
   catalogo,
@@ -56,13 +56,13 @@ export function CatalogosTabla({
 
   return (
     <div className="space-y-4">
-      <nav aria-label="Catálogos" className="flex flex-wrap gap-2">
+      <nav aria-label="Catálogos" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 md:flex-wrap md:overflow-visible">
         {CATALOGOS.map((c) => (
           <Link
             key={c.id}
             href={`/admin/catalogos?catalogo=${c.id}`}
             aria-current={c.id === catalogo ? "page" : undefined}
-            className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+            className={`shrink-0 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
               c.id === catalogo
                 ? "border-pethood-orange bg-pethood-orange text-white"
                 : "border-neutral-300 bg-neutral-100 text-neutral-700 hover:border-pethood-orange hover:text-pethood-orange-dark"
@@ -74,7 +74,7 @@ export function CatalogosTabla({
       </nav>
 
       <div className="flex flex-wrap items-end gap-3 rounded-lg border border-neutral-200 bg-white p-4">
-        <label className="text-xs font-medium text-neutral-600">
+        <label className="w-full text-xs font-medium text-neutral-600 sm:w-auto">
           <span className="mb-1 block">Buscar</span>
           <input
             type="text"
@@ -95,8 +95,8 @@ export function CatalogosTabla({
           </label>
         )}
         {permisos.alta && (
-          <div className="ml-auto">
-            <Button onClick={() => setModal({ item: null })}>
+          <div className="w-full sm:ml-auto sm:w-auto">
+            <Button className="w-full sm:w-auto" onClick={() => setModal({ item: null })}>
               <Plus size={16} className="mr-1 inline" />
               Nuevo
             </Button>
@@ -144,7 +144,7 @@ export function CatalogosTabla({
                   <td data-label="Usos" className="px-4 py-3 text-center text-neutral-600">{item.cantidadUsos}</td>
                   <td data-label="Estado" className="px-4 py-3 text-center text-neutral-600">{deBaja ? "De baja" : "Vigente"}</td>
                   <td data-label="Acciones" className="px-4 py-3">
-                    <div className="flex flex-wrap justify-center gap-2">
+                    <div className="flex flex-wrap justify-end gap-2 md:justify-center">
                       {permisos.edicion && !deBaja && (
                         <AccionButton icono={Pencil} tono="neutral" onClick={() => setModal({ item })}>
                           Editar
