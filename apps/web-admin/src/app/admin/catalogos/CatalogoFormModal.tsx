@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { Feedback } from "@/components/ui/Feedback";
 import { Modal } from "@/components/ui/Modal";
 import type { BodyCatalogo, Catalogo, ItemCatalogo } from "@/types/admin-catalogos";
 
@@ -12,12 +13,14 @@ export function CatalogoFormModal({
   catalogo,
   item,
   especies,
+  error,
   onCerrar,
   onGuardar,
 }: {
   catalogo: Catalogo;
   item: ItemCatalogo | null;
   especies: ItemCatalogo[];
+  error: string | null;
   onCerrar: () => void;
   onGuardar: (body: BodyCatalogo) => Promise<void>;
 }) {
@@ -99,6 +102,7 @@ export function CatalogoFormModal({
             />
           </label>
         )}
+        {error && <Feedback tipo="error" mensaje={error} />}
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onCerrar} disabled={enviando}>
             Cancelar

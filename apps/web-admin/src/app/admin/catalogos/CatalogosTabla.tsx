@@ -46,12 +46,12 @@ export function CatalogosTabla({
 
   async function guardar(body: BodyCatalogo) {
     const item = modal?.item;
-    await ejecutar(
+    const ok = await ejecutar(
       item?.id ?? "nuevo",
       () => (item ? editarItemCatalogo(catalogo, item.id, body, token) : crearItemCatalogo(catalogo, body, token)),
       item ? "Ítem actualizado correctamente." : "Ítem creado correctamente.",
     );
-    setModal(null);
+    if (ok) setModal(null);
   }
 
   return (
@@ -104,7 +104,7 @@ export function CatalogosTabla({
         )}
       </div>
 
-      {error && <Feedback tipo="error" mensaje={error} />}
+      {error && !modal && <Feedback tipo="error" mensaje={error} />}
       {exito && <Feedback tipo="exito" mensaje={exito} />}
 
       <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white">
@@ -192,6 +192,7 @@ export function CatalogosTabla({
           catalogo={catalogo}
           item={modal.item}
           especies={especies}
+          error={error}
           onCerrar={() => setModal(null)}
           onGuardar={guardar}
         />

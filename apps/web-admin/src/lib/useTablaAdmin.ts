@@ -20,7 +20,7 @@ export function useTablaAdmin(ruta: string, filtros: object) {
     router.push(`${ruta}?${params.toString()}`);
   }
 
-  async function ejecutar(id: number | string, accion: () => Promise<unknown>, mensajeExito: string) {
+  async function ejecutar(id: number | string, accion: () => Promise<unknown>, mensajeExito: string): Promise<boolean> {
     setCargando(id);
     setError(null);
     setExito(null);
@@ -28,8 +28,10 @@ export function useTablaAdmin(ruta: string, filtros: object) {
       await accion();
       setExito(mensajeExito);
       router.refresh();
+      return true;
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "No pudimos completar la acción. Intentá de nuevo.");
+      return false;
     } finally {
       setCargando(null);
     }
