@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { ChevronDown, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { AccionButton } from "@/components/ui/AccionButton";
 import { Button } from "@/components/ui/Button";
 import { Feedback } from "@/components/ui/Feedback";
@@ -196,6 +197,7 @@ export function CatalogosTabla(props: {
   token: string;
 }) {
   // La dirección sale de comparar el índice del chip nuevo con el anterior (patrón "estado derivado en render").
+  const router = useRouter();
   const indice = CATALOGOS.findIndex((c) => c.id === props.catalogo);
   const [previo, setPrevio] = useState(indice);
   const [direccion, setDireccion] = useState<"derecha" | "izquierda">("derecha");
@@ -207,7 +209,27 @@ export function CatalogosTabla(props: {
   return (
     // overflow-x-clip: el deslizamiento no debe generar scroll horizontal mientras entra.
     <div className="space-y-4 overflow-x-clip">
-      <nav aria-label="Catálogos" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 md:flex-wrap md:overflow-visible">
+      {/* Mobile: selector nativo (abre el picker del sistema). Desde md: chips. */}
+      <div className="relative md:hidden">
+        <label htmlFor="catalogo" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
+          Catálogo
+        </label>
+        <select
+          id="catalogo"
+          value={props.catalogo}
+          onChange={(e) => router.push(`/admin/catalogos?catalogo=${e.target.value}`)}
+          className="w-full appearance-none rounded-xl border border-pethood-orange bg-white py-3 pl-4 pr-11 text-base font-medium text-neutral-900 outline-none focus:ring-2 focus:ring-pethood-orange/30"
+        >
+          {CATALOGOS.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDown size={20} className="pointer-events-none absolute bottom-3.5 right-3.5 text-pethood-orange-dark" />
+      </div>
+
+      <nav aria-label="Catálogos" className="hidden flex-wrap gap-2 md:flex">
         {CATALOGOS.map((c) => (
           <Link
             key={c.id}
