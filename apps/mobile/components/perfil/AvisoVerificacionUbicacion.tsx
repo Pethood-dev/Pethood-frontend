@@ -4,6 +4,9 @@
  * Cuando los tres campos están completos, el backend geocodifica (preview) y acá se muestra el
  * link de Google Maps para que el usuario lo abra y confirme que el pin es correcto. Si no lo
  * es, puede corregir el link a mano.
+ *
+ * También lo usa el alta de un aviso de mascota perdida para el lugar donde se perdió o se
+ * encontró: los textos que hablan de "tu dirección" se cambian con `textos`.
  */
 import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
@@ -14,6 +17,22 @@ import { DialogoLinkMapa } from '@/components/perfil/DialogoLinkMapa';
 import { PALETA } from '@/constants/theme';
 import type { UbicacionPreview } from '@/types/auth';
 
+export interface TextosVerificacionUbicacion {
+  /** Lo que se ve mientras faltan campos para ubicar la dirección. */
+  incompleta: string;
+  verificada: string;
+  /** Lo que explica el diálogo de corregir el link a mano. */
+  dialogoMensaje: string;
+  dialogoDetalle: string;
+}
+
+const TEXTOS_PERFIL: TextosVerificacionUbicacion = {
+  incompleta: 'Completá provincia, localidad y calle y altura para ubicar tu dirección en el mapa.',
+  verificada: 'Dirección verificada',
+  dialogoMensaje: 'Pegá el link de Google Maps de tu ubicación.',
+  dialogoDetalle: 'Con ese link calculamos la distancia entre vos y el refugio.',
+};
+
 interface AvisoVerificacionUbicacionProps {
   ubicacion: UbicacionPreview | null;
   cargando: boolean;
@@ -21,6 +40,8 @@ interface AvisoVerificacionUbicacionProps {
   verificada: boolean;
   onVerificar: () => void;
   onGuardarManual: (mapaUrl: string) => Promise<void>;
+  /** Por defecto, los del perfil. */
+  textos?: TextosVerificacionUbicacion;
 }
 
 export function AvisoVerificacionUbicacion({
@@ -30,6 +51,7 @@ export function AvisoVerificacionUbicacion({
   verificada,
   onVerificar,
   onGuardarManual,
+  textos = TEXTOS_PERFIL,
 }: AvisoVerificacionUbicacionProps) {
   const [editandoManual, setEditandoManual] = useState(false);
   // Link cargado a mano: pisa al geocodificado mientras la dirección no cambie.
@@ -95,7 +117,7 @@ export function AvisoVerificacionUbicacion({
             <View className="mt-2 flex-row items-center gap-1.5">
               <Ionicons name="checkmark-circle" size={18} color={PALETA.estado.exito} />
               <Text className="flex-1 font-cuerpo-semi text-[14px] text-emerald-700">
-                Dirección verificada
+                {textos.verificada}
               </Text>
             </View>
           ) : (
@@ -131,13 +153,15 @@ export function AvisoVerificacionUbicacion({
         </View>
       ) : (
         <Text className="mt-2 font-cuerpo text-[14px] text-organic-neutral-500">
-          Completá provincia, localidad y calle y altura para ubicar tu dirección en el mapa.
+          {textos.incompleta}
         </Text>
       )}
 
       <DialogoLinkMapa
         visible={editandoManual}
         valorInicial={mapaUrl}
+        mensaje={textos.dialogoMensaje}
+        detalle={textos.dialogoDetalle}
         onGuardar={guardarManual}
         onCerrar={() => setEditandoManual(false)}
       />

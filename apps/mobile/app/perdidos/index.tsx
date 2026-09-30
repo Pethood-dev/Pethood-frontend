@@ -9,6 +9,10 @@
  * La pastilla "Filtros" va en la fila que el diseño deja vacía bajo el título, arriba a la
  * izquierda como pide la HU.
  *
+ * Con la ubicación del teléfono, cada aviso trae a qué distancia está su lugar (se ve en el
+ * detalle) y se puede filtrar por cercanía. Se pide al entrar, sin frenar el portal: si llega
+ * después de la primera página, la grilla se refresca. Sin permiso, el portal anda igual.
+ *
  * Cualquier usuario autenticado lo ve igual, desde cualquiera de sus dos perfiles: el aviso es
  * siempre de la persona (spec 020 del backend).
  *
@@ -17,7 +21,7 @@
  */
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -31,6 +35,7 @@ import { BotonFlotante } from '@/components/ui/BotonFlotante';
 import { PALETA } from '@/constants/theme';
 import { usePaginacionCursor } from '@/hooks/usePaginacionCursor';
 import { tomarAvisoCreado } from '@/lib/avisoRecienCreado';
+import { coordenadasRecordadas, pedirUbicacion, type Coordenadas } from '@/lib/ubicacion';
 import {
   contarFiltrosActivosPerdidos,
   listarAvisos,
@@ -172,11 +177,17 @@ export default function MascotasPerdidasScreen() {
 
   const filtrosActivos = contarFiltrosActivosPerdidos(filtros);
 
+  /** Desde dónde se mide la distancia en el listado actual. Ver `cargarPagina`. */
+  const coordenadasDelListado = useRef<Coordenadas | null>(null);
+
   // Depende de los filtros: cada cambio es una función nueva, y el hook vuelve a arrancar
-  // desde la primera página sin cursor.
+  // desde la primera página sin cursor. La ubicación es la última que tomó la app, en esta
+  // pantalla o en cualquier otra, y se fija en la primera página: si cambiara a mitad del
+  // scroll, el radio recortaría distinto de una página a la otra.
   const cargarPagina = useCallback(
     async (cursor: number | null) => {
-      const pagina = await listarAvisos(filtros, cursor);
+      if (cursor === null) coordenadasDelListado.current = coordenadasRecordadas();
+      const pagina = await listarAvisos(filtros, cursor, coordenadasDelListado.current);
       return { items: pagina.avisos, hayMas: pagina.hayMas, proximoCursor: pagina.proximoCursor };
     },
     [filtros],
@@ -191,6 +202,30 @@ export default function MascotasPerdidasScreen() {
   // Al volver del alta (GUI-25), el aviso recién publicado va arriba sin recargar la grilla.
   // Con filtros aplicados puede no cumplirlos: ahí se recarga y aparece sólo si corresponde.
   const { agregarAlPrincipio, refrescar } = lista;
+
+  /** La ubicación llegó con la grilla ya cargada: hay que volver a pedirla con distancias. */
+  const [ubicacionNueva, setUbicacionNueva] = useState(false);
+
+  useEffect(() => {
+    if (coordenadasRecordadas()) return;
+
+    let montado = true;
+    void pedirUbicacion().then((resultado) => {
+      if (montado && resultado.ok) setUbicacionNueva(true);
+    });
+    return () => {
+      montado = false;
+    };
+  }, []);
+
+  // En un efecto aparte y no en el `then`: ahí `refrescar` sería el de los filtros de cuando
+  // se pidió, y si el usuario ya los cambió se traería la grilla vieja.
+  useEffect(() => {
+    if (!ubicacionNueva) return;
+    setUbicacionNueva(false);
+    refrescar();
+  }, [ubicacionNueva, refrescar]);
+
   useFocusEffect(
     useCallback(() => {
       const creado = tomarAvisoCreado();
@@ -201,9 +236,11 @@ export default function MascotasPerdidasScreen() {
     }, [agregarAlPrincipio, refrescar, filtrosActivos]),
   );
 
+  // Siempre un objeto nuevo, así "Aplicar" recarga aunque no haya cambiado nada: puede que sólo
+  // se haya actualizado la ubicación desde donde se mide el radio.
   const aplicarFiltros = useCallback((nuevos: FiltrosPerdidos): void => {
     setModalFiltros(false);
-    setFiltros(nuevos);
+    setFiltros({ ...nuevos });
   }, []);
 
   // Se entra desde las dos vistas de Inicio: `back()` vuelve al origen real. El fallback

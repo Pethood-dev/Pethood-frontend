@@ -2,6 +2,10 @@
  * Geocodifica la dirección estructurada a medida que el usuario la completa, sin guardarla,
  * para mostrar el link de Google Maps y que lo verifique antes de guardar. Debounce para no
  * golpear el geocoder en cada tecla.
+ *
+ * Lo usan la dirección del perfil (Datos personales, Datos del refugio) y el lugar de un aviso
+ * de mascota perdida, donde el tercer campo es una referencia opcional: ahí va
+ * `calleAlturaOpcional`.
  */
 import { useEffect, useState } from 'react';
 
@@ -17,9 +21,12 @@ export interface DireccionEstructurada {
 export function usePreviewUbicacion(
   direccion: DireccionEstructurada,
   preview: (direccion: DireccionEstructurada) => Promise<UbicacionPreview>,
+  opciones: { calleAlturaOpcional?: boolean } = {},
 ): { ubicacion: UbicacionPreview | null; cargando: boolean; error: string | null } {
   const { provincia, localidad, calleAltura } = direccion;
-  const completa = Boolean(provincia.trim() && localidad.trim() && calleAltura.trim());
+  const completa = Boolean(
+    provincia.trim() && localidad.trim() && (opciones.calleAlturaOpcional || calleAltura.trim()),
+  );
 
   const [ubicacion, setUbicacion] = useState<UbicacionPreview | null>(null);
   const [cargando, setCargando] = useState(false);

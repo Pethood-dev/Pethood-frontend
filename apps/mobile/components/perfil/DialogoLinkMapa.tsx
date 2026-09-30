@@ -1,6 +1,7 @@
 /**
  * Diálogo para pegar/corregir a mano el link de Google Maps. Lo usan el lápiz de "Ubicación"
- * de Mi Perfil y el "corregir a mano" de Datos personales / Datos del refugio.
+ * de Mi Perfil y el "corregir a mano" de Datos personales / Datos del refugio y del lugar de
+ * un aviso de mascota perdida.
  */
 import { useEffect, useState } from 'react';
 
@@ -17,6 +18,9 @@ interface DialogoLinkMapaProps {
   /** Persiste el link. Debe lanzar (ApiError) si falla, para mostrar el motivo. */
   onGuardar: (mapaUrl: string) => Promise<void>;
   onCerrar: () => void;
+  /** Qué link pegar y para qué sirve. Por defecto, los del perfil. */
+  mensaje?: string;
+  detalle?: string;
 }
 
 export function DialogoLinkMapa({
@@ -24,6 +28,8 @@ export function DialogoLinkMapa({
   valorInicial,
   onGuardar,
   onCerrar,
+  mensaje = 'Pegá el link de Google Maps de tu ubicación.',
+  detalle = 'Con ese link calculamos la distancia entre vos y el refugio.',
 }: DialogoLinkMapaProps) {
   const toast = useToast();
   const [link, setLink] = useState('');
@@ -39,9 +45,9 @@ export function DialogoLinkMapa({
   }, [visible, valorInicial]);
 
   const guardar = async (): Promise<void> => {
-    const mensaje = validarLinkMapa(link);
-    if (mensaje) {
-      setError(mensaje);
+    const errorLink = validarLinkMapa(link);
+    if (errorLink) {
+      setError(errorLink);
       return;
     }
 
@@ -65,8 +71,8 @@ export function DialogoLinkMapa({
       tono="bloqueo"
       icono="location-outline"
       titulo="Editar ubicación"
-      mensaje="Pegá el link de Google Maps de tu ubicación."
-      detalle="Con ese link calculamos la distancia entre vos y el refugio."
+      mensaje={mensaje}
+      detalle={detalle}
       textoConfirmar="Guardar"
       cargando={guardando}
       onConfirmar={() => void guardar()}

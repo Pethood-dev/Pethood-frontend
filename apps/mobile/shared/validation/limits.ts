@@ -174,12 +174,23 @@ export const LIMITES = {
   animalPerdido: {
     nombre: { max: 30 },
     descripcion: { max: 300 },
-    /** Texto libre, como la ubicación del perfil, hasta que exista el catálogo de localidades. */
-    ubicacion: { max: 80 },
+    /**
+     * Dónde se perdió o se encontró, como la dirección del perfil: provincia y localidad del
+     * catálogo, y una referencia libre y opcional.
+     */
+    provincia: { max: 80 },
+    localidad: { max: 80 },
+    referencia: { max: 120 },
     /** Fotos por aviso: la primera es la portada de la tarjeta, el resto va en la galería. */
     imagenes: { max: 5 },
-    /** Cuántas ubicaciones se pueden elegir a la vez en el filtro del portal. */
-    filtroUbicaciones: { maximo: 20 },
+    /** Link de Google Maps que se pega a mano para corregir el lugar. */
+    mapaUrl: { max: 500 },
+    /** Cuántas provincias se pueden elegir a la vez en el filtro del portal: todas. */
+    filtroProvincias: { maximo: 24 },
+    /** Cuántas localidades se pueden elegir a la vez en el filtro del portal. */
+    filtroLocalidades: { maximo: 20 },
+    /** Radio del filtro por cercanía, en km. Mismo techo que el de publicaciones. */
+    radioKm: { min: 1, max: 500 },
     /** Tamaño de página del portal (paginación por cursor). El backend acepta hasta 50. */
     pagina: { porDefecto: 20, maximo: 50 },
   },
