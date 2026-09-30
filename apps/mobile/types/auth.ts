@@ -14,7 +14,16 @@ export interface Usuario {
   roles: RolUsuario[];
   imagenUrl?: string | null;
   telefono?: string | null;
-  ubicacion?: string | null;
+  /** Dirección estructurada del perfil (para geocodificar). */
+  provincia?: string | null;
+  localidad?: string | null;
+  calleAltura?: string | null;
+  /** URL de Google Maps y coordenadas geocodificadas de la dirección. */
+  mapaUrl?: string | null;
+  latitud?: number | null;
+  longitud?: number | null;
+  /** Si el usuario confirmó que el link de Maps apunta a su dirección real. */
+  ubicacionVerificada?: boolean;
   /**
    * Refugio al que pertenece, o `null`. Lo necesita GUI-31 para nombrarlo en la cabecera
    * del listado de chats. Opcional porque una sesión guardada antes de que el backend lo
@@ -25,7 +34,13 @@ export interface Usuario {
 
 export interface Perfil extends Usuario {
   telefono: string | null;
-  ubicacion: string | null;
+  provincia: string | null;
+  localidad: string | null;
+  calleAltura: string | null;
+  mapaUrl: string | null;
+  latitud: number | null;
+  longitud: number | null;
+  ubicacionVerificada: boolean;
   imagenUrl: string | null;
   tienePassword: boolean;
   mascotas: number;
@@ -54,6 +69,10 @@ export interface RegistroPayload {
   password: string;
   fechaNacimiento: string;
   telefono: string;
+  /** Dirección opcional; si vienen las tres, el backend geocodifica y guarda coordenadas. */
+  provincia?: string;
+  localidad?: string;
+  calleAltura?: string;
 }
 
 export interface ActualizarPerfilPayload {
@@ -61,5 +80,15 @@ export interface ActualizarPerfilPayload {
   apellido: string;
   email: string;
   telefono: string;
-  ubicacion: string;
+  provincia: string;
+  localidad: string;
+  calleAltura: string;
+  ubicacionVerificada: boolean;
+}
+
+/** Resultado del preview de geocodificación (sin guardar). */
+export interface UbicacionPreview {
+  mapaUrl: string;
+  latitud: number;
+  longitud: number;
 }

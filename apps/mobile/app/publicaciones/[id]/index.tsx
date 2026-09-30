@@ -37,6 +37,7 @@ import {
   Subtitulo,
   TarjetaFicha,
 } from '@/components/publicaciones/FichaPublicacion';
+import { ResumenReputacion } from '@/components/resenas/ResumenReputacion';
 import { BotonSolicitar, solicitudEnviadaDe } from '@/components/solicitudes/BotonSolicitar';
 import { ConfirmDialog, type TonoDialogo } from '@/components/ui/ConfirmDialog';
 import { EstadoMascotaBadge } from '@/components/ui/EstadoMascotaBadge';
@@ -44,6 +45,7 @@ import { VacunasMascota } from '@/components/vacunas/VacunasMascota';
 import { ESTADO_SOLICITABLE } from '@/constants/Mascotas';
 import { PALETA } from '@/constants/theme';
 import { useSesion } from '@/hooks/useSesion';
+import { coordenadasRecordadas, distanciaEnTexto, pedirUbicacion } from '@/lib/ubicacion';
 import { agregarFavorito, quitarFavorito } from '@/services/favoritos';
 import {
   ESTADO_PUBLICACION,
@@ -54,6 +56,7 @@ import {
 } from '@/services/publicaciones';
 import { obtenerElegibilidad } from '@/services/solicitudes';
 import { rasgoSegunGenero } from '@/shared/genero';
+import { aFechaVisible, parsearFecha } from '@/shared/validation/dates';
 
 /** Cartel de confirmación y aviso de éxito de cada cambio de estado manual. */
 const CAMBIOS_DE_ESTADO: Record<
@@ -122,6 +125,28 @@ export default function FichaPublicacionScreen() {
   const [solicitudAbiertaId, setSolicitudAbiertaId] = useState<number | null>(() =>
     Number.isInteger(publicacionId) ? (solicitudEnviadaDe(publicacionId) ?? null) : null,
   );
+  /** Distancia a quien publicó, cuando hay ubicación del usuario y del publicador. */
+  const [distanciaKm, setDistanciaKm] = useState<number | null>(null);
+
+  /**
+   * Pide la ubicación (reusa la de la sesión) y vuelve a pedir la ficha con las coordenadas
+   * para que el backend calcule la distancia. Best-effort: si no hay permiso, no se muestra.
+   */
+  const cargarDistancia = useCallback(async (id: number): Promise<void> => {
+    const recordadas = coordenadasRecordadas();
+    const resultado = recordadas
+      ? ({ ok: true, coordenadas: recordadas } as const)
+      : await pedirUbicacion();
+
+    if (!resultado.ok) return;
+
+    try {
+      const conDistancia = await obtenerPublicacion(id, resultado.coordenadas);
+      setDistanciaKm(conDistancia.distanciaKm);
+    } catch {
+      // Silencioso: la distancia es información secundaria.
+    }
+  }, []);
 
   const cargar = useCallback(async (): Promise<void> => {
     if (!Number.isInteger(publicacionId) || publicacionId <= 0) {
@@ -133,6 +158,8 @@ export default function FichaPublicacionScreen() {
     try {
       setError(null);
       setPublicacion(await obtenerPublicacion(publicacionId));
+      // La distancia se resuelve después, sin bloquear el contenido.
+      void cargarDistancia(publicacionId);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No pudimos cargar la publicación.');
     } finally {
@@ -155,7 +182,7 @@ export default function FichaPublicacionScreen() {
         }
       })
       .catch(() => undefined);
-  }, [publicacionId, puedeAdoptar]);
+  }, [publicacionId, puedeAdoptar, cargarDistancia]);
 
   // Al tomar foco y no solo al montar: al volver de editarla, la ficha muestra los cambios.
   useFocusEffect(
@@ -259,6 +286,16 @@ export default function FichaPublicacionScreen() {
   const procedencia =
     [publicacion.refugio?.nombre, publicacion.ubicacion].filter(Boolean).join(' · ') || null;
 
+  // Enlace a Google Maps del refugio (Módulo 11). Sin link, no se muestra el ícono.
+  const mapaDelRefugio = publicacion.refugio?.mapaUrl ?? null;
+
+  // Fecha en que se publicó la mascota, para mostrarla bajo el refugio.
+  const fechaPublicacion = parsearFecha(publicacion.fechaPublicacion);
+  const fechaPublicacionTexto = fechaPublicacion ? aFechaVisible(fechaPublicacion) : null;
+
+  // Distancia a quien publicó, si se pudo calcular (requiere ubicación del usuario).
+  const distanciaTexto = distanciaKm !== null ? distanciaEnTexto(distanciaKm) : null;
+
   return (
     <View className="flex-1 bg-pethood-beige">
       {/* Se suma el inset inferior para que el último bloque no quede debajo de la barra
@@ -284,6 +321,9 @@ export default function FichaPublicacionScreen() {
             refugio={publicacion.refugio}
             persona={publicacion.publicadoPor}
             ubicacion={publicacion.ubicacion}
+            distanciaTexto={distanciaTexto}
+            mapaUrl={mapaDelRefugio}
+            fechaTexto={fechaPublicacionTexto}
           />
 
           {/* Solo sobre lo propio: a quien adopta le alcanza con el estado de la mascota, y
@@ -336,6 +376,18 @@ export default function FichaPublicacionScreen() {
             </SeccionFicha>
           ) : null}
         </TarjetaFicha>
+
+        {/* Reputación de quien publica (Módulo 10, HU-10.5): antes de decidir, el adoptante
+            ve cómo fue valorado el refugio por otras personas. */}
+        {publicacion.refugio ? (
+          <ResumenReputacion
+            tipo="refugio"
+            id={publicacion.refugio.id}
+            titulo="Reseñas del refugio"
+            mostrarLista
+            className="mx-3 mt-5"
+          />
+        ) : null}
 
         {/* Acciones de quien la gestiona, debajo de la tarjeta: primero se ve la publicación
             entera tal como la ve quien adopta. Una finalizada ya no tiene ninguna: es
