@@ -1,22 +1,34 @@
 import { cookies } from "next/headers";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { ExportacionAdmin } from "@/components/dashboard/ExportacionAdmin";
-import { ListaMock } from "@/components/ui/ListaMock";
+import { listarMascotas } from "@/services/admin-moderacion";
+import type { FiltrosModeracion } from "@/types/admin-moderacion";
+import { MascotasTabla } from "./MascotasTabla";
 
-export default async function MascotasAdminPage() {
+interface PageProps {
+  searchParams: Promise<Record<string, string | undefined>>;
+}
+
+export default async function MascotasAdminPage({ searchParams }: PageProps) {
+  const params = await searchParams;
   const token = (await cookies()).get(AUTH_COOKIE)?.value ?? "";
+  const filtros: FiltrosModeracion = {
+    page: params.page ? Number(params.page) : 1,
+    q: params.q,
+    incluirBajas: params.incluirBajas === "true" ? "true" : undefined,
+  };
+  const lista = await listarMascotas(filtros, token);
+
   return (
-    <ListaMock
-      titulo="Mascotas"
-      descripcion="Todas las mascotas registradas en la plataforma."
-      columnas={["Nombre", "Especie", "Estado", "Dueño", "Alta"]}
-      accion={<ExportacionAdmin entidad="mascotas" token={token} />}
-      filas={[
-        ["Firulais", "Perro", "Disponible", "Refugio Huellitas", "01/09/2026"],
-        ["Michi", "Gato", "Adoptado", "Ana Gómez", "28/08/2026"],
-        ["Luna", "Perro", "En tratamiento", "Refugio Patitas", "15/08/2026"],
-        ["Nala", "Gato", "Disponible", "Refugio Huellitas", "02/08/2026"],
-      ]}
-    />
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-heading text-2xl text-neutral-900">Mascotas</h1>
+          <p className="text-base text-neutral-700">Todas las mascotas registradas en la plataforma.</p>
+        </div>
+        <ExportacionAdmin entidad="mascotas" token={token} />
+      </div>
+      <MascotasTabla lista={lista} filtros={filtros} token={token} />
+    </div>
   );
 }
