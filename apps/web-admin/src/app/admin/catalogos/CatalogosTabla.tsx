@@ -78,6 +78,7 @@ export function CatalogosTabla({
           <span className="mb-1 block">Buscar</span>
           <input
             type="text"
+            maxLength={100}
             defaultValue={filtros.q ?? ""}
             placeholder="Nombre"
             className={CAMPO}

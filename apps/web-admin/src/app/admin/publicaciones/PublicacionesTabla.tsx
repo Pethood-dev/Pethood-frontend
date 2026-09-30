@@ -51,6 +51,7 @@ export function PublicacionesTabla({
           <span className="mb-1 block">Buscar</span>
           <input
             type="text"
+            maxLength={100}
             defaultValue={filtros.q ?? ""}
             placeholder="Título o mascota"
             className={CAMPO}
