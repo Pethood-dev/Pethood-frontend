@@ -31,7 +31,7 @@ export default function LoginPage() {
   return (
     <div className="grid flex-1 lg:grid-cols-[1.4fr_1fr]">
       <aside className="relative hidden overflow-hidden lg:block">
-        <Image src="/img/login.jpg" alt="" fill priority sizes="58vw" className="object-cover object-[35%_center]" />
+        <Image src="/img/login-gato.jpg" alt="" fill priority sizes="58vw" className="object-cover object-[35%_center]" />
         <div className="absolute inset-0 bg-gradient-to-t from-neutral-900/80 via-neutral-900/20 to-transparent" />
         <a
           href="https://commons.wikimedia.org/wiki/File:Black_and_white_cat%E2%80%93IMG_6332_02.jpg"
