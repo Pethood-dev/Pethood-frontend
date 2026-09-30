@@ -31,8 +31,16 @@ export default function LoginPage() {
   return (
     <div className="grid flex-1 lg:grid-cols-[1.1fr_1fr]">
       <aside className="relative hidden overflow-hidden lg:block">
-        <Image src="/img/refugio.jpg" alt="" fill priority sizes="55vw" className="object-cover" />
+        <Image src="/img/login.jpg" alt="" fill priority sizes="55vw" className="object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-neutral-900/80 via-neutral-900/20 to-transparent" />
+        <a
+          href="https://commons.wikimedia.org/wiki/File:D%C3%BClmen,_Hausd%C3%BClmen,_Golden_Retriever_--_2022_--_5945.jpg"
+          target="_blank"
+          rel="noreferrer"
+          className="absolute right-4 top-4 text-xs text-white/70 hover:text-white"
+        >
+          Foto: Dietmar Rabich / CC BY-SA 4.0
+        </a>
         <div className="animate-dashboard-in absolute inset-x-0 bottom-0 space-y-3 p-12 text-white">
           <h2 className="font-heading text-4xl leading-tight">Cada mascota merece un hogar.</h2>
           <p className="max-w-md text-lg text-white/85">
