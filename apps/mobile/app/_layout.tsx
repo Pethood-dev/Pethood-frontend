@@ -89,6 +89,8 @@ function RootNavigator() {
         <Stack.Screen name="perdidos/nuevo" options={{ presentation: 'card' }} />
         <Stack.Screen name="campanias/index" />
         <Stack.Screen name="campanias/[id]/donar" options={{ presentation: 'card' }} />
+        <Stack.Screen name="campanias/refugio/index" />
+        <Stack.Screen name="campanias/refugio/nueva" options={{ presentation: 'card' }} />
         <Stack.Screen name="mascotas/crear" options={{ presentation: 'card' }} />
         {/* HU-6.4. Se abre tocando una tarjeta de "Mis mascotas". */}
         <Stack.Screen name="mascotas/[id]/index" options={{ presentation: 'card' }} />
