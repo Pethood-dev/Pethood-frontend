@@ -64,7 +64,7 @@ const MENU_ADOPTANTE: ItemMenu[] = [
   },
   { icono: 'footsteps-outline', label: 'Seguimientos', ruta: '/seguimientos' },
   { icono: 'heart-outline', label: 'Favoritos', ruta: '/favoritos' },
-  { icono: 'heart-circle-outline', label: 'Campañas' },
+  { icono: 'heart-circle-outline', label: 'Campañas', ruta: '/campanias' as Href },
 ];
 
 /**
@@ -86,7 +86,11 @@ const MENU_REFUGIO: ItemMenu[] = [
     ruta: { pathname: '/solicitudes', params: { vista: 'recibidas' } },
   },
   { icono: 'footsteps-outline', label: 'Seguimientos', ruta: '/seguimientos' },
-  { icono: 'heart-circle-outline', label: 'Campañas del refugio' },
+  {
+    icono: 'heart-circle-outline',
+    label: 'Campañas del refugio',
+    ruta: '/campanias/refugio' as Href,
+  },
 ];
 
 /** Solo se muestra en la vista personal: en la de refugio la tarjeta es la del refugio. */
