@@ -4,7 +4,7 @@ import { Pagination } from "@/components/ui/Pagination";
 import { useTablaAdmin } from "@/lib/useTablaAdmin";
 import type { FiltrosModeracion, Lista, SolicitudAdmin } from "@/types/admin-moderacion";
 
-const CAMPO = "rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-900";
+const CAMPO = "w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-900 sm:w-auto";
 
 export function SolicitudesTabla({ lista, filtros }: { lista: Lista<SolicitudAdmin>; filtros: FiltrosModeracion }) {
   const { aplicarFiltros, irAPagina } = useTablaAdmin("/admin/solicitudes", filtros);
@@ -12,7 +12,7 @@ export function SolicitudesTabla({ lista, filtros }: { lista: Lista<SolicitudAdm
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3 rounded-lg border border-neutral-200 bg-white p-4">
-        <label className="text-xs font-medium text-neutral-600">
+        <label className="w-full text-xs font-medium text-neutral-600 sm:w-auto">
           <span className="mb-1 block">Buscar</span>
           <input
             type="text"
@@ -22,7 +22,7 @@ export function SolicitudesTabla({ lista, filtros }: { lista: Lista<SolicitudAdm
             onKeyDown={(e) => e.key === "Enter" && aplicarFiltros({ q: e.currentTarget.value })}
           />
         </label>
-        <label className="text-xs font-medium text-neutral-600">
+        <label className="w-full text-xs font-medium text-neutral-600 sm:w-auto">
           <span className="mb-1 block">Tipo</span>
           <input
             type="text"
@@ -32,11 +32,11 @@ export function SolicitudesTabla({ lista, filtros }: { lista: Lista<SolicitudAdm
             onKeyDown={(e) => e.key === "Enter" && aplicarFiltros({ tipo: e.currentTarget.value })}
           />
         </label>
-        <label className="text-xs font-medium text-neutral-600">
+        <label className="w-full text-xs font-medium text-neutral-600 sm:w-auto">
           <span className="mb-1 block">Desde</span>
           <input type="date" defaultValue={filtros.desde ?? ""} className={CAMPO} onChange={(e) => aplicarFiltros({ desde: e.target.value })} />
         </label>
-        <label className="text-xs font-medium text-neutral-600">
+        <label className="w-full text-xs font-medium text-neutral-600 sm:w-auto">
           <span className="mb-1 block">Hasta</span>
           <input type="date" defaultValue={filtros.hasta ?? ""} className={CAMPO} onChange={(e) => aplicarFiltros({ hasta: e.target.value })} />
         </label>

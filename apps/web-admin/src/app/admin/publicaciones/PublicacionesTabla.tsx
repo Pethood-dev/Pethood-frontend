@@ -14,7 +14,7 @@ import {
 } from "@/services/admin-moderacion";
 import type { AccionPublicacion, FiltrosModeracion, Lista, PublicacionAdmin } from "@/types/admin-moderacion";
 
-const CAMPO = "rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-900";
+const CAMPO = "w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-900 sm:w-auto";
 
 interface ModalMotivo {
   titulo: string;
@@ -47,7 +47,7 @@ export function PublicacionesTabla({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3 rounded-lg border border-neutral-200 bg-white p-4">
-        <label className="text-xs font-medium text-neutral-600">
+        <label className="w-full text-xs font-medium text-neutral-600 sm:w-auto">
           <span className="mb-1 block">Buscar</span>
           <input
             type="text"
@@ -100,7 +100,7 @@ export function PublicacionesTabla({
                   <td data-label="Solicitudes" className="px-4 py-3 text-center text-neutral-600">{p.cantidadSolicitudes}</td>
                   <td data-label="Fecha" className="px-4 py-3 text-center text-neutral-600">{new Date(p.fechaAlta).toLocaleDateString("es-AR")}</td>
                   <td data-label="Acciones" className="px-4 py-3">
-                    <div className="flex flex-wrap justify-center gap-2">
+                    <div className="flex flex-wrap justify-end gap-2 md:justify-center">
                       {/* El backend valida la transición (409 TRANSICION_INVALIDA); acá solo se ofrece lo plausible. */}
                       {deBaja ? (
                         <AccionButton

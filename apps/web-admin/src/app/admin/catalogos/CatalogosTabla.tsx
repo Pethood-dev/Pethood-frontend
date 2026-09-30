@@ -137,7 +137,7 @@ export function CatalogosTabla({
                 .filter(Boolean)
                 .join(" · ");
               return (
-                <tr key={item.id} className="border-b border-neutral-100 last:border-0">
+                <tr key={`${item.id}-${typeof item.especie === "string" ? item.especie : ""}`} className="border-b border-neutral-100 last:border-0">
                   <td data-label="Nombre" className="px-4 py-3 text-center text-neutral-900">{item.nombre}</td>
                   <td data-label="Descripción" className="px-4 py-3 text-center text-neutral-600">{item.descripcion ?? "—"}</td>
                   <td data-label="Detalle" className="px-4 py-3 text-center text-neutral-600">{detalle || "—"}</td>
