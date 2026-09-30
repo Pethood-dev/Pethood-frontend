@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Feedback } from "@/components/ui/Feedback";
+import { CampoTexto } from "@/components/ui/CampoTexto";
+import { ErrorCampo } from "@/components/ui/ErrorCampo";
 import { Modal } from "@/components/ui/Modal";
+import { useTocados } from "@/lib/useTocados";
+import { hayErrores, LIMITES, validarEntero, validarTexto } from "@/lib/validation";
 import type { BodyCatalogo, Catalogo, ItemCatalogo } from "@/types/admin-catalogos";
 
 const INPUT = "w-full rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-900";
@@ -36,12 +40,18 @@ export function CatalogoFormModal({
   const [secuencia, setSecuencia] = useState(String(item?.secuenciaDias ?? ""));
   const [enviando, setEnviando] = useState(false);
 
-  const nombreOk = !tieneNombre || (nombre.trim().length >= 2 && nombre.trim().length <= 50);
-  const especieOk = !tieneEspecie || especieId !== "";
-  const secuenciaOk = !tieneSecuencia || (Number(secuencia) >= 1 && Number(secuencia) <= 365 && Number.isInteger(Number(secuencia)));
-  const valido = nombreOk && especieOk && secuenciaOk;
+  const { ver, tocar, intentarEnviar } = useTocados();
+  const L = LIMITES.catalogo;
+  const errores = {
+    nombre: tieneNombre ? validarTexto(nombre, { etiqueta: "El nombre", ...L.nombre }) : null,
+    especie: tieneEspecie && !especieId ? "Elegí una especie para continuar." : null,
+    descripcion: tieneDescripcion ? validarTexto(descripcion, { etiqueta: "La descripción", ...L.descripcion, obligatorio: false }) : null,
+    secuencia: tieneSecuencia ? validarEntero(secuencia, { etiqueta: "La secuencia", ...L.secuenciaDias }) : null,
+  };
 
   async function guardar() {
+    intentarEnviar();
+    if (hayErrores(errores)) return;
     setEnviando(true);
     const body: BodyCatalogo = {};
     if (tieneNombre) body.nombre = nombre.trim();
@@ -59,15 +69,21 @@ export function CatalogoFormModal({
     <Modal titulo={item ? "Editar ítem" : "Nuevo ítem"} onCerrar={onCerrar}>
       <div className="space-y-3">
         {tieneNombre && (
-          <label className="block text-sm font-medium text-neutral-700">
-            Nombre
-            <input className={INPUT} maxLength={50} value={nombre} onChange={(e) => setNombre(e.target.value)} />
-          </label>
+          <CampoTexto id="nombre" label="Nombre" value={nombre} onChange={setNombre} onBlur={() => tocar("nombre")} error={ver("nombre", errores.nombre)} maxLength={L.nombre.max} />
         )}
         {tieneEspecie && (
-          <label className="block text-sm font-medium text-neutral-700">
-            Especie
-            <select className={INPUT} value={especieId} onChange={(e) => setEspecieId(e.target.value)}>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-neutral-700" htmlFor="especieId">
+              Especie
+            </label>
+            <select
+              id="especieId"
+              className={`${INPUT} ${ver("especie", errores.especie) ? "border-red-400" : ""}`}
+              value={especieId}
+              onChange={(e) => setEspecieId(e.target.value)}
+              onBlur={() => tocar("especie")}
+              aria-invalid={!!ver("especie", errores.especie)}
+            >
               <option value="">Elegí una especie</option>
               {especies.map((e) => (
                 <option key={e.id} value={e.id}>
@@ -75,39 +91,21 @@ export function CatalogoFormModal({
                 </option>
               ))}
             </select>
-          </label>
+            <ErrorCampo id="especieId" error={ver("especie", errores.especie)} />
+          </div>
         )}
         {tieneDescripcion && (
-          <label className="block text-sm font-medium text-neutral-700">
-            Descripción
-            <textarea
-              className={INPUT}
-              rows={3}
-              maxLength={200}
-              value={descripcion}
-              onChange={(e) => setDescripcion(e.target.value)}
-            />
-          </label>
+          <CampoTexto id="descripcion" label="Descripción" rows={3} value={descripcion} onChange={setDescripcion} onBlur={() => tocar("descripcion")} error={ver("descripcion", errores.descripcion)} maxLength={L.descripcion.max} />
         )}
         {tieneSecuencia && (
-          <label className="block text-sm font-medium text-neutral-700">
-            Secuencia (días, 1 a 365)
-            <input
-              className={INPUT}
-              type="number"
-              min={1}
-              max={365}
-              value={secuencia}
-              onChange={(e) => setSecuencia(e.target.value)}
-            />
-          </label>
+          <CampoTexto id="secuencia" label="Secuencia (días, 1 a 365)" type="number" min={L.secuenciaDias.min} max={L.secuenciaDias.max} value={secuencia} onChange={setSecuencia} onBlur={() => tocar("secuencia")} error={ver("secuencia", errores.secuencia)} />
         )}
         {error && <Feedback tipo="error" mensaje={error} />}
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onCerrar} disabled={enviando}>
             Cancelar
           </Button>
-          <Button onClick={guardar} disabled={enviando || !valido}>
+          <Button onClick={guardar} disabled={enviando}>
             {enviando ? "Guardando…" : "Guardar"}
           </Button>
         </div>
