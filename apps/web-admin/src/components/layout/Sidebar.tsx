@@ -17,8 +17,9 @@ interface SidebarProps {
   links: SidebarLink[];
 }
 
+// El alto y el texto de cada ítem del menú mobile se calculan según el alto de pantalla (ver `estiloItem`).
 const ITEM_MOVIL =
-  "flex w-80 max-w-[85vw] items-center gap-4 rounded-2xl border px-6 py-4 text-lg font-medium transition-all duration-200 active:scale-95";
+  "flex w-80 max-w-[85vw] items-center gap-3 rounded-2xl border px-6 font-medium transition-all duration-200 active:scale-95 [&_svg]:h-[1.25em] [&_svg]:w-[1.25em] [&_svg]:shrink-0";
 
 export function Sidebar({ links }: SidebarProps) {
   const pathname = usePathname();
@@ -40,6 +41,13 @@ export function Sidebar({ links }: SidebarProps) {
   // se desvanece: así nada salta mientras anima el ancho.
   const fila =
     "flex w-full items-center gap-3 overflow-hidden whitespace-nowrap rounded-lg px-4 py-2.5 text-base font-medium transition-colors";
+  // Menú mobile de tamaño dinámico: reparte el alto de pantalla entre todos los ítems (links + Salir + Cerrar),
+  // con piso y techo para que ni se aplaste ni se agrande de más. `svh` = alto real con las barras del navegador.
+  const estiloItem = (delayMs: number) => ({
+    transitionDelay: abierto ? `${delayMs}ms` : "0ms",
+    height: `clamp(36px, calc((100svh - 3rem) / ${links.length + 2} - 8px), 60px)`,
+    fontSize: "clamp(14px, 2.4svh, 18px)",
+  });
   const etiqueta = `transition-opacity duration-200 ${colapsado ? "md:opacity-0" : ""}`;
 
   return (
@@ -51,15 +59,15 @@ export function Sidebar({ links }: SidebarProps) {
           abierto ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
         }`}
       >
-        <nav className="flex flex-1 flex-col items-center gap-3 overflow-y-auto px-6 py-8">
-          <div className="my-auto flex w-full flex-col items-center gap-3">
+        <nav className="flex flex-1 flex-col items-center gap-2 overflow-y-auto px-6 py-4">
+          <div className="my-auto flex w-full flex-col items-center gap-2">
             {links.map((link, i) => (
               <Link
                 key={link.href}
                 href={link.href}
                 onClick={() => setAbierto(false)}
                 tabIndex={abierto ? 0 : -1}
-                style={{ transitionDelay: abierto ? `${i * 30}ms` : "0ms" }}
+                style={estiloItem(i * 30)}
                 className={`${ITEM_MOVIL} ${
                   pathname.startsWith(link.href)
                     ? "border-pethood-orange/40 bg-pethood-orange/15 text-pethood-orange-dark"
@@ -73,16 +81,17 @@ export function Sidebar({ links }: SidebarProps) {
             <form
               action={logoutAction}
               style={{ transitionDelay: abierto ? `${links.length * 30}ms` : "0ms" }}
-              className={`w-80 max-w-[85vw] pt-2 transition-all duration-200 ${
+              className={`w-80 max-w-[85vw] transition-all duration-200 ${
                 abierto ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"
               }`}
             >
               <button
                 type="submit"
                 tabIndex={abierto ? 0 : -1}
+                style={estiloItem(0)}
                 className={`${ITEM_MOVIL} w-full justify-center border-white/10 bg-white/5 text-red-400`}
               >
-                <LogOut className="h-5 w-5 shrink-0" />
+                <LogOut />
                 Salir
               </button>
             </form>
@@ -90,7 +99,7 @@ export function Sidebar({ links }: SidebarProps) {
               type="button"
               onClick={() => setAbierto(false)}
               tabIndex={abierto ? 0 : -1}
-              style={{ transitionDelay: abierto ? `${(links.length + 1) * 30}ms` : "0ms" }}
+              style={estiloItem((links.length + 1) * 30)}
               className={`${ITEM_MOVIL} justify-center border-pethood-orange bg-pethood-orange text-white ${
                 abierto ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"
               }`}
