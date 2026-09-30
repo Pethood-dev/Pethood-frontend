@@ -33,7 +33,6 @@ export default async function CatalogosAdminPage({ searchParams }: PageProps) {
         <p className="text-base text-neutral-700">Valores base que usan los formularios de la plataforma.</p>
       </div>
       <CatalogosTabla
-        key={catalogo}
         catalogo={catalogo}
         lista={lista}
         filtros={filtros}
