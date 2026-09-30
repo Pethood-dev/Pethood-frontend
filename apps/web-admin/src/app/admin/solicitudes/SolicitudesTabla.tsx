@@ -1,13 +1,25 @@
 "use client";
 
+import { useState } from "react";
+import { Feedback } from "@/components/ui/Feedback";
 import { Pagination } from "@/components/ui/Pagination";
 import { useTablaAdmin } from "@/lib/useTablaAdmin";
+import { validarRangoFechas } from "@/lib/validation";
 import type { FiltrosModeracion, Lista, SolicitudAdmin } from "@/types/admin-moderacion";
 
 const CAMPO = "w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-900 sm:w-auto";
 
 export function SolicitudesTabla({ lista, filtros }: { lista: Lista<SolicitudAdmin>; filtros: FiltrosModeracion }) {
-  const { aplicarFiltros, irAPagina } = useTablaAdmin("/admin/solicitudes", filtros);
+  const { aplicarFiltros: navegar, irAPagina } = useTablaAdmin("/admin/solicitudes", filtros);
+  const [errorFechas, setErrorFechas] = useState<string | null>(null);
+
+  // El rango se valida antes de pedir: no tiene sentido mandar desde > hasta al backend.
+  function aplicarFiltros(nuevos: Partial<FiltrosModeracion>) {
+    const { desde, hasta } = { ...filtros, ...nuevos };
+    const error = validarRangoFechas(desde, hasta);
+    setErrorFechas(error);
+    if (!error) navegar(nuevos);
+  }
 
   return (
     <div className="space-y-4">
@@ -16,6 +28,7 @@ export function SolicitudesTabla({ lista, filtros }: { lista: Lista<SolicitudAdm
           <span className="mb-1 block">Buscar</span>
           <input
             type="text"
+            maxLength={100}
             defaultValue={filtros.q ?? ""}
             placeholder="Mascota, solicitante o email"
             className={CAMPO}
@@ -26,6 +39,7 @@ export function SolicitudesTabla({ lista, filtros }: { lista: Lista<SolicitudAdm
           <span className="mb-1 block">Tipo</span>
           <input
             type="text"
+            maxLength={100}
             defaultValue={filtros.tipo ?? ""}
             placeholder="Adopcion, Transito…"
             className={CAMPO}
@@ -41,6 +55,8 @@ export function SolicitudesTabla({ lista, filtros }: { lista: Lista<SolicitudAdm
           <input type="date" defaultValue={filtros.hasta ?? ""} className={CAMPO} onChange={(e) => aplicarFiltros({ hasta: e.target.value })} />
         </label>
       </div>
+
+      {errorFechas && <Feedback tipo="error" mensaje={errorFechas} />}
 
       <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white">
         <table className="tabla-apilable w-full text-left text-sm">
