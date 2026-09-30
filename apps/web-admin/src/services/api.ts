@@ -61,3 +61,12 @@ export async function apiFetch<T>(ruta: string, options: ApiFetchOptions = {}): 
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
+
+export function aQueryString(filtros: object): string {
+  const params = new URLSearchParams();
+  for (const [clave, valor] of Object.entries(filtros as Record<string, string | number | boolean | undefined>)) {
+    if (valor !== undefined && valor !== "") params.set(clave, String(valor));
+  }
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}

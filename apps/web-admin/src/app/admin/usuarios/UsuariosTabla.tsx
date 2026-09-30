@@ -76,6 +76,7 @@ export function UsuariosTabla({
           <label className="mb-1 block text-xs font-medium text-neutral-600">Buscar</label>
           <input
             type="text"
+            maxLength={100}
             defaultValue={filtros.q ?? ""}
             placeholder="Nombre, apellido o email"
             className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-900"
