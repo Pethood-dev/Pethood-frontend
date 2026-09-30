@@ -1,4 +1,6 @@
 import Image from "next/image";
+import { Foto } from "./Foto";
+import { FOTO_REGISTRO } from "./fotos";
 import { RegistroRefugioForm } from "./RegistroRefugioForm";
 import { SiteFooter } from "./SiteFooter";
 import { SiteHeader } from "./SiteHeader";
@@ -27,9 +29,11 @@ export default function Landing() {
               aria-label="Perro mirando a lo lejos al sol"
             />
             <div className="hero-copy">
-              <h1>
+              {/* Eslogan del póster: punto principal de la página. */}
+              <h1>Adoptar es cambiar dos vidas.</h1>
+              <p className="hero-sub">
                 Adopción responsable y rescate animal, en una sola plataforma
-              </h1>
+              </p>
               <p>
                 PetHood conecta a dos actores que hoy no tienen un lugar en
                 común: <strong>adoptantes</strong> con{" "}
@@ -65,8 +69,8 @@ export default function Landing() {
             </article>
             <article className="card">
               <Image
-                src="/img/puppy.jpg"
-                alt="Cachorro bernés en el pasto"
+                src="/img/refugio.jpg"
+                alt="Perro sonriendo esperando un hogar"
                 width={640}
                 height={480}
               />
@@ -96,13 +100,6 @@ export default function Landing() {
 
         <section className="why">
           <div className="wrap grid2">
-            <Image
-              src="/img/panel.jpg"
-              alt="Perro junto a una notebook mostrando su foto"
-              width={1200}
-              height={800}
-              style={{ width: "100%", height: "auto", borderRadius: 20 }}
-            />
             <div>
               <h2>Por qué existe</h2>
               <p>
@@ -117,6 +114,13 @@ export default function Landing() {
                 adoptantes como de refugios.
               </p>
             </div>
+            <Image
+              src="/img/panel.jpg"
+              alt="Perro junto a una notebook mostrando su foto"
+              width={1200}
+              height={800}
+              style={{ width: "100%", height: "auto", borderRadius: 20 }}
+            />
           </div>
         </section>
 
@@ -124,19 +128,13 @@ export default function Landing() {
           <div className="wrap grid2">
             <div>
               <h2>Registrá tu refugio u ONG</h2>
-              <p className="lead">
+              <p className="lead" style={{ marginBottom: 24 }}>
                 Completá tus datos y los del refugio. Tu cuenta queda{" "}
                 <strong>pendiente de verificación</strong>: mientras tanto podés
                 completar el perfil, pero no publicar hasta que el equipo de
                 administración la apruebe.
               </p>
-              <Image
-                src="/img/refugio.jpg"
-                alt="Perro sonriendo esperando un hogar"
-                width={1200}
-                height={800}
-                style={{ width: "100%", height: "auto", borderRadius: 14 }}
-              />
+              <Foto {...FOTO_REGISTRO} />
             </div>
 
             <RegistroRefugioForm />
