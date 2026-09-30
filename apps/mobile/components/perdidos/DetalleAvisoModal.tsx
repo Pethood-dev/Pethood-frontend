@@ -10,16 +10,20 @@
  *   publicó el aviso, que es con quien se va a hablar.
  * - "Enviar mensaje" queda deshabilitado: el chat de reencuentro es de HU-13.2. En un aviso
  *   propio ni se muestra, porque no hay a quién escribirle.
+ * - Dos agregados que el diseño no trae, de cuando el lugar pasó al catálogo de provincias: a
+ *   qué distancia está el lugar (si el usuario dio su ubicación y el lugar se pudo ubicar en
+ *   el mapa) y un botón para verlo en Google Maps.
  *
  * El aviso puede traer hasta 5 fotos: la tarjeta del portal muestra sólo la portada y acá se
  * deslizan todas, con puntos que marcan en cuál se está.
  */
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Image, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Image, Linking, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { EstadoAnimalPerdidoBadge } from '@/components/ui/EstadoAnimalPerdidoBadge';
 import { PALETA } from '@/constants/theme';
+import { distanciaEnTexto } from '@/lib/ubicacion';
 import { urlAbsoluta } from '@/services/api';
 import type { AvisoPerdido } from '@/services/animalesPerdidos';
 import { aFechaVisible, parsearFecha } from '@/shared/validation/dates';
@@ -78,6 +82,14 @@ function TarjetaDetalle({ aviso, onCerrar }: { aviso: AvisoPerdido; onCerrar: ()
   const nombre = aviso.nombre ?? 'Sin nombre';
   const reportante = `${aviso.reportante.nombre} ${aviso.reportante.apellido}`.trim();
   const suceso = textoSuceso(aviso);
+  // "Godoy Cruz - Mendoza · a 2,3 km", como la zona de la ficha de una publicación.
+  const lugar = [
+    aviso.ubicacion,
+    aviso.distanciaKm !== null ? distanciaEnTexto(aviso.distanciaKm) : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const mapaUrl = aviso.mapaUrl;
 
   return (
     <View
@@ -122,15 +134,27 @@ function TarjetaDetalle({ aviso, onCerrar }: { aviso: AvisoPerdido; onCerrar: ()
           </Text>
 
           <View className="mt-4 gap-2.5">
-            {aviso.ubicacion ? (
-              <DatoConIcono icono="location-outline" texto={aviso.ubicacion} />
-            ) : null}
+            {lugar ? <DatoConIcono icono="location-outline" texto={lugar} /> : null}
             {suceso ? <DatoConIcono icono="calendar-outline" texto={suceso} /> : null}
             <DatoConIcono icono="person-outline" texto={`Lo publicó ${reportante}`} />
           </View>
 
+          {mapaUrl ? (
+            <Pressable
+              accessibilityRole="link"
+              accessibilityLabel="Ver el lugar en Google Maps"
+              onPress={() => void Linking.openURL(mapaUrl).catch(() => undefined)}
+              className="mt-5 h-[48px] flex-row items-center justify-center gap-2 rounded-full border border-organic-accent-600 active:opacity-70"
+            >
+              <Ionicons name="map-outline" size={19} color={PALETA.accent[600]} />
+              <Text className="font-cuerpo-bold text-[16px] text-organic-accent-600">
+                Ver en Google Maps
+              </Text>
+            </Pressable>
+          ) : null}
+
           {aviso.esPropio ? null : (
-            <View className="mt-5">
+            <View className={mapaUrl ? 'mt-3' : 'mt-5'}>
               {/* Deshabilitado con el mismo gris que las funciones que todavía no están en
                   el Perfil: el chat de reencuentro llega con HU-13.2. */}
               <Pressable

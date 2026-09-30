@@ -7,18 +7,30 @@
  * backend los exige: la especie (también la usa el filtro del portal) y el permiso de
  * ubicación, cuyas coordenadas se toman al publicar (precondición de la HU).
  *
+ * El lugar se carga como la dirección del perfil: provincia y localidad del catálogo, más una
+ * referencia libre y opcional ("frente a la plaza"). Arranca con la provincia y la localidad
+ * del perfil, porque casi siempre pasa cerca de casa, pero se cambian si el animal se perdió
+ * o se encontró en otro lado. También como en el perfil, debajo se ve el lugar en Google Maps
+ * para verificar el pin o corregirlo pegando un link a mano; ese punto viaja en el alta y es
+ * desde donde se mide la distancia en el portal. Por eso los campos del lugar van últimos en
+ * la tarjeta, pegados al mapa (el diseño tiene la fecha al final).
+ *
  * La validación de acá es sólo para UX: la real la hace el backend y sus mensajes se muestran
  * tal cual. Mismo patrón que el alta de mascota: el botón se habilita con todo válido, y
  * tocarlo deshabilitado marca en rojo lo que falta y lo nombra en un aviso (criterio 5).
  */
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CustomButton } from '@/components/CustomButton';
 import { EstadoCargando, EstadoError } from '@/components/feedback/EstadosPantalla';
 import { useToast } from '@/components/feedback/Toast';
+import {
+  AvisoVerificacionUbicacion,
+  type TextosVerificacionUbicacion,
+} from '@/components/perfil/AvisoVerificacionUbicacion';
 import { BotonCircular } from '@/components/ui/BotonCircular';
 import { DateField } from '@/components/ui/DateField';
 import { FormCard, FormCardRow } from '@/components/ui/FormCard';
@@ -29,10 +41,13 @@ import { Segmentado, type OpcionSegmento } from '@/components/ui/Segmentado';
 import { SelectField } from '@/components/ui/SelectField';
 import { TextAreaField } from '@/components/ui/TextAreaField';
 import { TextField } from '@/components/ui/TextField';
+import { PROVINCIAS, localidadesDe } from '@/constants/Provincias';
+import { usePreviewUbicacion, type DireccionEstructurada } from '@/hooks/usePreviewUbicacion';
+import { useSesion } from '@/hooks/useSesion';
 import { useUbicacionDispositivo } from '@/hooks/useUbicacionDispositivo';
 import { avisarAvisoCreado } from '@/lib/avisoRecienCreado';
 import { ApiError } from '@/services/api';
-import { crearAviso } from '@/services/animalesPerdidos';
+import { crearAviso, leerLinkMapa, ubicarLugar } from '@/services/animalesPerdidos';
 import {
   listarEspecies,
   listarEstadosAnimalPerdido,
@@ -41,6 +56,7 @@ import {
 import { validarFechaPasada } from '@/shared/validation/dates';
 import { LIMITES } from '@/shared/validation/limits';
 import { validarTexto } from '@/shared/validation/text';
+import type { UbicacionPreview, Usuario } from '@/types/auth';
 
 /** El estado que exige nombre, como regla del backend: en uno encontrado puede faltar. */
 const ESTADO_CON_NOMBRE = 'Perdido';
@@ -56,12 +72,51 @@ const ETIQUETA_EN_ALTA: Record<string, string> = {
 
 const { animalPerdido } = LIMITES;
 
+const TEXTOS_MAPA: TextosVerificacionUbicacion = {
+  incompleta: 'Elegí la provincia y la localidad para ver el lugar en el mapa.',
+  verificada: 'Lugar verificado',
+  dialogoMensaje: 'Pegá el link de Google Maps del lugar donde se perdió o se encontró.',
+  dialogoDetalle: 'Desde ahí se calcula a qué distancia está el aviso de quien lo vea.',
+};
+
+/** El preview del lugar, con la forma que espera el hook de la dirección del perfil. */
+function previsualizarLugar(lugar: DireccionEstructurada): Promise<UbicacionPreview> {
+  // La referencia hace de "calle y altura": es el tercer dato del lugar, y es opcional.
+  return ubicarLugar({
+    provincia: lugar.provincia,
+    localidad: lugar.localidad,
+    referencia: lugar.calleAltura,
+  });
+}
+
+const OPCIONES_PROVINCIA = PROVINCIAS.map((provincia) => ({
+  valor: provincia.nombre,
+  etiqueta: provincia.nombre,
+}));
+
+/**
+ * El lugar del perfil para precargar, sólo si es del catálogo: un perfil cargado antes de los
+ * selectores puede tener texto libre, y ese no se arrastra al aviso.
+ */
+function lugarDelPerfil(usuario: Usuario | null): {
+  provincia: string | null;
+  localidad: string | null;
+} {
+  const provincia = PROVINCIAS.find((opcion) => opcion.nombre === usuario?.provincia)?.nombre;
+  if (!provincia) return { provincia: null, localidad: null };
+
+  const localidad = localidadesDe(provincia).find((opcion) => opcion === usuario?.localidad);
+  return { provincia, localidad: localidad ?? null };
+}
+
 interface ErroresFormulario {
   foto?: string;
   nombre?: string;
   especieId?: string;
   descripcion?: string;
-  ubicacion?: string;
+  provincia?: string;
+  localidad?: string;
+  referencia?: string;
   fechaSuceso?: string;
 }
 
@@ -71,7 +126,9 @@ const ETIQUETAS: Record<keyof ErroresFormulario, string> = {
   nombre: 'el nombre',
   especieId: 'la especie',
   descripcion: 'la descripción',
-  ubicacion: 'el lugar',
+  provincia: 'la provincia',
+  localidad: 'la localidad',
+  referencia: 'la referencia',
   fechaSuceso: 'la fecha',
 };
 
@@ -83,6 +140,7 @@ function enumerar(elementos: string[]): string {
 export default function NuevoAvisoPerdidoScreen() {
   const router = useRouter();
   const toast = useToast();
+  const { usuario } = useSesion();
   const ubicacion = useUbicacionDispositivo();
 
   const [estados, setEstados] = useState<OpcionCatalogo[]>([]);
@@ -95,7 +153,17 @@ export default function NuevoAvisoPerdidoScreen() {
   const [nombre, setNombre] = useState('');
   const [especieId, setEspecieId] = useState<number | null>(null);
   const [descripcion, setDescripcion] = useState('');
-  const [lugar, setLugar] = useState('');
+  const [provincia, setProvincia] = useState<string | null>(
+    () => lugarDelPerfil(usuario).provincia,
+  );
+  const [localidad, setLocalidad] = useState<string | null>(
+    () => lugarDelPerfil(usuario).localidad,
+  );
+  const [referencia, setReferencia] = useState('');
+  /** El usuario confirmó que el pin del mapa es el lugar. Como en el perfil, no bloquea. */
+  const [verificada, setVerificada] = useState(false);
+  /** El punto del link que pegó a mano: pisa al del preview hasta que cambie el lugar. */
+  const [puntoManual, setPuntoManual] = useState<UbicacionPreview | null>(null);
   // Casi siempre se reporta en el día: arranca en hoy y se cambia si hace falta.
   const [fechaSuceso, setFechaSuceso] = useState<Date | null>(() => new Date());
 
@@ -152,6 +220,59 @@ export default function NuevoAvisoPerdidoScreen() {
     etiqueta: ETIQUETA_EN_ALTA[estado.nombre] ?? estado.nombre,
   }));
 
+  const opcionesLocalidad = useMemo(
+    () => localidadesDe(provincia).map((opcion) => ({ valor: opcion, etiqueta: opcion })),
+    [provincia],
+  );
+
+  const mapa = usePreviewUbicacion(
+    { provincia: provincia ?? '', localidad: localidad ?? '', calleAltura: referencia },
+    previsualizarLugar,
+    { calleAlturaOpcional: true },
+  );
+
+  /**
+   * Otro lugar es otro pin: la verificación y el link pegado a mano eran del anterior. El
+   * bloque del mapa se vuelve a montar con la misma clave, así tampoco muestra el link viejo.
+   */
+  const claveDelLugar = `${provincia ?? ''}|${localidad ?? ''}|${referencia.trim()}`;
+  const olvidarPin = (): void => {
+    setVerificada(false);
+    setPuntoManual(null);
+  };
+
+  /** Al cambiar de provincia se limpia la localidad: las de la anterior ya no aplican. */
+  const elegirProvincia = (nueva: string): void => {
+    if (nueva === provincia) return;
+    setProvincia(nueva);
+    setLocalidad(null);
+    olvidarPin();
+  };
+
+  const elegirLocalidad = (nueva: string): void => {
+    if (nueva === localidad) return;
+    setLocalidad(nueva);
+    olvidarPin();
+  };
+
+  const cambiarReferencia = (nueva: string): void => {
+    setReferencia(nueva);
+    if (nueva.trim() !== referencia.trim()) olvidarPin();
+  };
+
+  /** "Corregir a mano": el backend lee el punto del link. Si no puede, el diálogo lo dice. */
+  const guardarLinkManual = useCallback(async (link: string): Promise<void> => {
+    setPuntoManual(await leerLinkMapa(link));
+    setVerificada(true);
+  }, []);
+
+  /**
+   * El punto que viaja en el alta: el pegado a mano o el del preview. Mientras el preview se
+   * recalcula no se manda ninguno, porque el que hay es del lugar anterior: el backend lo
+   * geocodifica al publicar.
+   */
+  const puntoDelLugar = puntoManual ?? (mapa.cargando ? null : mapa.ubicacion);
+
   const errores = useMemo<ErroresFormulario>(() => {
     const resultado: ErroresFormulario = {};
 
@@ -172,17 +293,31 @@ export default function NuevoAvisoPerdidoScreen() {
     });
     if (errorDescripcion) resultado.descripcion = errorDescripcion;
 
-    const errorLugar = validarTexto(lugar, {
-      max: animalPerdido.ubicacion.max,
-      etiqueta: 'El lugar',
+    if (provincia === null) resultado.provincia = 'La provincia es obligatoria';
+    if (localidad === null) resultado.localidad = 'La localidad es obligatoria';
+
+    const errorReferencia = validarTexto(referencia, {
+      max: animalPerdido.referencia.max,
+      etiqueta: 'La referencia',
+      obligatorio: false,
     });
-    if (errorLugar) resultado.ubicacion = errorLugar;
+    if (errorReferencia) resultado.referencia = errorReferencia;
 
     const errorFecha = validarFechaPasada(fechaSuceso, 'La fecha');
     if (errorFecha) resultado.fechaSuceso = errorFecha;
 
     return resultado;
-  }, [fotos, nombre, nombreObligatorio, especieId, descripcion, lugar, fechaSuceso]);
+  }, [
+    fotos,
+    nombre,
+    nombreObligatorio,
+    especieId,
+    descripcion,
+    provincia,
+    localidad,
+    referencia,
+    fechaSuceso,
+  ]);
 
   const formularioValido = Object.keys(errores).length === 0;
   const puedePublicar = formularioValido && ubicacion.estado === 'concedido' && estadoId !== null;
@@ -222,7 +357,9 @@ export default function NuevoAvisoPerdidoScreen() {
       fotos.length === 0 ||
       !fechaSuceso ||
       estadoId === null ||
-      especieId === null
+      especieId === null ||
+      provincia === null ||
+      localidad === null
     ) {
       return;
     }
@@ -236,7 +373,12 @@ export default function NuevoAvisoPerdidoScreen() {
         nombre: nombre.trim(),
         especieId,
         descripcion: descripcion.trim(),
-        ubicacion: lugar.trim(),
+        provincia,
+        localidad,
+        referencia: referencia.trim(),
+        puntoDelLugar: puntoDelLugar
+          ? { latitud: puntoDelLugar.latitud, longitud: puntoDelLugar.longitud }
+          : null,
         fechaSuceso,
         latitud: coordenadas.latitud,
         longitud: coordenadas.longitud,
@@ -345,20 +487,6 @@ export default function NuevoAvisoPerdidoScreen() {
               </FormCardRow>
 
               <FormCardRow>
-                <TextField
-                  label="Lugar / barrio"
-                  obligatorio
-                  placeholder="Ej. Godoy Cruz"
-                  value={lugar}
-                  onChangeText={setLugar}
-                  onBlur={() => marcarTocado('ubicacion')}
-                  maxLength={animalPerdido.ubicacion.max}
-                  error={errorDe('ubicacion')}
-                  grande
-                />
-              </FormCardRow>
-
-              <FormCardRow ultima>
                 <DateField
                   label="Fecha"
                   obligatorio
@@ -372,11 +500,68 @@ export default function NuevoAvisoPerdidoScreen() {
                   grande
                 />
               </FormCardRow>
+
+              <FormCardRow>
+                <SelectField
+                  label="Provincia"
+                  obligatorio
+                  placeholder="Elegí la provincia"
+                  opciones={OPCIONES_PROVINCIA}
+                  valor={provincia}
+                  onChange={elegirProvincia}
+                  onBlur={() => marcarTocado('provincia')}
+                  error={errorDe('provincia')}
+                  buscable
+                  grande
+                />
+              </FormCardRow>
+
+              <FormCardRow>
+                <SelectField
+                  label="Localidad"
+                  obligatorio
+                  placeholder="Elegí la localidad"
+                  opciones={opcionesLocalidad}
+                  valor={localidad}
+                  onChange={elegirLocalidad}
+                  onBlur={() => marcarTocado('localidad')}
+                  error={errorDe('localidad')}
+                  deshabilitado={provincia === null}
+                  textoDeshabilitado="Elegí primero la provincia"
+                  buscable
+                  grande
+                />
+              </FormCardRow>
+
+              <FormCardRow ultima>
+                <TextField
+                  label="Referencia (opcional)"
+                  placeholder="Ej. frente a la plaza"
+                  value={referencia}
+                  onChangeText={cambiarReferencia}
+                  onBlur={() => marcarTocado('referencia')}
+                  maxLength={animalPerdido.referencia.max}
+                  error={errorDe('referencia')}
+                  grande
+                />
+              </FormCardRow>
             </FormCard>
+
+            {/* Con un link pegado a mano, ese es el pin: tapa el error del preview, si lo hubo. */}
+            <AvisoVerificacionUbicacion
+              key={claveDelLugar}
+              ubicacion={mapa.ubicacion ?? puntoManual}
+              cargando={mapa.cargando}
+              error={puntoManual ? null : mapa.error}
+              verificada={verificada}
+              onVerificar={() => setVerificada(true)}
+              onGuardarManual={guardarLinkManual}
+              textos={TEXTOS_MAPA}
+            />
 
             {ubicacion.estado === 'denegado' || ubicacion.estado === 'bloqueado' ? (
               <Nota
-                texto="Para publicar el aviso necesitamos la ubicación de tu teléfono en ese momento. No se muestra en la publicación: ahí sólo va el lugar que escribiste."
+                texto="Para publicar el aviso necesitamos la ubicación de tu teléfono en ese momento. No se muestra en la publicación: ahí sólo va el lugar que elegiste."
                 accion={{
                   etiqueta:
                     ubicacion.estado === 'bloqueado' ? 'Abrir ajustes' : 'Permitir ubicación',
