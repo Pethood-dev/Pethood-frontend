@@ -4,7 +4,9 @@
  */
 
 function patronDecimal(enteros: number, decimales: number): RegExp {
-  return new RegExp(`^\\d{1,${enteros}}([.,]\\d{1,${decimales}})?$`);
+  // Sin decimales no hay parte decimal: `\d{1,0}` ni siquiera es una regex válida.
+  const parteDecimal = decimales > 0 ? `([.,]\\d{1,${decimales}})?` : '';
+  return new RegExp(`^\\d{1,${enteros}}${parteDecimal}$`);
 }
 
 /** Devuelve el mensaje de error, o null si el decimal es válido. */
@@ -20,7 +22,8 @@ export function validarDecimal(
   const enteros = String(Math.trunc(max)).length;
 
   if (!patronDecimal(enteros, decimales).test(texto)) {
-    const ejemplo = decimales > 0 ? ' (ej. 12,5)' : '';
+    if (decimales === 0) return `${etiqueta} debe ser un número entero, sin puntos ni comas`;
+    const ejemplo = ' (ej. 12,5)';
     return `${etiqueta} debe ser un número con hasta ${decimales} decimal${decimales === 1 ? '' : 'es'}${ejemplo}`;
   }
 
@@ -35,6 +38,7 @@ export function validarDecimal(
  * Se usa en `onChangeText` para que el teclado no deje escribir algo inválido.
  */
 export function filtrarEntradaDecimal(texto: string, decimales: number): string {
+  if (decimales === 0) return texto.replace(/\D/g, '');
   const limpio = texto.replace(/[^\d.,]/g, '');
   const separador = limpio.search(/[.,]/);
 
