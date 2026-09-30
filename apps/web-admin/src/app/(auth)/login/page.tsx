@@ -29,9 +29,9 @@ export default function LoginPage() {
   const [verPassword, setVerPassword] = useState(false);
 
   return (
-    <div className="grid flex-1 lg:grid-cols-[1.1fr_1fr]">
+    <div className="grid flex-1 lg:grid-cols-[1.4fr_1fr]">
       <aside className="relative hidden overflow-hidden lg:block">
-        <Image src="/img/login.jpg" alt="" fill priority sizes="55vw" className="object-cover" />
+        <Image src="/img/login.jpg" alt="" fill priority sizes="58vw" className="object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-neutral-900/80 via-neutral-900/20 to-transparent" />
         <a
           href="https://commons.wikimedia.org/wiki/File:D%C3%BClmen,_Hausd%C3%BClmen,_Golden_Retriever_--_2022_--_5945.jpg"
