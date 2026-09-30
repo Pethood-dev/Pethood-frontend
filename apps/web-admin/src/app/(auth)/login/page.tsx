@@ -58,7 +58,7 @@ export default function LoginPage() {
 
           <form action={formAction}>
             <h1 className="mb-1 font-heading text-3xl text-neutral-900">Bienvenido de nuevo</h1>
-            <p className="mb-8 text-base text-neutral-700">Ingresá al panel de administradores y refugios.</p>
+            <p className="mb-8 text-base text-neutral-700">Ingresá con tu cuenta y seguí ayudando a que cada mascota encuentre su lugar.</p>
 
             <label className="mb-1 block text-sm font-semibold text-neutral-700" htmlFor="email">
               Email
