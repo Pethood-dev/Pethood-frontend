@@ -27,9 +27,11 @@ export default function Landing() {
               aria-label="Perro mirando a lo lejos al sol"
             />
             <div className="hero-copy">
-              <h1>
+              {/* Eslogan del póster: punto principal de la página. */}
+              <h1>Adoptar es cambiar dos vidas.</h1>
+              <p className="hero-sub">
                 Adopción responsable y rescate animal, en una sola plataforma
-              </h1>
+              </p>
               <p>
                 PetHood conecta a dos actores que hoy no tienen un lugar en
                 común: <strong>adoptantes</strong> con{" "}
