@@ -351,6 +351,7 @@ export default function ConversacionScreen() {
           onReportar={() => {
             const contacto = sala.cabecera?.contacto;
             if (contacto) setReportado({ tipo: contacto.tipo, objetoId: contacto.id });
+          }}
           onVerPerfil={() => {
             const contacto = sala.cabecera?.contacto;
             if (!contacto) return;
