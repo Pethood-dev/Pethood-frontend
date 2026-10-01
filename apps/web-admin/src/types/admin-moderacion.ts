@@ -58,3 +58,31 @@ export interface FiltrosModeracion {
   desde?: string;
   hasta?: string;
 }
+
+export interface ReportePublicacion {
+  id: number;
+  motivo: string;
+  resuelto: boolean;
+  respuesta: string | null;
+  reportante: { id: number; nombre: string; apellido: string } | null;
+  fechaAlta: string;
+}
+
+/** `GET /admin/publicaciones/:id` (docs/api-admin-moderacion.md). */
+export interface DetallePublicacionAdmin extends PublicacionAdmin {
+  descripcion: string | null;
+  ubicacion: string | null;
+  requisitos: string[];
+  personalidad: string[];
+  desparasitado: boolean;
+  imagenes: string[];
+  mascota: PublicacionAdmin["mascota"] & {
+    fechaNacimiento: string | null;
+    genero: string | null;
+    tamanio: string | null;
+    castrado: boolean | null;
+    imagenUrl: string | null;
+    raza: string;
+  };
+  reportes: ReportePublicacion[];
+}
