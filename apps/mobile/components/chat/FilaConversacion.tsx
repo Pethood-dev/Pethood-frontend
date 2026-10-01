@@ -14,7 +14,11 @@
  * en el diseño la última no lleva línea debajo.
  */
 import { Ionicons } from '@expo/vector-icons';
+import { useRef } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import ReanimatedSwipeable, {
+  type SwipeableMethods,
+} from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 import { Avatar } from '@/components/ui/Avatar';
 import { BadgeContador } from '@/components/ui/BadgeContador';
@@ -38,9 +42,20 @@ interface FilaConversacionProps {
    * un bug.
    */
   onPress?: () => void;
+  /**
+   * Deslizar la fila hacia la izquierda deja a la vista el botón «Reportar» (spec 008). Sin
+   * esto la fila no se desliza.
+   */
+  onReportar?: () => void;
 }
 
-export function FilaConversacion({ conversacion, ahora, onPress }: FilaConversacionProps) {
+export function FilaConversacion({
+  conversacion,
+  ahora,
+  onPress,
+  onReportar,
+}: FilaConversacionProps) {
+  const swipeable = useRef<SwipeableMethods>(null);
   const { contacto, ultimoMensaje, noLeidos } = conversacion;
 
   const sinLeer = noLeidos > 0;
@@ -63,7 +78,7 @@ export function FilaConversacion({ conversacion, ahora, onPress }: FilaConversac
         ? 'Foto'
         : (ultimoMensaje?.contenido ?? 'Todavía no hay mensajes');
 
-  return (
+  const fila = (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`Conversación con ${contacto.nombre}${
@@ -155,5 +170,35 @@ export function FilaConversacion({ conversacion, ahora, onPress }: FilaConversac
         )}
       </View>
     </Pressable>
+  );
+
+  if (!onReportar) return fila;
+
+  return (
+    <ReanimatedSwipeable
+      ref={swipeable}
+      friction={2}
+      rightThreshold={40}
+      overshootRight={false}
+      renderRightActions={() => (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Reportar a ${contacto.nombre}`}
+          onPress={() => {
+            swipeable.current?.close();
+            onReportar();
+          }}
+          className="w-24 items-center justify-center gap-1 border-l border-red-200 bg-red-50 active:opacity-70"
+        >
+          <Ionicons name="flag-outline" size={22} color={PALETA.estado.error} />
+          <Text className="font-cuerpo-semi text-[13px]" style={{ color: PALETA.estado.error }}>
+            Reportar
+          </Text>
+        </Pressable>
+      )}
+    >
+      {/* Fondo propio: sin él, la acción de atrás se vería a través de la fila. */}
+      <View className="bg-organic-bg">{fila}</View>
+    </ReanimatedSwipeable>
   );
 }
