@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { BadgeCheck, RotateCcw, ShieldOff, UserCog, UserX } from "lucide-react";
+import { BadgeCheck, Eye, RotateCcw, ShieldOff, UserCog, UserX } from "lucide-react";
 import { Feedback } from "@/components/ui/Feedback";
 import { EstadoBadge } from "@/components/ui/EstadoBadge";
 import { RolBadge } from "@/components/ui/RolBadge";
@@ -13,11 +13,11 @@ import {
   gestionarRoles,
   reactivarUsuario,
   suspenderUsuario,
-  verificarUsuario,
 } from "@/services/admin-usuarios";
 import { ApiError } from "@/services/api";
 import type { FiltrosUsuarios, ListaUsuarios, UsuarioAdmin } from "@/types/admin-usuarios";
 import { MotivoModal } from "@/components/admin/MotivoModal";
+import { DetalleUsuarioModal } from "./DetalleUsuarioModal";
 import { RolesModal } from "./RolesModal";
 
 export function UsuariosTabla({
@@ -36,6 +36,8 @@ export function UsuariosTabla({
   const [modalSuspender, setModalSuspender] = useState<UsuarioAdmin | null>(null);
   const [modalBaja, setModalBaja] = useState<UsuarioAdmin | null>(null);
   const [modalRoles, setModalRoles] = useState<UsuarioAdmin | null>(null);
+  const [detalle, setDetalle] = useState<number | null>(null);
+  const [verificando, setVerificando] = useState<number | null>(null);
 
   function aplicarFiltros(nuevos: Partial<FiltrosUsuarios>) {
     const params = new URLSearchParams();
@@ -72,25 +74,25 @@ export function UsuariosTabla({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3 rounded-lg border border-neutral-200 bg-white p-4">
-        <div>
+        <div className="w-full sm:w-auto">
           <label className="mb-1 block text-xs font-medium text-neutral-600">Buscar</label>
           <input
             type="text"
             maxLength={100}
             defaultValue={filtros.q ?? ""}
             placeholder="Nombre, apellido o email"
-            className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-900"
+            className="w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-900 sm:w-auto"
             onKeyDown={(e) => {
               if (e.key === "Enter") aplicarFiltros({ q: e.currentTarget.value });
             }}
           />
         </div>
 
-        <div>
+        <div className="w-full sm:w-auto">
           <label className="mb-1 block text-xs font-medium text-neutral-600">Rol</label>
           <select
             defaultValue={filtros.rol ?? ""}
-            className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-900"
+            className="w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-900 sm:w-auto"
             onChange={(e) => aplicarFiltros({ rol: (e.target.value || undefined) as FiltrosUsuarios["rol"] })}
           >
             <option value="">Todos</option>
@@ -100,11 +102,11 @@ export function UsuariosTabla({
           </select>
         </div>
 
-        <div>
+        <div className="w-full sm:w-auto">
           <label className="mb-1 block text-xs font-medium text-neutral-600">Estado</label>
           <select
             defaultValue={filtros.estado ?? ""}
-            className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-900"
+            className="w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-900 sm:w-auto"
             onChange={(e) => aplicarFiltros({ estado: (e.target.value || undefined) as FiltrosUsuarios["estado"] })}
           >
             <option value="">Todos</option>
@@ -115,11 +117,11 @@ export function UsuariosTabla({
           </select>
         </div>
 
-        <div>
+        <div className="w-full sm:w-auto">
           <label className="mb-1 block text-xs font-medium text-neutral-600">Verificado</label>
           <select
             defaultValue={filtros.verificado ?? ""}
-            className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-900"
+            className="w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-900 sm:w-auto"
             onChange={(e) =>
               aplicarFiltros({ verificado: (e.target.value || undefined) as FiltrosUsuarios["verificado"] })
             }
@@ -159,12 +161,17 @@ export function UsuariosTabla({
               return (
                 <tr key={usuario.id} className="border-b border-neutral-100 last:border-0">
                   <td data-label="Usuario" className="px-4 py-3 text-center text-neutral-900">
-                    {usuario.nombre} {usuario.apellido}
+                    <button type="button" onClick={() => setDetalle(usuario.id)} className="font-medium text-neutral-900 hover:underline">
+                      {usuario.nombre} {usuario.apellido}
+                    </button>
                   </td>
                   <td data-label="Email" className="px-4 py-3 text-center text-neutral-600">{usuario.email}</td>
                   <td data-label="Roles" className="px-4 py-3">
                     <div className="flex flex-wrap justify-center gap-1">
-                      {usuario.roles.map((rol) => (
+                      {/* Con perfil de refugio, el badge Adoptante sobra. */}
+                      {usuario.roles
+                        .filter((rol) => !(rol === "ADOPTANTE" && usuario.roles.includes("MIEMBRO_REFUGIO")))
+                        .map((rol) => (
                         <RolBadge key={rol} rol={rol} />
                       ))}
                     </div>
@@ -175,19 +182,9 @@ export function UsuariosTabla({
                   <td data-label="Verificado" className="px-4 py-3 text-center text-neutral-600">{usuario.verificado ? "Sí" : "No"}</td>
                   <td data-label="Acciones" className="px-4 py-3">
                     <div className="flex flex-wrap justify-center gap-2">
+                      <AccionButton icono={Eye} tono="info" onClick={() => setDetalle(usuario.id)}>Ver</AccionButton>
                       {usuario.estado === "Pendiente_Verificacion" && (
-                        <AccionButton
-                          icono={BadgeCheck}
-                          tono="exito"
-                          disabled={cargando === usuario.id}
-                          onClick={() =>
-                            ejecutar(
-                              usuario.id,
-                              () => verificarUsuario(usuario.id, token),
-                              "Usuario verificado correctamente.",
-                            )
-                          }
-                        >
+                        <AccionButton icono={BadgeCheck} tono="exito" onClick={() => setVerificando(usuario.id)}>
                           Verificar
                         </AccionButton>
                       )}
@@ -232,6 +229,21 @@ export function UsuariosTabla({
       </div>
 
       <Pagination page={lista.page} limit={lista.limit} total={lista.total} onCambiar={irAPagina} />
+
+      {detalle && <DetalleUsuarioModal id={detalle} token={token} onCerrar={() => setDetalle(null)} />}
+
+      {verificando && (
+        <DetalleUsuarioModal
+          id={verificando}
+          token={token}
+          onCerrar={() => setVerificando(null)}
+          onVerificado={() => {
+            setVerificando(null);
+            setExito("Usuario verificado correctamente.");
+            router.refresh();
+          }}
+        />
+      )}
 
       {modalSuspender && (
         <MotivoModal

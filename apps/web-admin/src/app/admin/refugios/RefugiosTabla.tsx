@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { BadgeCheck, RotateCcw, ShieldOff, Trash2 } from "lucide-react";
+import { BadgeCheck, Eye, RotateCcw, ShieldOff, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Feedback } from "@/components/ui/Feedback";
 import { EstadoBadge } from "@/components/ui/EstadoBadge";
@@ -13,7 +13,6 @@ import {
   bajaRefugio,
   reactivarRefugio,
   suspenderRefugio,
-  verificarRefugio,
 } from "@/services/admin-usuarios";
 import { ApiError } from "@/services/api";
 import type { FiltrosRefugios, ListaRefugios, RefugioAdmin } from "@/types/admin-usuarios";
@@ -35,6 +34,7 @@ export function RefugiosTabla({
   const [exito, setExito] = useState<string | null>(null);
   const [modalAlta, setModalAlta] = useState(false);
   const [modalDetalle, setModalDetalle] = useState<number | null>(null);
+  const [modalVerificar, setModalVerificar] = useState<number | null>(null);
   const [modalSuspender, setModalSuspender] = useState<RefugioAdmin | null>(null);
   const [modalBaja, setModalBaja] = useState<RefugioAdmin | null>(null);
 
@@ -74,25 +74,25 @@ export function RefugiosTabla({
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3 rounded-lg border border-neutral-200 bg-white p-4">
         <div className="flex flex-wrap items-end gap-3">
-          <div>
+          <div className="w-full sm:w-auto">
             <label className="mb-1 block text-xs font-medium text-neutral-600">Buscar</label>
             <input
               type="text"
             maxLength={100}
               defaultValue={filtros.q ?? ""}
               placeholder="Nombre del refugio"
-              className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-900"
+              className="w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-900 sm:w-auto"
               onKeyDown={(e) => {
                 if (e.key === "Enter") aplicarFiltros({ q: e.currentTarget.value });
               }}
             />
           </div>
 
-          <div>
+          <div className="w-full sm:w-auto">
             <label className="mb-1 block text-xs font-medium text-neutral-600">Estado</label>
             <select
               defaultValue={filtros.estado ?? ""}
-              className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-900"
+              className="w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-900 sm:w-auto"
               onChange={(e) =>
                 aplicarFiltros({ estado: (e.target.value || undefined) as FiltrosRefugios["estado"] })
               }
@@ -105,11 +105,11 @@ export function RefugiosTabla({
             </select>
           </div>
 
-          <div>
+          <div className="w-full sm:w-auto">
             <label className="mb-1 block text-xs font-medium text-neutral-600">Verificado</label>
             <select
               defaultValue={filtros.verificado ?? ""}
-              className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-900"
+              className="w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-900 sm:w-auto"
               onChange={(e) =>
                 aplicarFiltros({ verificado: (e.target.value || undefined) as FiltrosRefugios["verificado"] })
               }
@@ -164,19 +164,9 @@ export function RefugiosTabla({
                 <td data-label="Verificado" className="px-4 py-3 text-center text-neutral-600">{refugio.verificado ? "Sí" : "No"}</td>
                 <td data-label="Acciones" className="px-4 py-3">
                   <div className="flex flex-wrap justify-center gap-2">
+                    <AccionButton icono={Eye} tono="info" onClick={() => setModalDetalle(refugio.id)}>Ver</AccionButton>
                     {refugio.estado === "Pendiente_Verificacion" && (
-                      <AccionButton
-                        icono={BadgeCheck}
-                        tono="exito"
-                        disabled={cargando === refugio.id}
-                        onClick={() =>
-                          ejecutar(
-                            refugio.id,
-                            () => verificarRefugio(refugio.id, token),
-                            "Refugio verificado correctamente.",
-                          )
-                        }
-                      >
+                      <AccionButton icono={BadgeCheck} tono="exito" onClick={() => setModalVerificar(refugio.id)}>
                         Verificar
                       </AccionButton>
                     )}
@@ -230,6 +220,19 @@ export function RefugiosTabla({
 
       {modalDetalle !== null && (
         <DetalleRefugioModal refugioId={modalDetalle} token={token} onCerrar={() => setModalDetalle(null)} />
+      )}
+
+      {modalVerificar && (
+        <DetalleRefugioModal
+          refugioId={modalVerificar}
+          token={token}
+          onCerrar={() => setModalVerificar(null)}
+          onVerificado={() => {
+            setModalVerificar(null);
+            setExito("Refugio verificado correctamente.");
+            router.refresh();
+          }}
+        />
       )}
 
       {modalSuspender && (
