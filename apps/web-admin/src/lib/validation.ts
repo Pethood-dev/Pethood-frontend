@@ -6,7 +6,15 @@
  * Si cambia un número allá, cambialo acá. Mensajes en voseo (REQUISITOS.md §5).
  */
 export const LIMITES = {
-  refugio: { nombre: { min: 2, max: 100 }, direccion: { min: 2, max: 150 }, descripcion: { max: 1000 } },
+  refugio: {
+    nombre: { min: 2, max: 100 },
+    direccion: { min: 2, max: 150 },
+    descripcion: { max: 1000 },
+    // Registro público (POST /auth/registro-refugio): la dirección va estructurada.
+    provincia: { min: 2, max: 80 },
+    localidad: { min: 2, max: 80 },
+    calleAltura: { min: 2, max: 120 },
+  },
   persona: { nombre: { min: 1, max: 50 } },
   consultaSoporte: {
     nombreCompleto: { min: 2, max: 100 },

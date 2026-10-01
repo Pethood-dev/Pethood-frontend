@@ -2,6 +2,9 @@
 
 import { useState, type ReactNode } from "react";
 import { ErrorCampo } from "@/components/ui/ErrorCampo";
+import { Feedback } from "@/components/ui/Feedback";
+import { ApiError } from "@/services/api";
+import { registrarRefugio } from "@/services/auth";
 import { useTocados } from "@/lib/useTocados";
 import {
   hayErrores,
@@ -15,7 +18,7 @@ import {
   validarTexto,
 } from "@/lib/validation";
 
-const VACIO = { nombre: "", apellido: "", email: "", pass: "", pass2: "", rnombre: "", rdir: "", rtel: "", remail: "", rdesc: "" };
+const VACIO = { nombre: "", apellido: "", email: "", pass: "", pass2: "", rnombre: "", rprov: "", rloc: "", rcalle: "", rtel: "", remail: "", rdesc: "" };
 type Campo = keyof typeof VACIO;
 
 function Grupo({ titulo, children }: { titulo: string; children: ReactNode }) {
@@ -27,12 +30,15 @@ function Grupo({ titulo, children }: { titulo: string; children: ReactNode }) {
   );
 }
 
-// Maqueta del registro de refugio (HU-1.1 / HU-2.4): valida en el cliente pero todavía no envía datos.
+// Registro de refugio (HU-1.1 / HU-2.4): valida en el cliente y envía a POST /auth/registro-refugio.
+// El refugio nace "Pendiente de verificación" hasta que un admin lo apruebe.
 export function RegistroRefugioForm() {
   const [v, setV] = useState(VACIO);
   const [imagen, setImagen] = useState<File | null>(null);
-  const [listo, setListo] = useState(false);
-  const { ver, tocar, intentarEnviar } = useTocados();
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [exito, setExito] = useState<string | null>(null);
+  const { ver, tocar, intentarEnviar, reiniciar } = useTocados();
 
   const errores: Record<Campo | "rimg", string | null> = {
     nombre: validarNombrePersona(v.nombre, "El nombre"),
@@ -41,7 +47,9 @@ export function RegistroRefugioForm() {
     pass: validarPasswordNueva(v.pass),
     pass2: validarConfirmacion(v.pass, v.pass2),
     rnombre: validarTexto(v.rnombre, { etiqueta: "El nombre del refugio", ...LIMITES.refugio.nombre }),
-    rdir: validarTexto(v.rdir, { etiqueta: "La dirección", ...LIMITES.refugio.direccion }),
+    rprov: validarTexto(v.rprov, { etiqueta: "La provincia", ...LIMITES.refugio.provincia }),
+    rloc: validarTexto(v.rloc, { etiqueta: "La localidad", ...LIMITES.refugio.localidad }),
+    rcalle: validarTexto(v.rcalle, { etiqueta: "La calle y altura", ...LIMITES.refugio.calleAltura }),
     rtel: validarTelefono(v.rtel, false),
     remail: validarEmail(v.remail, false),
     rdesc: validarTexto(v.rdesc, { etiqueta: "La descripción", ...LIMITES.refugio.descripcion, obligatorio: false }),
@@ -71,10 +79,40 @@ export function RegistroRefugioForm() {
     <form
       aria-label="Registro de refugio u ONG"
       noValidate
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
         intentarEnviar();
-        setListo(!hayErrores(errores));
+        setExito(null);
+        setError(null);
+        if (hayErrores(errores)) return;
+
+        const datos = new FormData();
+        datos.set("nombre", v.nombre.trim());
+        datos.set("apellido", v.apellido.trim());
+        datos.set("email", v.email.trim());
+        datos.set("password", v.pass);
+        datos.set("refugioNombre", v.rnombre.trim());
+        datos.set("provincia", v.rprov.trim());
+        datos.set("localidad", v.rloc.trim());
+        datos.set("calleAltura", v.rcalle.trim());
+        if (v.rtel.trim()) datos.set("refugioTelefono", v.rtel.trim());
+        if (v.remail.trim()) datos.set("refugioEmail", v.remail.trim());
+        if (v.rdesc.trim()) datos.set("refugioDescripcion", v.rdesc.trim());
+        if (imagen) datos.set("imagen", imagen);
+
+        setEnviando(true);
+        try {
+          await registrarRefugio(datos);
+          setExito("¡Listo! Recibimos tu solicitud. Un administrador va a revisar tu refugio y, cuando lo apruebe, vas a poder ingresar con tu email y contraseña.");
+          setV(VACIO);
+          setImagen(null);
+          (e.target as HTMLFormElement).reset();
+          reiniciar();
+        } catch (err) {
+          setError(err instanceof ApiError ? err.message : "No pudimos enviar tu solicitud. Intentá de nuevo.");
+        } finally {
+          setEnviando(false);
+        }
       }}
     >
       <Grupo titulo="Tus datos">
@@ -86,7 +124,9 @@ export function RegistroRefugioForm() {
       </Grupo>
       <Grupo titulo="Datos del refugio">
         {campo("rnombre", "Nombre del refugio / ONG *", { full: true, max: LIMITES.refugio.nombre.max })}
-        {campo("rdir", "Dirección *", { auto: "street-address", full: true, max: LIMITES.refugio.direccion.max })}
+        {campo("rprov", "Provincia *", { max: LIMITES.refugio.provincia.max })}
+        {campo("rloc", "Localidad *", { max: LIMITES.refugio.localidad.max })}
+        {campo("rcalle", "Calle y altura *", { auto: "street-address", full: true, max: LIMITES.refugio.calleAltura.max })}
         {campo("rtel", "Teléfono", { tipo: "tel", max: 20 })}
         {campo("remail", "Email del refugio", { tipo: "email", max: 100 })}
         <div className="full">
@@ -120,10 +160,12 @@ export function RegistroRefugioForm() {
           <ErrorCampo id="rimg" error={ver("rimg", errores.rimg)} />
         </div>
       </Grupo>
+      {error && <Feedback tipo="error" mensaje={error} />}
+      {exito && <Feedback tipo="exito" mensaje={exito} />}
       <div className="actions">
-        <p className="hint">{listo ? "Datos válidos. Maqueta: todavía no envía datos." : "Maqueta: todavía no envía datos."}</p>
-        <button type="submit" className="btn">
-          Registrar refugio
+        <p className="hint">Tu refugio queda pendiente hasta que lo verifique un administrador.</p>
+        <button type="submit" className="btn" disabled={enviando}>
+          {enviando ? "Enviando…" : "Registrar refugio"}
         </button>
       </div>
     </form>
