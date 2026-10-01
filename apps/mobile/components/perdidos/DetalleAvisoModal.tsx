@@ -21,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Image, Linking, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 
+import { BotonReportar } from '@/components/reportes/BotonReportar';
 import { EstadoAnimalPerdidoBadge } from '@/components/ui/EstadoAnimalPerdidoBadge';
 import { PALETA } from '@/constants/theme';
 import { distanciaEnTexto } from '@/lib/ubicacion';
@@ -171,6 +172,15 @@ function TarjetaDetalle({ aviso, onCerrar }: { aviso: AvisoPerdido; onCerrar: ()
                 Muy pronto vas a poder escribirle desde acá.
               </Text>
             </View>
+          )}
+
+          {aviso.esPropio ? null : (
+            <BotonReportar
+              tipo="ANIMAL_PERDIDO"
+              objetoId={aviso.id}
+              etiqueta="Reportar aviso"
+              className="mt-4"
+            />
           )}
         </View>
       </ScrollView>
