@@ -4,6 +4,12 @@ export type RolUsuario = 'ADOPTANTE' | 'MIEMBRO_REFUGIO' | 'ADMIN';
 export interface RefugioDeSesion {
   id: number;
   nombre: string;
+  /**
+   * Activo, Pendiente_Verificacion, Suspendido o Inactivo. Solo con Activo el backend deja
+   * usar el perfil de refugio (si no, 403 REFUGIO_NO_VERIFICADO). Opcional por si la sesión
+   * guardada en el dispositivo es de una versión anterior.
+   */
+  estado?: string;
 }
 
 export interface Usuario {
