@@ -2,6 +2,12 @@ import type { ApiErrorBody } from "@/types/api";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1";
 
+/** Las rutas de archivos que devuelve la API (`/api/v1/archivos/...`) son relativas al origen. */
+export function urlArchivo(ruta: string): string {
+  if (/^https?:\/\//.test(ruta)) return ruta;
+  return `${API_URL.replace(/\/api\/v1\/?$/, "")}${ruta.startsWith("/") ? ruta : `/${ruta}`}`;
+}
+
 export class ApiError extends Error {
   codigo: string;
   status: number;
