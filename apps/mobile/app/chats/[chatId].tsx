@@ -348,6 +348,10 @@ export default function ConversacionScreen() {
           solicitud={sala.cabecera?.solicitud ?? null}
           desconectado={sala.desconectado}
           onVolver={volver}
+          onReportar={() => {
+            const contacto = sala.cabecera?.contacto;
+            if (contacto) setReportado({ tipo: contacto.tipo, objetoId: contacto.id });
+          }}
         />
 
         {/* El padding inferior sigue al teclado, así la barra de escritura sube con él y el
