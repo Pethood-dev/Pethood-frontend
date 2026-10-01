@@ -29,6 +29,15 @@ const ESTILOS: Record<string, EstiloEstado> = {
   },
 };
 
+/**
+ * La marca del caso cerrado (HU-13.2), con el texto exacto del criterio de aceptación.
+ *
+ * Va **además** del badge "Resuelto" y no en su lugar: el badge dice el estado y esto dice
+ * qué pasó, que es lo que la HU pide mostrar. La usan la tarjeta de la grilla y el popup de
+ * detalle, y vive acá para que las dos lean el mismo texto sin importarse entre sí.
+ */
+export const LEYENDA_RESUELTO = 'Volvió con su dueño';
+
 export function estiloDeEstadoAnimalPerdido(nombre: string): EstiloEstado {
   return (
     ESTILOS[nombre] ?? {

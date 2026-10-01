@@ -322,6 +322,9 @@ export default function ConversacionScreen() {
                 ? () => router.push(`/solicitudes/${fila.item.solicitud!.id}`)
                 : undefined
             }
+            // El portal no tiene pantalla de detalle propia: el popup se abre desde la
+            // grilla, así que se navega al portal y desde ahí se toca el aviso.
+            onVerAviso={fila.item.aviso ? () => router.push('/perdidos') : undefined}
           />
         )}
       </View>
@@ -417,11 +420,21 @@ export default function ConversacionScreen() {
             habilitada={sala.puedeEscribir}
           />
 
-          {sala.puedeEscribir ? null : (
+          {sala.motivoSinEscritura === null ? null : (
             <View className="flex-row items-center justify-center gap-1.5 bg-organic-neutral-100 px-4 pb-2">
-              <Ionicons name="information-circle-outline" size={13} color={PALETA.neutral[600]} />
-              <Text className="font-cuerpo text-[12px] text-organic-neutral-600">
-                Esta cuenta fue dada de baja. Podés leer la conversación, pero no responder.
+              <Ionicons
+                name={
+                  sala.motivoSinEscritura === 'CHAT_CERRADO'
+                    ? 'checkmark-circle-outline'
+                    : 'information-circle-outline'
+                }
+                size={13}
+                color={PALETA.neutral[600]}
+              />
+              <Text className="flex-1 font-cuerpo text-[12px] text-organic-neutral-600">
+                {sala.motivoSinEscritura === 'CHAT_CERRADO'
+                  ? 'Este caso se resolvió. Podés leer la conversación, pero no responder.'
+                  : 'Esta cuenta fue dada de baja. Podés leer la conversación, pero no responder.'}
               </Text>
             </View>
           )}

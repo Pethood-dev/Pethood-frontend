@@ -8,8 +8,9 @@
  *   sabe la especie: va "especie · hace cuánto", igual que en la tarjeta.
  * - El diseño muestra un teléfono de contacto que la API no expone. En su lugar va quién
  *   publicó el aviso, que es con quien se va a hablar.
- * - "Enviar mensaje" queda deshabilitado: el chat de reencuentro es de HU-13.2. En un aviso
- *   propio ni se muestra, porque no hay a quién escribirle.
+ * - "Enviar mensaje" abre el chat de reencuentro (HU-13.2). En un aviso propio no se muestra
+ *   —no hay a quién escribirle— y en su lugar va "Marcar como resuelto", que cierra el caso.
+ *   Un aviso ya resuelto no ofrece ninguno de los dos.
  * - Dos agregados que el diseño no trae, de cuando el lugar pasó al catálogo de provincias: a
  *   qué distancia está el lugar (si el usuario dio su ubicación y el lugar se pudo ubicar en
  *   el mapa) y un botón para verlo en Google Maps.
@@ -19,14 +20,25 @@
  */
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Image, Linking, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  Linking,
+  Modal,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
 
 import { BotonReportar } from '@/components/reportes/BotonReportar';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { EstadoAnimalPerdidoBadge } from '@/components/ui/EstadoAnimalPerdidoBadge';
+import { LEYENDA_RESUELTO } from '@/constants/EstadosAnimalPerdido';
 import { PALETA } from '@/constants/theme';
 import { distanciaEnTexto } from '@/lib/ubicacion';
 import { urlAbsoluta } from '@/services/api';
-import type { AvisoPerdido } from '@/services/animalesPerdidos';
+import { estaResuelto, type AvisoPerdido } from '@/services/animalesPerdidos';
 import { aFechaVisible, parsearFecha } from '@/shared/validation/dates';
 
 import { subtituloAviso } from './TarjetaAviso';
@@ -49,9 +61,21 @@ interface DetalleAvisoModalProps {
   /** El aviso a mostrar, o `null` con el popup cerrado. */
   aviso: AvisoPerdido | null;
   onCerrar: () => void;
+  /**
+   * Reclamar el aviso (HU-13.2). Lo resuelve la pantalla, que es la que navega a la sala: el
+   * popup no conoce el router ni el servicio.
+   */
+  onReclamar: (aviso: AvisoPerdido) => Promise<void>;
+  /** Cerrar el caso. Devuelve el aviso actualizado para que la pantalla lo reemplace. */
+  onResolver: (aviso: AvisoPerdido) => Promise<void>;
 }
 
-export function DetalleAvisoModal({ aviso, onCerrar }: DetalleAvisoModalProps) {
+export function DetalleAvisoModal({
+  aviso,
+  onCerrar,
+  onReclamar,
+  onResolver,
+}: DetalleAvisoModalProps) {
   return (
     <Modal
       visible={aviso !== null}
@@ -70,13 +94,57 @@ export function DetalleAvisoModal({ aviso, onCerrar }: DetalleAvisoModalProps) {
           className="absolute inset-0"
         />
 
-        {aviso ? <TarjetaDetalle aviso={aviso} onCerrar={onCerrar} /> : null}
+        {aviso ? (
+          <TarjetaDetalle
+            aviso={aviso}
+            onCerrar={onCerrar}
+            onReclamar={onReclamar}
+            onResolver={onResolver}
+          />
+        ) : null}
       </View>
     </Modal>
   );
 }
 
-function TarjetaDetalle({ aviso, onCerrar }: { aviso: AvisoPerdido; onCerrar: () => void }) {
+function TarjetaDetalle({
+  aviso,
+  onCerrar,
+  onReclamar,
+  onResolver,
+}: {
+  aviso: AvisoPerdido;
+  onCerrar: () => void;
+  onReclamar: (aviso: AvisoPerdido) => Promise<void>;
+  onResolver: (aviso: AvisoPerdido) => Promise<void>;
+}) {
+  // Un solo estado para las dos acciones: nunca se puede estar haciendo las dos, porque los
+  // botones son excluyentes (`esPropio`).
+  const [enViaje, setEnViaje] = useState(false);
+  const [confirmarResuelto, setConfirmarResuelto] = useState(false);
+
+  const resuelto = estaResuelto(aviso);
+
+  const reclamar = async (): Promise<void> => {
+    setEnViaje(true);
+    try {
+      await onReclamar(aviso);
+    } finally {
+      // La pantalla puede haber cerrado el popup al navegar; el estado se descarta con él.
+      setEnViaje(false);
+    }
+  };
+
+  const resolver = async (): Promise<void> => {
+    setEnViaje(true);
+    try {
+      await onResolver(aviso);
+      setConfirmarResuelto(false);
+    } finally {
+      setEnViaje(false);
+    }
+  };
+
   const fotos = aviso.imagenes
     .map(urlAbsoluta)
     .filter((url): url is string => url !== null);
@@ -154,24 +222,45 @@ function TarjetaDetalle({ aviso, onCerrar }: { aviso: AvisoPerdido; onCerrar: ()
             </Pressable>
           ) : null}
 
-          {aviso.esPropio ? null : (
-            <View className={mapaUrl ? 'mt-3' : 'mt-5'}>
-              {/* Deshabilitado con el mismo gris que las funciones que todavía no están en
-                  el Perfil: el chat de reencuentro llega con HU-13.2. */}
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={{ disabled: true }}
-                accessibilityHint="Todavía no disponible"
-                disabled
-                className="h-[52px] flex-row items-center justify-center gap-2 rounded-full bg-organic-accent-600 opacity-40"
-              >
-                <Ionicons name="chatbubble-outline" size={19} color={PALETA.blanco} />
-                <Text className="font-cuerpo-bold text-[16px] text-white">Enviar mensaje</Text>
-              </Pressable>
-              <Text className="mt-2 text-center font-cuerpo text-[12.5px] text-organic-neutral-600">
-                Muy pronto vas a poder escribirle desde acá.
+          {/* Caso cerrado: ni se reclama ni se vuelve a resolver, así que en lugar de un
+              botón va la marca que pide el criterio de aceptación de la HU. */}
+          {resuelto ? (
+            <View
+              className={`${mapaUrl ? 'mt-3' : 'mt-5'} flex-row items-center justify-center gap-2 rounded-2xl bg-organic-accent-100 px-4 py-3`}
+            >
+              <Ionicons name="heart-circle-outline" size={20} color={PALETA.accent[700]} />
+              <Text className="font-cuerpo-bold text-[15px] text-organic-accent-700">
+                {LEYENDA_RESUELTO}
               </Text>
             </View>
+          ) : aviso.esPropio ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Marcar el aviso como resuelto"
+              accessibilityState={{ disabled: enViaje }}
+              disabled={enViaje}
+              onPress={() => setConfirmarResuelto(true)}
+              className={`${mapaUrl ? 'mt-3' : 'mt-5'} h-[52px] flex-row items-center justify-center gap-2 rounded-full bg-organic-accent-600 active:opacity-70 ${enViaje ? 'opacity-60' : ''}`}
+            >
+              <Ionicons name="checkmark-circle-outline" size={19} color={PALETA.blanco} />
+              <Text className="font-cuerpo-bold text-[16px] text-white">Marcar como resuelto</Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Enviar un mensaje a ${reportante}`}
+              accessibilityState={{ disabled: enViaje, busy: enViaje }}
+              disabled={enViaje}
+              onPress={() => void reclamar()}
+              className={`${mapaUrl ? 'mt-3' : 'mt-5'} h-[52px] flex-row items-center justify-center gap-2 rounded-full bg-organic-accent-600 active:opacity-70 ${enViaje ? 'opacity-60' : ''}`}
+            >
+              {enViaje ? (
+                <ActivityIndicator size="small" color={PALETA.blanco} />
+              ) : (
+                <Ionicons name="chatbubble-outline" size={19} color={PALETA.blanco} />
+              )}
+              <Text className="font-cuerpo-bold text-[16px] text-white">Enviar mensaje</Text>
+            </Pressable>
           )}
 
           {aviso.esPropio ? null : (
@@ -184,6 +273,22 @@ function TarjetaDetalle({ aviso, onCerrar }: { aviso: AvisoPerdido; onCerrar: ()
           )}
         </View>
       </ScrollView>
+
+      {/* Acción crítica y, por ahora, irreversible: "Resuelto" es terminal hasta HU-13.3.
+          Regla transversal 6 — confirmación antes de ejecutarla. */}
+      <ConfirmDialog
+        visible={confirmarResuelto}
+        tono="exito"
+        icono="checkmark-circle-outline"
+        titulo="¿El caso se resolvió?"
+        mensaje={`Vamos a marcar el aviso de ${nombre} como resuelto.`}
+        detalle="Las conversaciones que se abrieron por este aviso van a quedar sólo para leer, y no vas a poder volver atrás."
+        textoConfirmar="Sí, se resolvió"
+        textoCancelar="Cancelar"
+        cargando={enViaje}
+        onConfirmar={() => void resolver()}
+        onCerrar={() => setConfirmarResuelto(false)}
+      />
     </View>
   );
 }

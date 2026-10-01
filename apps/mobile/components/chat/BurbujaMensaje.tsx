@@ -23,6 +23,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, Text, View, useWindowDimensions } from 'react-native';
 
 import { GrillaAdjuntosMensaje } from '@/components/chat/GrillaAdjuntosMensaje';
+import { TarjetaAvisoChat } from '@/components/chat/TarjetaAvisoChat';
 import { TarjetaSolicitudChat } from '@/components/chat/TarjetaSolicitudChat';
 import { entregaDe, TicksMensaje } from '@/components/chat/TicksMensaje';
 import { PALETA } from '@/constants/theme';
@@ -77,6 +78,8 @@ interface BurbujaMensajeProps {
   onAbrirImagen?: (indice: number) => void;
   /** Navega al detalle de la solicitud embebida. Sólo en los mensajes de sistema. */
   onVerSolicitud?: () => void;
+  /** Navega al aviso de mascota perdida de la tarjeta (HU-13.2). */
+  onVerAviso?: () => void;
   /** Mantener apretada una burbuja recibida: abre el reporte del mensaje. */
   onReportar?: () => void;
 }
@@ -163,6 +166,7 @@ export function BurbujaMensaje({
   onDescartar,
   onAbrirImagen,
   onVerSolicitud,
+  onVerAviso,
   onReportar,
 }: BurbujaMensajeProps) {
   const { width: anchoPantalla } = useWindowDimensions();
@@ -175,6 +179,14 @@ export function BurbujaMensaje({
         fecha={item.fecha}
         onVerSolicitud={onVerSolicitud}
       />
+    ) : null;
+  }
+
+  // HU-13.2: el aviso reclamado, con el mismo tratamiento que la solicitud. Sin `aviso` no
+  // se pinta nada: es un mensaje de sistema sin su carga, y una burbuja vacía sería peor.
+  if (item.tipo === 'ANIMAL_PERDIDO') {
+    return item.aviso ? (
+      <TarjetaAvisoChat aviso={item.aviso} fecha={item.fecha} onVerAviso={onVerAviso} />
     ) : null;
   }
 

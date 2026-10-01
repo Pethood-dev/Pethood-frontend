@@ -27,6 +27,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CustomButton } from '@/components/CustomButton';
 import { EstadoCargando, EstadoError, EstadoVacio } from '@/components/feedback/EstadosPantalla';
+import { useToast } from '@/components/feedback/Toast';
 import { DetalleAvisoModal } from '@/components/perdidos/DetalleAvisoModal';
 import { FiltrosPerdidosModal } from '@/components/perdidos/FiltrosPerdidosModal';
 import { TarjetaAviso } from '@/components/perdidos/TarjetaAviso';
@@ -39,10 +40,13 @@ import { coordenadasRecordadas, pedirUbicacion, type Coordenadas } from '@/lib/u
 import {
   contarFiltrosActivosPerdidos,
   listarAvisos,
+  reclamarAviso,
+  resolverAviso,
   SIN_FILTROS_PERDIDOS,
   type AvisoPerdido,
   type FiltrosPerdidos,
 } from '@/services/animalesPerdidos';
+import { ApiError } from '@/services/api';
 
 const SIN_CONEXION =
   'No pudimos cargar las publicaciones. Revisá tu conexión e intentalo de nuevo.';
@@ -171,6 +175,7 @@ function PieLista({ cargandoMas, errorMas, onReintentar }: PieListaProps) {
 
 export default function MascotasPerdidasScreen() {
   const router = useRouter();
+  const toast = useToast();
   const [seleccionado, setSeleccionado] = useState<AvisoPerdido | null>(null);
   const [filtros, setFiltros] = useState<FiltrosPerdidos>(SIN_FILTROS_PERDIDOS);
   const [modalFiltros, setModalFiltros] = useState(false);
@@ -201,7 +206,7 @@ export default function MascotasPerdidasScreen() {
 
   // Al volver del alta (GUI-25), el aviso recién publicado va arriba sin recargar la grilla.
   // Con filtros aplicados puede no cumplirlos: ahí se recarga y aparece sólo si corresponde.
-  const { agregarAlPrincipio, refrescar } = lista;
+  const { agregarAlPrincipio, refrescar, reemplazar } = lista;
 
   /** La ubicación llegó con la grilla ya cargada: hay que volver a pedirla con distancias. */
   const [ubicacionNueva, setUbicacionNueva] = useState(false);
@@ -242,6 +247,54 @@ export default function MascotasPerdidasScreen() {
     setModalFiltros(false);
     setFiltros({ ...nuevos });
   }, []);
+
+  /**
+   * HU-13.2: reclamar el aviso y entrar a la sala de reencuentro.
+   *
+   * Cierra el popup antes de navegar: si quedara abierto, al volver del chat el usuario se
+   * encontraría el detalle encima de la grilla sin haberlo pedido.
+   *
+   * El backend es idempotente, así que tocar el botón dos veces no abre dos salas.
+   */
+  const reclamar = useCallback(
+    async (aviso: AvisoPerdido): Promise<void> => {
+      try {
+        const { chatId } = await reclamarAviso(aviso.id);
+        setSeleccionado(null);
+        router.push(`/chats/${chatId}`);
+      } catch (err) {
+        // El backend manda el mensaje en voseo, listo para mostrar: los casos que puede
+        // devolver son el aviso ya resuelto o la cuenta del reportante dada de baja.
+        toast.mostrarError(
+          err instanceof ApiError ? err.message : 'No pudimos abrir la conversación. Probá de nuevo.',
+        );
+      }
+    },
+    [router, toast],
+  );
+
+  /**
+   * HU-13.2: el reportante cierra su caso.
+   *
+   * El aviso vuelve ya resuelto y se reemplaza en el listado **sin moverlo de lugar** y sin
+   * refetch; el popup se queda abierto mostrando la marca "Volvió con su dueño", que es la
+   * confirmación de que la acción surtió efecto.
+   */
+  const resolver = useCallback(
+    async (aviso: AvisoPerdido): Promise<void> => {
+      try {
+        const actualizado = await resolverAviso(aviso.id);
+        reemplazar(actualizado);
+        setSeleccionado(actualizado);
+        toast.mostrarExito('Marcamos el aviso como resuelto. ¡Qué alegría!');
+      } catch (err) {
+        toast.mostrarError(
+          err instanceof ApiError ? err.message : 'No pudimos resolver el aviso. Probá de nuevo.',
+        );
+      }
+    },
+    [reemplazar, toast],
+  );
 
   // Se entra desde las dos vistas de Inicio: `back()` vuelve al origen real. El fallback
   // cubre el caso sin historial (deep link directo).
@@ -325,7 +378,12 @@ export default function MascotasPerdidasScreen() {
         />
       </SafeAreaView>
 
-      <DetalleAvisoModal aviso={seleccionado} onCerrar={() => setSeleccionado(null)} />
+      <DetalleAvisoModal
+        aviso={seleccionado}
+        onCerrar={() => setSeleccionado(null)}
+        onReclamar={reclamar}
+        onResolver={resolver}
+      />
 
       <FiltrosPerdidosModal
         visible={modalFiltros}

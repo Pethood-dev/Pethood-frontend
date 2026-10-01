@@ -1,6 +1,6 @@
 /**
- * Avisos de mascotas perdidas y encontradas (HU-13.1). Contrato completo en
- * `pethood-backend/docs/api-mascotas-perdidas.md`.
+ * Avisos de mascotas perdidas y encontradas: alta y portal (HU-13.1), reclamo y cierre del
+ * caso (HU-13.2). Contrato completo en `pethood-backend/docs/api-mascotas-perdidas.md`.
  */
 import type { Coordenadas } from '@/lib/ubicacion';
 import { LIMITES } from '@/shared/validation/limits';
@@ -50,9 +50,12 @@ export interface AvisoPerdido {
   /** ISO 8601. Define el orden del portal. */
   fechaAlta: string;
   fechaResuelto: string | null;
-  /** Contraparte del chat de reencuentro (HU-13.2, todavía sin implementar). */
+  /** Contraparte del chat de reencuentro (HU-13.2). */
   reportante: { id: number; nombre: string; apellido: string; imagenUrl: string | null };
-  /** Con `true` el aviso es del usuario: no se le ofrece escribirse a sí mismo. */
+  /**
+   * Con `true` el aviso es del usuario. Decide qué botón ofrece el detalle: con `false`,
+   * "Enviar mensaje"; con `true`, "Marcar como resuelto".
+   */
   esPropio: boolean;
 }
 
@@ -253,4 +256,43 @@ export interface ProvinciaConLocalidades {
  */
 export function listarUbicaciones(): Promise<ProvinciaConLocalidades[]> {
   return get('/animales-perdidos/ubicaciones');
+}
+
+// ─────────────── HU-13.2 · Reclamo y cierre del caso ───────────────
+
+/** El estado que cierra el caso, tal como lo nombra el catálogo del backend. */
+export const ESTADO_RESUELTO = 'Resuelto';
+
+/** Si el aviso ya está cerrado: no se reclama ni se vuelve a resolver. */
+export function estaResuelto(aviso: AvisoPerdido): boolean {
+  return aviso.estado.nombre === ESTADO_RESUELTO;
+}
+
+/** La sala de reencuentro que devuelve el reclamo. */
+export interface ReclamoAviso {
+  chatId: number;
+  /** `false` si la sala ya existía: el botón no se esconde después del primer reclamo. */
+  nueva: boolean;
+}
+
+/**
+ * Reclama el aviso y devuelve la sala para navegar a ella.
+ *
+ * Es idempotente del lado del backend (responde 200, no 201): volver a tocar el botón
+ * devuelve la misma sala y no duplica la tarjeta del aviso.
+ */
+export function reclamarAviso(id: number): Promise<ReclamoAviso> {
+  // Sin cuerpo: el endpoint no recibe body.
+  return post(`/animales-perdidos/${id}/reclamo`, {});
+}
+
+/**
+ * Cierra el caso: el aviso pasa a "Resuelto" y sus salas de reencuentro quedan en sólo
+ * lectura.
+ *
+ * Devuelve la tarjeta ya actualizada para reemplazar el aviso en memoria, sin refetch del
+ * portal.
+ */
+export function resolverAviso(id: number): Promise<AvisoPerdido> {
+  return post(`/animales-perdidos/${id}/resuelto`, {});
 }
