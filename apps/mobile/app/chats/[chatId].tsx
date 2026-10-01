@@ -351,6 +351,14 @@ export default function ConversacionScreen() {
           onReportar={() => {
             const contacto = sala.cabecera?.contacto;
             if (contacto) setReportado({ tipo: contacto.tipo, objetoId: contacto.id });
+          onVerPerfil={() => {
+            const contacto = sala.cabecera?.contacto;
+            if (!contacto) return;
+            if (contacto.tipo === 'REFUGIO') {
+              router.push({ pathname: '/perfiles/refugio/[id]', params: { id: contacto.id } });
+            } else {
+              router.push({ pathname: '/perfiles/usuario/[id]', params: { id: contacto.id } });
+            }
           }}
         />
 

@@ -35,6 +35,8 @@ interface CabeceraConversacionProps {
   onVolver: () => void;
   /** Reporta al contacto (spec 008). Sin esto no se muestra la bandera. */
   onReportar?: () => void;
+  /** Abre el perfil público del contacto (spec 023). Se toca la foto. */
+  onVerPerfil?: () => void;
 }
 
 /**
@@ -91,6 +93,7 @@ export function CabeceraConversacion({
   desconectado,
   onVolver,
   onReportar,
+  onVerPerfil,
 }: CabeceraConversacionProps) {
   return (
     <View>
@@ -105,15 +108,23 @@ export function CabeceraConversacion({
           <Ionicons name="arrow-back" size={24} color={PALETA.neutral[700]} />
         </Pressable>
 
-        <Avatar
-          uri={urlAbsoluta(contacto?.imagenUrl)}
-          nombre={contacto?.nombre}
-          tamanio={AVATAR}
-          tamanioTexto={AVATAR_TEXTO}
-          variante="organic"
-          tono={contacto?.tipo === 'REFUGIO' ? 'acento' : 'neutro'}
-          accessibilityLabel={contacto ? `Foto de ${contacto.nombre}` : 'Foto del contacto'}
-        />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={contacto ? `Ver el perfil de ${contacto.nombre}` : 'Ver el perfil'}
+          disabled={!contacto || !onVerPerfil}
+          onPress={onVerPerfil}
+          className="active:opacity-70"
+        >
+          <Avatar
+            uri={urlAbsoluta(contacto?.imagenUrl)}
+            nombre={contacto?.nombre}
+            tamanio={AVATAR}
+            tamanioTexto={AVATAR_TEXTO}
+            variante="organic"
+            tono={contacto?.tipo === 'REFUGIO' ? 'acento' : 'neutro'}
+            accessibilityLabel={contacto ? `Foto de ${contacto.nombre}` : 'Foto del contacto'}
+          />
+        </Pressable>
 
         <View className="min-w-0 flex-1">
           <Text
