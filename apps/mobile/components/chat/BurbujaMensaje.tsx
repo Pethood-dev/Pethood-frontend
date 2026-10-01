@@ -77,6 +77,8 @@ interface BurbujaMensajeProps {
   onAbrirImagen?: (indice: number) => void;
   /** Navega al detalle de la solicitud embebida. Sólo en los mensajes de sistema. */
   onVerSolicitud?: () => void;
+  /** Mantener apretada una burbuja recibida: abre el reporte del mensaje. */
+  onReportar?: () => void;
 }
 
 /** Hora del mensaje dentro de la burbuja, o el estado mientras no hay fecha del servidor. */
@@ -161,6 +163,7 @@ export function BurbujaMensaje({
   onDescartar,
   onAbrirImagen,
   onVerSolicitud,
+  onReportar,
 }: BurbujaMensajeProps) {
   const { width: anchoPantalla } = useWindowDimensions();
 
@@ -202,7 +205,11 @@ export function BurbujaMensaje({
           </View>
         ) : null
       ) : (
-        <View
+        <Pressable
+          onLongPress={!propia && item.estado === 'enviado' ? onReportar : undefined}
+          delayLongPress={400}
+          accessibilityActions={onReportar && !propia ? [{ name: 'longpress', label: 'Reportar mensaje' }] : undefined}
+          onAccessibilityAction={onReportar ? () => onReportar() : undefined}
           style={{
             ...(propia ? RADIOS_PROPIA : RADIOS_RECIBIDA),
             ...RELLENO,
@@ -221,7 +228,7 @@ export function BurbujaMensaje({
           </Text>
 
           <PieBurbuja item={item} />
-        </View>
+        </Pressable>
       )}
 
       {/* El error no se traga el mensaje: el texto sigue en la burbuja y se puede reintentar

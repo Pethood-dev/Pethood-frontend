@@ -29,6 +29,7 @@ import { CabeceraConversacion } from '@/components/chat/CabeceraConversacion';
 import { HojaAdjuntos, type OrigenAdjunto } from '@/components/chat/HojaAdjuntos';
 import { VisorAdjuntos } from '@/components/chat/VisorAdjuntos';
 import { EstadoCargando, EstadoError, EstadoVacio } from '@/components/feedback/EstadosPantalla';
+import { ReporteModal, type ObjetoReportado } from '@/components/reportes/ReporteModal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { EditorFotoModal } from '@/components/ui/EditorFotoModal';
 import { SeparadorFecha } from '@/components/ui/SeparadorFecha';
@@ -61,6 +62,8 @@ function normalizarTipo(tipo?: string | null): string {
 export default function ConversacionScreen() {
   const router = useRouter();
   const { usuario, token } = useSesion();
+  /** Lo que se está reportando (un mensaje o el contacto), o `null` con el modal cerrado. */
+  const [reportado, setReportado] = useState<ObjetoReportado | null>(null);
   const { chatId: parametro } = useLocalSearchParams<{ chatId: string }>();
   const chatId = Number(parametro);
 
@@ -313,6 +316,7 @@ export default function ConversacionScreen() {
             onReintentar={() => sala.reintentar(fila.item.clave)}
             onDescartar={() => sala.descartar(fila.item.clave)}
             onAbrirImagen={(indice) => setAmpliado({ adjuntos: fila.item.adjuntos, indice })}
+            onReportar={() => setReportado({ tipo: 'MENSAJE', objetoId: Number(fila.item.clave) })}
             onVerSolicitud={
               fila.item.solicitud
                 ? () => router.push(`/solicitudes/${fila.item.solicitud!.id}`)
@@ -344,6 +348,10 @@ export default function ConversacionScreen() {
           solicitud={sala.cabecera?.solicitud ?? null}
           desconectado={sala.desconectado}
           onVolver={volver}
+          onReportar={() => {
+            const contacto = sala.cabecera?.contacto;
+            if (contacto) setReportado({ tipo: contacto.tipo, objetoId: contacto.id });
+          }}
           onVerPerfil={() => {
             const contacto = sala.cabecera?.contacto;
             if (!contacto) return;
@@ -422,6 +430,7 @@ export default function ConversacionScreen() {
 
       {/* Un solo visor para toda la conversación: montar un Modal por burbuja sería un
           componente por mensaje para algo que sólo se ve de a uno. */}
+      <ReporteModal objeto={reportado} onCerrar={() => setReportado(null)} />
       <VisorAdjuntos
         adjuntos={ampliado?.adjuntos ?? []}
         indiceInicial={ampliado?.indice ?? null}

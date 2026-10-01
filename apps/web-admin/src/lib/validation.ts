@@ -18,6 +18,8 @@ export const LIMITES = {
   faqCategoria: { nombre: { min: 2, max: 50 }, descripcion: { max: 200 } },
   catalogo: { nombre: { min: 2, max: 50 }, descripcion: { max: 200 }, secuenciaDias: { min: 1, max: 365 } },
   motivo: { min: 1, max: 500 },
+  /** Respuesta del admin al resolver un reporte (spec 008). Solo web-admin: no se espeja en mobile. */
+  respuestaReporte: { min: 1, max: 500 },
   busqueda: { max: 100 },
   password: { min: 8 },
   imagen: { tamanioMaximoBytes: 5 * 1024 * 1024, formatos: ["image/jpeg", "image/png", "image/webp"] },

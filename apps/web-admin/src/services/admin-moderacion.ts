@@ -1,6 +1,7 @@
 import { apiFetch, aQueryString } from "./api";
 import type {
   AccionPublicacion,
+  DetallePublicacionAdmin,
   FiltrosModeracion,
   Lista,
   MascotaAdmin,
@@ -31,3 +32,6 @@ export const reactivarMascota = (id: number, motivo: string, token: string) =>
 
 export const listarSolicitudes = (f: FiltrosModeracion, token: string): Promise<Lista<SolicitudAdmin>> =>
   apiFetch(`/admin/solicitudes${aQueryString(f)}`, { token });
+
+export const obtenerPublicacion = (id: number, token: string): Promise<DetallePublicacionAdmin> =>
+  apiFetch(`/admin/publicaciones/${id}`, { token });

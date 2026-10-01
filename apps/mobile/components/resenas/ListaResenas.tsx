@@ -4,9 +4,11 @@
  */
 import { Text, View } from 'react-native';
 
+import { BotonReportar } from '@/components/reportes/BotonReportar';
 import { Estrellas } from '@/components/resenas/Estrellas';
 import { Avatar } from '@/components/ui/Avatar';
 import { Chip } from '@/components/ui/Chip';
+import { useSesion } from '@/hooks/useSesion';
 import { urlAbsoluta } from '@/services/api';
 import { etiquetaFlujo, type Resena } from '@/services/resenas';
 import { aFechaVisible, parsearFecha } from '@/shared/validation/dates';
@@ -17,6 +19,8 @@ function fechaVisible(iso: string): string {
 }
 
 export function ListaResenas({ resenas }: { resenas: Resena[] }) {
+  const { usuario } = useSesion();
+
   if (resenas.length === 0) {
     return (
       <View className="rounded-2xl bg-organic-surface p-5">
@@ -51,6 +55,14 @@ export function ListaResenas({ resenas }: { resenas: Resena[] }) {
                 </Text>
               </View>
             </View>
+            {resena.autor.id === usuario?.id ? null : (
+              <BotonReportar
+                tipo="RESENA"
+                objetoId={resena.id}
+                etiqueta="Reportar reseña"
+                soloIcono
+              />
+            )}
           </View>
 
           {resena.comentario ? (
@@ -62,6 +74,8 @@ export function ListaResenas({ resenas }: { resenas: Resena[] }) {
           <View className="mt-2.5 flex-row">
             <Chip etiqueta={etiquetaFlujo(resena.flujo)} variante="filtro" />
           </View>
+
+
         </View>
       ))}
     </View>

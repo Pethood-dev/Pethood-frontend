@@ -33,6 +33,8 @@ interface CabeceraConversacionProps {
   /** Muestra la franja de "Sin conexión" bajo la cabecera. */
   desconectado: boolean;
   onVolver: () => void;
+  /** Reporta al contacto (spec 008). Sin esto no se muestra la bandera. */
+  onReportar?: () => void;
   /** Abre el perfil público del contacto (spec 023). Se toca la foto. */
   onVerPerfil?: () => void;
 }
@@ -90,6 +92,7 @@ export function CabeceraConversacion({
   solicitud = null,
   desconectado,
   onVolver,
+  onReportar,
   onVerPerfil,
 }: CabeceraConversacionProps) {
   return (
@@ -140,6 +143,18 @@ export function CabeceraConversacion({
             </Text>
           ) : null}
         </View>
+
+        {contacto && onReportar ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Reportar a ${contacto.nombre}`}
+            onPress={onReportar}
+            hitSlop={8}
+            className="h-9 w-9 items-center justify-center rounded-full border border-red-200 bg-red-50 active:opacity-70"
+          >
+            <Ionicons name="flag-outline" size={17} color={PALETA.estado.error} />
+          </Pressable>
+        ) : null}
       </View>
 
       {/* GUI-14 no contempla este aviso, pero sin él una conversación sin tiempo real se ve
