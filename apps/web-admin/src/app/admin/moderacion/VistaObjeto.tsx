@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Chips, Dato, Galeria, dia, plata, siNo } from "@/components/admin/Detalle";
 import { EstadoBadge, type EstadoCiclo } from "@/components/ui/EstadoBadge";
 import { urlArchivo } from "@/services/api";
 import { obtenerPublicacion } from "@/services/admin-moderacion";
@@ -9,68 +10,15 @@ import type { DetallePublicacionAdmin } from "@/types/admin-moderacion";
 import type { DetalleRefugio } from "@/types/admin-usuarios";
 import type { TipoReporte, VistaObjetoReporte } from "@/types/admin-reportes";
 
-const Dato = ({ k, v }: { k: string; v: string | null | undefined }) =>
-  v ? (
-    <div>
-      <dt className="text-xs uppercase text-neutral-500">{k}</dt>
-      <dd className="text-sm text-neutral-900">{v}</dd>
-    </div>
-  ) : null;
-
-const Chips = ({ items }: { items: string[] }) => (
-  <div className="flex flex-wrap gap-1.5">
-    {items.map((i) => (
-      <span key={i} className="rounded-full bg-pethood-beige px-2.5 py-0.5 text-xs text-neutral-700">
-        {i}
-      </span>
-    ))}
-  </div>
-);
-
-/** Foto grande + miniaturas para elegir. Sin fotos, un recuadro vacío en vez de un hueco. */
-function Galeria({ fotos, alt }: { fotos: string[]; alt: string }) {
-  const [actual, setActual] = useState(0);
-  if (fotos.length === 0) {
-    return (
-      <div className="flex aspect-[4/3] w-full items-center justify-center rounded-xl bg-neutral-100 text-sm text-neutral-400">
-        Sin fotos
-      </div>
-    );
-  }
-  return (
-    <div className="space-y-2">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={urlArchivo(fotos[actual])} alt={alt} className="aspect-[4/3] w-full rounded-xl object-cover" />
-      {fotos.length > 1 && (
-        <div className="flex gap-2">
-          {fotos.map((f, i) => (
-            <button
-              key={f}
-              type="button"
-              onClick={() => setActual(i)}
-              aria-label={`Ver foto ${i + 1}`}
-              className={`overflow-hidden rounded-lg border-2 ${i === actual ? "border-pethood-orange" : "border-transparent opacity-70"}`}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={urlArchivo(f)} alt="" className="h-10 w-10 object-cover" />
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function edad(iso: string | null): string | null {
+export function edad(iso: string | null): string | null {
   if (!iso) return null;
   const meses = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / (30.44 * 86_400_000)));
   return meses < 12 ? `${meses} ${meses === 1 ? "mes" : "meses"}` : `${Math.floor(meses / 12)} años`;
 }
 
-function Publicacion({ p }: { p: DetallePublicacionAdmin }) {
+export function Publicacion({ p }: { p: DetallePublicacionAdmin }) {
   const m = p.mascota;
   const fotos = p.imagenes.length ? p.imagenes : m.imagenUrl ? [m.imagenUrl] : [];
-  const siNo = (v: boolean | null) => (v === null ? null : v ? "Sí" : "No");
   return (
     <div className="grid gap-4 sm:grid-cols-[12rem_1fr]">
       <Galeria fotos={fotos} alt={p.titulo} />
@@ -132,8 +80,6 @@ function Refugio({ d }: { d: DetalleRefugio }) {
   );
 }
 
-const dia = (iso: string) => new Date(iso).toLocaleDateString("es-AR");
-const plata = (n: number) => n.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 
 /** Misma tarjeta (foto + datos) para persona, reseña, aviso y campaña. */
 function Generica({ v }: { v: VistaObjetoReporte }) {
