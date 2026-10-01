@@ -2,6 +2,7 @@ import { apiFetch, aQueryString } from "./api";
 import type {
   AltaRefugioBody,
   DetalleRefugio,
+  DetalleUsuario,
   FiltrosRefugios,
   FiltrosUsuarios,
   ListaRefugios,
@@ -77,4 +78,8 @@ export function reactivarRefugio(id: number, token: string): Promise<{ refugio: 
 
 export function bajaRefugio(id: number, motivo: string, token: string): Promise<{ refugio: Partial<RefugioAdmin> }> {
   return apiFetch(`/admin/refugios/${id}/baja`, { method: "PATCH", body: { motivo }, token });
+}
+
+export function obtenerUsuario(id: number, token: string): Promise<DetalleUsuario> {
+  return apiFetch(`/admin/usuarios/${id}`, { token });
 }

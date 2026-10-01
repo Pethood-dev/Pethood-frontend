@@ -1,57 +1,34 @@
 import { cookies } from "next/headers";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { ExportacionAdmin } from "@/components/dashboard/ExportacionAdmin";
-import { ListaMock } from "@/components/ui/ListaMock";
+import { listarCampanas } from "@/services/admin-campanas";
+import type { FiltrosCampanas } from "@/types/admin-campanas";
+import { CampanasTabla } from "./CampanasTabla";
 
-export default async function CampanasAdminPage() {
+interface PageProps {
+  searchParams: Promise<Record<string, string | undefined>>;
+}
+
+export default async function CampanasAdminPage({ searchParams }: PageProps) {
+  const params = await searchParams;
   const token = (await cookies()).get(AUTH_COOKIE)?.value ?? "";
+  const filtros: FiltrosCampanas = {
+    page: params.page ? Number(params.page) : 1,
+    q: params.q,
+    estado: params.estado,
+  };
+  const lista = await listarCampanas(filtros, token);
+
   return (
-    <ListaMock
-      titulo="Campañas"
-      descripcion="Campañas de donación de los refugios."
-      columnas={[
-        "Campaña",
-        "Refugio",
-        "Estado",
-        "Objetivo",
-        "Recaudado",
-        "Vence",
-      ]}
-      accion={<ExportacionAdmin entidad="campanias" token={token} />}
-      filas={[
-        [
-          "Alimento para invierno",
-          "Refugio Huellitas",
-          "Activa",
-          "$150.000",
-          "$92.000",
-          "30/10/2026",
-        ],
-        [
-          "Cirugía de Luna",
-          "Refugio Patitas",
-          "Activa",
-          "$80.000",
-          "$80.000",
-          "15/10/2026",
-        ],
-        [
-          "Techo nuevo",
-          "Refugio Huellitas",
-          "Inactiva",
-          "$300.000",
-          "$0",
-          "01/11/2026",
-        ],
-        [
-          "Vacunación anual",
-          "Refugio Patitas",
-          "Finalizada",
-          "$60.000",
-          "$60.000",
-          "01/09/2026",
-        ],
-      ]}
-    />
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div>
+          <h1 className="font-heading text-2xl text-neutral-900">Campañas</h1>
+          <p className="text-base text-neutral-700">Campañas de donación de los refugios.</p>
+        </div>
+        <ExportacionAdmin entidad="campanias" token={token} />
+      </div>
+      <CampanasTabla lista={lista} filtros={filtros} token={token} />
+    </div>
   );
 }

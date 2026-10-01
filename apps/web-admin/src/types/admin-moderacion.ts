@@ -86,3 +86,35 @@ export interface DetallePublicacionAdmin extends PublicacionAdmin {
   };
   reportes: ReportePublicacion[];
 }
+
+/** `GET /admin/mascotas/:id`. */
+export interface DetalleMascotaAdmin extends MascotaAdmin {
+  fechaNacimiento: string | null;
+  genero: string | null;
+  peso: number | null;
+  tamanio: string | null;
+  castrado: boolean | null;
+  descripcion: string | null;
+  imagenUrl: string | null;
+  historiaClinica: {
+    id: number;
+    fechaVisita: string;
+    titulo: string;
+    descripcion: string | null;
+    vacunacion: boolean;
+    tipoVacuna: string | null;
+    documentoUrl: string | null;
+  }[];
+}
+
+/** `GET /admin/solicitudes/:id`. */
+export interface DetalleSolicitudAdmin extends SolicitudAdmin {
+  publicacionId: number;
+  motivacion: string | null;
+  comentario: string | null;
+  fechaRespuesta: string | null;
+  fechaInicioTransito: string | null;
+  fechaFinTransito: string | null;
+  fechaBaja: string | null;
+  historialEstados: { estado: string; fechaAlta: string; fechaBaja: string | null; usuarioAlta: unknown }[];
+}
