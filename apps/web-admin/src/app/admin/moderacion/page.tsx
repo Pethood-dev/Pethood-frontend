@@ -1,17 +1,34 @@
-import { ListaMock } from "@/components/ui/ListaMock";
+import { cookies } from "next/headers";
+import { AUTH_COOKIE } from "@/lib/auth";
+import { listarReportes } from "@/services/admin-reportes";
+import type { EstadoReporte, FiltrosReportes, TipoReporte } from "@/types/admin-reportes";
+import { ReportesTabla } from "./ReportesTabla";
 
-// HU-3.1 a HU-3.7 — falta resolver/suspender/eliminar; ReporteProblema aún sin módulo en el backend.
-export default function ModeracionAdminPage() {
+interface PageProps {
+  searchParams: Promise<Record<string, string | undefined>>;
+}
+
+// HU-3.6 y HU-3.7 — reportes de moderación (spec 008). Suspender y dar de baja siguen
+// siendo acciones aparte (HU-3.4 y 3.5): resolver un reporte no actúa sobre el objeto.
+export default async function ModeracionAdminPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const token = (await cookies()).get(AUTH_COOKIE)?.value ?? "";
+  const filtros: FiltrosReportes = {
+    estado: (params.estado as EstadoReporte | undefined) ?? "pendiente",
+    tipo: params.tipo as TipoReporte | undefined,
+    page: params.page ? Number(params.page) : 1,
+  };
+  const lista = await listarReportes(filtros, token);
+
   return (
-    <ListaMock
-      titulo="Moderación"
-      descripcion="Reportes de publicaciones, usuarios y reseñas pendientes de revisión."
-      columnas={["Tipo", "Reportado", "Motivo", "Estado", "Fecha"]}
-      filas={[
-        ["Publicación", "Dar en adopción a Toby", "Contenido engañoso", "Pendiente", "02/09/2026"],
-        ["Usuario", "Carlos Ruiz", "Maltrato animal", "Pendiente", "31/08/2026"],
-        ["Reseña", "Reseña #48", "Lenguaje ofensivo", "Resuelto", "20/08/2026"],
-      ]}
-    />
+    <div className="space-y-4">
+      <div>
+        <h1 className="font-heading text-2xl text-neutral-900">Moderación</h1>
+        <p className="text-base text-neutral-700">
+          Reportes de publicaciones, personas, refugios, reseñas, avisos, campañas y mensajes.
+        </p>
+      </div>
+      <ReportesTabla lista={lista} filtros={filtros} token={token} />
+    </div>
   );
 }
