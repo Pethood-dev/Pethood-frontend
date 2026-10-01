@@ -50,6 +50,11 @@ export const LIMITES = {
     mapaUrl: { max: 500 },
   },
 
+  /** Reporte de moderación (spec 008, HU-3.1 a HU-3.3). Texto libre. Espejo del backend. */
+  reporte: {
+    motivo: { min: 5, max: 500 },
+  },
+
   consultaSoporte: {
     nombreCompleto: { min: 2, max: 100 },
     email: { max: 100 },
