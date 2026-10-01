@@ -344,6 +344,15 @@ export default function ConversacionScreen() {
           solicitud={sala.cabecera?.solicitud ?? null}
           desconectado={sala.desconectado}
           onVolver={volver}
+          onVerPerfil={() => {
+            const contacto = sala.cabecera?.contacto;
+            if (!contacto) return;
+            if (contacto.tipo === 'REFUGIO') {
+              router.push({ pathname: '/perfiles/refugio/[id]', params: { id: contacto.id } });
+            } else {
+              router.push({ pathname: '/perfiles/usuario/[id]', params: { id: contacto.id } });
+            }
+          }}
         />
 
         {/* El padding inferior sigue al teclado, así la barra de escritura sube con él y el
