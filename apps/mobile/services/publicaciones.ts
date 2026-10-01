@@ -64,7 +64,7 @@ export interface PublicacionFeed {
     mapaUrl: string | null;
   } | null;
   /** Quien la publicó, solo si es una persona (`refugio` null). En una de refugio viene null. */
-  publicadoPor: { nombre: string; apellido: string } | null;
+  publicadoPor: { id: number; nombre: string; apellido: string; imagenUrl: string | null } | null;
   /**
    * Distancia en km entre la ubicación de quien publicó y las coordenadas del usuario, cuando
    * se piden con `obtenerPublicacion(id, coordenadas)`. `null` si no hay ubicación ubicable.

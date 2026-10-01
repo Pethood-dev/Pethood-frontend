@@ -324,6 +324,21 @@ export default function FichaPublicacionScreen() {
             distanciaTexto={distanciaTexto}
             mapaUrl={mapaDelRefugio}
             fechaTexto={fechaPublicacionTexto}
+            onVerPerfil={
+              publicacion.refugio
+                ? () =>
+                    router.push({
+                      pathname: '/perfiles/refugio/[id]',
+                      params: { id: publicacion.refugio!.id },
+                    })
+                : publicacion.publicadoPor
+                  ? () =>
+                      router.push({
+                        pathname: '/perfiles/usuario/[id]',
+                        params: { id: publicacion.publicadoPor!.id },
+                      })
+                  : undefined
+            }
           />
 
           {/* Solo sobre lo propio: a quien adopta le alcanza con el estado de la mascota, y
