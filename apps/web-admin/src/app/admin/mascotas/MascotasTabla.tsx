@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { RotateCcw, Trash2 } from "lucide-react";
+import { Eye, RotateCcw, Trash2 } from "lucide-react";
 import { MotivoModal } from "@/components/admin/MotivoModal";
 import { AccionButton } from "@/components/ui/AccionButton";
 import { Feedback } from "@/components/ui/Feedback";
 import { Pagination } from "@/components/ui/Pagination";
 import { useTablaAdmin } from "@/lib/useTablaAdmin";
 import { bajaMascota, reactivarMascota } from "@/services/admin-moderacion";
+import { DetalleMascotaModal } from "./DetalleMascotaModal";
 import type { FiltrosModeracion, Lista, MascotaAdmin } from "@/types/admin-moderacion";
 
 const CAMPO = "w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-900 sm:w-auto";
@@ -22,6 +23,7 @@ export function MascotasTabla({
   token: string;
 }) {
   const { cargando, error, exito, ejecutar, aplicarFiltros, irAPagina } = useTablaAdmin("/admin/mascotas", filtros);
+  const [detalle, setDetalle] = useState<number | null>(null);
   const [modal, setModal] = useState<{ mascota: MascotaAdmin; baja: boolean } | null>(null);
 
   return (
@@ -72,7 +74,11 @@ export function MascotasTabla({
               const deBaja = m.fechaBaja !== null;
               return (
                 <tr key={m.id} className="border-b border-neutral-100 last:border-0">
-                  <td data-label="Nombre" className="px-4 py-3 text-center text-neutral-900">{m.nombre}</td>
+                  <td data-label="Nombre" className="px-4 py-3 text-center text-neutral-900">
+                    <button type="button" onClick={() => setDetalle(m.id)} className="font-medium text-neutral-900 hover:underline">
+                      {m.nombre}
+                    </button>
+                  </td>
                   <td data-label="Especie" className="px-4 py-3 text-center text-neutral-600">{m.especie}{m.raza ? ` · ${m.raza}` : ""}</td>
                   <td data-label="Estado" className="px-4 py-3 text-center text-neutral-600">{deBaja ? "De baja" : m.estado.nombre}</td>
                   <td data-label="Dueño" className="px-4 py-3 text-center text-neutral-600">{m.duenio.nombre}</td>
@@ -80,6 +86,7 @@ export function MascotasTabla({
                   <td data-label="Alta" className="px-4 py-3 text-center text-neutral-600">{new Date(m.fechaAlta).toLocaleDateString("es-AR")}</td>
                   <td data-label="Acciones" className="px-4 py-3">
                     <div className="flex flex-wrap justify-end gap-2 md:justify-center">
+                      <AccionButton icono={Eye} tono="info" onClick={() => setDetalle(m.id)}>Ver</AccionButton>
                       <AccionButton
                         icono={deBaja ? RotateCcw : Trash2}
                         tono={deBaja ? "exito" : "peligro"}
@@ -98,6 +105,8 @@ export function MascotasTabla({
       </div>
 
       <Pagination page={lista.page} limit={lista.limit} total={lista.total} onCambiar={irAPagina} />
+
+      {detalle && <DetalleMascotaModal id={detalle} token={token} onCerrar={() => setDetalle(null)} />}
 
       {modal && (
         <MotivoModal
