@@ -2,8 +2,9 @@
  * El aviso de mascota perdida/encontrada embebido en la conversación (GUI-14, HU-13.2): la
  * tarjeta que PetHood deja en la sala cuando alguien reclama un aviso.
  *
- * Es el **primer mensaje** de una sala de reencuentro y existe para que el reportante sepa de
- * qué aviso le están hablando: con varios reclamos abiertos, una sala vacía no lo dice.
+ * Existe para que el reportante sepa de qué aviso le están hablando, y con la conversación
+ * compartida es lo único que lo dice: la misma sala puede tener una solicitud de adopción y dos
+ * avisos distintos, y sin la tarjeta todo sería la misma lista de mensajes con la misma persona.
  *
  * Misma anatomía que `TarjetaSolicitudChat` —no es una burbuja, ocupa todo el ancho, la emite
  * el sistema, va precedida por la firma "PetHood · hh:mm" y lleva su propia acción— con tres

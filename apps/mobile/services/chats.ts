@@ -98,7 +98,7 @@ export interface SolicitudEnChat {
 }
 
 /**
- * El aviso de mascota perdida/encontrada que abrió la sala de reencuentro (HU-13.2).
+ * El aviso de mascota perdida/encontrada de una tarjeta de la conversación (HU-13.2).
  *
  * Es un resumen, no el aviso entero: el detalle completo sale del portal. **No trae
  * coordenadas ni distancia** — las del dispositivo no se exponen nunca y la distancia depende
@@ -190,17 +190,22 @@ export interface CabeceraChat {
    * El texto ("responde en ~2 h") lo arma el cliente.
    */
   minutosRespuesta: number | null;
-  /** La solicitud que abrió la sala, o `null` si no nació de una. */
+  /** La solicitud vigente de la sala, o `null` si no hay ninguna. */
   solicitud: SolicitudEnChat | null;
-  /** El aviso que abrió la sala (HU-13.2), o `null`. Excluyente con `solicitud`. */
+  /**
+   * El aviso de la última tarjeta de aviso de la sala (HU-13.2), o `null`.
+   *
+   * **No es excluyente con `solicitud`**: desde que el reclamo entra en la conversación que ya
+   * existía con esa persona, una sala puede tener las dos tarjetas.
+   */
   aviso: AvisoEnChat | null;
   /**
-   * La sala se lee pero no se escribe: esconder la barra de escritura y poner el cartel.
+   * De cuál de las dos tarjetas se está hablando: la más reciente, o `null` si no hay ninguna.
+   * Alimenta el subtítulo de la cabecera.
    *
-   * Viene resuelto por el backend y no como "el aviso está resuelto": el día que haya otro
-   * motivo de cierre, la pantalla no cambia.
+   * Lo decide el backend para que la pantalla no tenga que comparar fechas ni conocer la regla.
    */
-  soloLectura: boolean;
+  contexto: 'SOLICITUD' | 'ANIMAL_PERDIDO' | null;
 }
 
 export interface ResultadoLeidos {

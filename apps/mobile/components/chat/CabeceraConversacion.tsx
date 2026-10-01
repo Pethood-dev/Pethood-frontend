@@ -18,7 +18,7 @@ import { Text, View, Pressable } from 'react-native';
 import { Avatar } from '@/components/ui/Avatar';
 import { PALETA } from '@/constants/theme';
 import { urlAbsoluta } from '@/services/api';
-import type { ContactoChat, SolicitudEnChat } from '@/services/chats';
+import type { AvisoEnChat, CabeceraChat, ContactoChat, SolicitudEnChat } from '@/services/chats';
 
 const AVATAR = 44;
 const AVATAR_TEXTO = 16;
@@ -28,8 +28,12 @@ interface CabeceraConversacionProps {
   enLinea: boolean;
   /** En cuántos minutos suele responder el contacto, o `null` si no hay tendencia. */
   minutosRespuesta?: number | null;
-  /** La solicitud que abrió la sala, si la hay: manda sobre el estado en el subtítulo. */
+  /** La solicitud vigente de la sala, si la hay: manda sobre el estado en el subtítulo. */
   solicitud?: SolicitudEnChat | null;
+  /** El aviso de mascota perdida vigente de la sala (HU-13.2), si lo hay. */
+  aviso?: AvisoEnChat | null;
+  /** Cuál de los dos nombra el subtítulo. Lo decide el backend: es el más reciente. */
+  contexto?: CabeceraChat['contexto'];
   /** Muestra la franja de "Sin conexión" bajo la cabecera. */
   desconectado: boolean;
   onVolver: () => void;
@@ -67,12 +71,29 @@ function subtitulo(
   enLinea: boolean,
   minutosRespuesta: number | null,
   solicitud: SolicitudEnChat | null,
+  aviso: AvisoEnChat | null,
+  contexto: CabeceraChat['contexto'],
 ): string {
   if (!contacto.activo) return 'Cuenta dada de baja';
 
-  // Con una solicitud de por medio, de qué se está hablando importa más que la presencia:
-  // es el subtítulo del artboard 36.
-  if (solicitud) {
+  // Con una tarjeta de por medio, de qué se está hablando importa más que la presencia: es el
+  // subtítulo del artboard 36. Una conversación puede tener una solicitud Y un aviso desde
+  // HU-13.2 (el reclamo entra en la sala que ya existía con esa persona), así que cuál mostrar
+  // lo decide el backend en `contexto` — es la más reciente.
+  if (contexto === 'ANIMAL_PERDIDO' && aviso) {
+    // El nombre, o la especie si el aviso no lo tiene (un "Encontrado" puede no saberlo).
+    const quien = aviso.nombre ?? aviso.especie;
+    return `${aviso.estado}${quien ? ` · ${quien}` : ''}`;
+  }
+
+  if (contexto === 'SOLICITUD' && solicitud) {
+    const mascota = solicitud.mascota.nombre;
+    return `Solicitud #${solicitud.id}${mascota ? ` · ${mascota}` : ''}`;
+  }
+
+  // Sin `contexto` (salas viejas, o un cliente contra un backend anterior) se mantiene el
+  // comportamiento de antes: la solicitud manda si está.
+  if (contexto === null && solicitud) {
     const mascota = solicitud.mascota.nombre;
     return `Solicitud #${solicitud.id}${mascota ? ` · ${mascota}` : ''}`;
   }
@@ -90,6 +111,8 @@ export function CabeceraConversacion({
   enLinea,
   minutosRespuesta = null,
   solicitud = null,
+  aviso = null,
+  contexto = null,
   desconectado,
   onVolver,
   onReportar,
@@ -139,7 +162,7 @@ export function CabeceraConversacion({
 
           {contacto ? (
             <Text numberOfLines={1} className="font-cuerpo text-[11px] text-organic-neutral-600">
-              {subtitulo(contacto, enLinea, minutosRespuesta, solicitud)}
+              {subtitulo(contacto, enLinea, minutosRespuesta, solicitud, aviso, contexto)}
             </Text>
           ) : null}
         </View>

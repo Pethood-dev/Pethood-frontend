@@ -61,15 +61,8 @@ export interface EstadoSalaChat {
   enLinea: boolean;
   /** El socket está caído: la franja de "Sin conexión" del header. */
   desconectado: boolean;
-  /**
-   * `false` si la sala no acepta mensajes nuevos: se puede leer pero no escribir.
-   *
-   * Dos motivos hoy, y `motivoSinEscritura` dice cuál: la cuenta del contacto se dio de baja,
-   * o la sala se cerró (HU-13.2: el aviso del reclamo pasó a Resuelto).
-   */
+  /** `false` si la cuenta del contacto se dio de baja: se puede leer pero no escribir. */
   puedeEscribir: boolean;
-  /** Por qué no se puede escribir, para el cartel. `null` si se puede. */
-  motivoSinEscritura: 'CONTACTO_INACTIVO' | 'CHAT_CERRADO' | null;
   recargar: () => void;
   cargarMasViejos: () => void;
   enviar: (contenido: string, fotos: ArchivoAdjunto[]) => void;
@@ -404,17 +397,7 @@ export function useSalaChat(chatId: number, miUsuarioId: number, token: string |
     desconectado,
     // Mientras no sabemos quién es el contacto se asume que sí, para no deshabilitar el
     // input durante la carga y que parpadee al habilitarse.
-    puedeEscribir: cabecera === null || (cabecera.contacto.activo && !cabecera.soloLectura),
-    // El cierre de la sala manda sobre la cuenta de baja: es el motivo más específico, y el
-    // que explica por qué la conversación quedó como está.
-    motivoSinEscritura:
-      cabecera === null
-        ? null
-        : cabecera.soloLectura
-          ? 'CHAT_CERRADO'
-          : cabecera.contacto.activo
-            ? null
-            : 'CONTACTO_INACTIVO',
+    puedeEscribir: cabecera?.contacto.activo ?? true,
     recargar,
     cargarMasViejos,
     enviar,

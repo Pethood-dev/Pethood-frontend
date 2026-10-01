@@ -268,18 +268,21 @@ export function estaResuelto(aviso: AvisoPerdido): boolean {
   return aviso.estado.nombre === ESTADO_RESUELTO;
 }
 
-/** La sala de reencuentro que devuelve el reclamo. */
+/** La conversación que devuelve el reclamo. */
 export interface ReclamoAviso {
   chatId: number;
-  /** `false` si la sala ya existía: el botón no se esconde después del primer reclamo. */
+  /**
+   * `true` sólo si hubo que **abrir** la conversación. Con `false` ya existía una con esa
+   * persona —por una adopción, o por otro aviso— y el reclamo entró ahí.
+   */
   nueva: boolean;
 }
 
 /**
- * Reclama el aviso y devuelve la sala para navegar a ella.
+ * Reclama el aviso y devuelve la conversación con quien lo publicó, para navegar a ella.
  *
- * Es idempotente del lado del backend (responde 200, no 201): volver a tocar el botón
- * devuelve la misma sala y no duplica la tarjeta del aviso.
+ * Es idempotente del lado del backend (responde 200, no 201): volver a tocar el botón devuelve
+ * la misma conversación y no repite la tarjeta del aviso.
  */
 export function reclamarAviso(id: number): Promise<ReclamoAviso> {
   // Sin cuerpo: el endpoint no recibe body.
@@ -287,11 +290,12 @@ export function reclamarAviso(id: number): Promise<ReclamoAviso> {
 }
 
 /**
- * Cierra el caso: el aviso pasa a "Resuelto" y sus salas de reencuentro quedan en sólo
- * lectura.
+ * Cierra el **caso**: el aviso pasa a "Resuelto" y el portal lo marca con "Volvió con su dueño".
  *
- * Devuelve la tarjeta ya actualizada para reemplazar el aviso en memoria, sin refetch del
- * portal.
+ * **No cierra ninguna conversación** — decisión del equipo del 2026-10-01, ver la spec 024 §9.
+ * Las dos personas siguen pudiendo escribirse, que es justamente cuando coordinan la entrega.
+ *
+ * Devuelve la tarjeta ya actualizada para reemplazar el aviso en memoria, sin refetch del portal.
  */
 export function resolverAviso(id: number): Promise<AvisoPerdido> {
   return post(`/animales-perdidos/${id}/resuelto`, {});

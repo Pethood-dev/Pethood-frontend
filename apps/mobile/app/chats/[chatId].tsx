@@ -349,6 +349,8 @@ export default function ConversacionScreen() {
           enLinea={sala.enLinea}
           minutosRespuesta={sala.cabecera?.minutosRespuesta ?? null}
           solicitud={sala.cabecera?.solicitud ?? null}
+          aviso={sala.cabecera?.aviso ?? null}
+          contexto={sala.cabecera?.contexto ?? null}
           desconectado={sala.desconectado}
           onVolver={volver}
           onReportar={() => {
@@ -420,21 +422,11 @@ export default function ConversacionScreen() {
             habilitada={sala.puedeEscribir}
           />
 
-          {sala.motivoSinEscritura === null ? null : (
+          {sala.puedeEscribir ? null : (
             <View className="flex-row items-center justify-center gap-1.5 bg-organic-neutral-100 px-4 pb-2">
-              <Ionicons
-                name={
-                  sala.motivoSinEscritura === 'CHAT_CERRADO'
-                    ? 'checkmark-circle-outline'
-                    : 'information-circle-outline'
-                }
-                size={13}
-                color={PALETA.neutral[600]}
-              />
-              <Text className="flex-1 font-cuerpo text-[12px] text-organic-neutral-600">
-                {sala.motivoSinEscritura === 'CHAT_CERRADO'
-                  ? 'Este caso se resolvió. Podés leer la conversación, pero no responder.'
-                  : 'Esta cuenta fue dada de baja. Podés leer la conversación, pero no responder.'}
+              <Ionicons name="information-circle-outline" size={13} color={PALETA.neutral[600]} />
+              <Text className="font-cuerpo text-[12px] text-organic-neutral-600">
+                Esta cuenta fue dada de baja. Podés leer la conversación, pero no responder.
               </Text>
             </View>
           )}

@@ -249,12 +249,13 @@ export default function MascotasPerdidasScreen() {
   }, []);
 
   /**
-   * HU-13.2: reclamar el aviso y entrar a la sala de reencuentro.
+   * HU-13.2: reclamar el aviso y entrar a la conversación con quien lo publicó.
    *
    * Cierra el popup antes de navegar: si quedara abierto, al volver del chat el usuario se
    * encontraría el detalle encima de la grilla sin haberlo pedido.
    *
-   * El backend es idempotente, así que tocar el botón dos veces no abre dos salas.
+   * El backend resuelve a qué sala entrar: si ya había una con esa persona, es ésa. Tocar el
+   * botón dos veces no abre dos conversaciones ni repite la tarjeta.
    */
   const reclamar = useCallback(
     async (aviso: AvisoPerdido): Promise<void> => {
@@ -279,6 +280,8 @@ export default function MascotasPerdidasScreen() {
    * El aviso vuelve ya resuelto y se reemplaza en el listado **sin moverlo de lugar** y sin
    * refetch; el popup se queda abierto mostrando la marca "Volvió con su dueño", que es la
    * confirmación de que la acción surtió efecto.
+   *
+   * No toca ninguna conversación: resolver cierra el caso, no el chat (spec 024 §9).
    */
   const resolver = useCallback(
     async (aviso: AvisoPerdido): Promise<void> => {

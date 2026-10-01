@@ -8,9 +8,10 @@
  *   sabe la especie: va "especie · hace cuánto", igual que en la tarjeta.
  * - El diseño muestra un teléfono de contacto que la API no expone. En su lugar va quién
  *   publicó el aviso, que es con quien se va a hablar.
- * - "Enviar mensaje" abre el chat de reencuentro (HU-13.2). En un aviso propio no se muestra
- *   —no hay a quién escribirle— y en su lugar va "Marcar como resuelto", que cierra el caso.
- *   Un aviso ya resuelto no ofrece ninguno de los dos.
+ * - "Enviar mensaje" abre la conversación con quien publicó el aviso (HU-13.2); si ya tenían
+ *   una, entra a ésa. En un aviso propio no se muestra —no hay a quién escribirle— y en su
+ *   lugar va "Marcar como resuelto", que cierra el caso **pero no la conversación**. Un aviso
+ *   ya resuelto no ofrece ninguno de los dos.
  * - Dos agregados que el diseño no trae, de cuando el lugar pasó al catálogo de provincias: a
  *   qué distancia está el lugar (si el usuario dio su ubicación y el lugar se pudo ubicar en
  *   el mapa) y un botón para verlo en Google Maps.
@@ -282,7 +283,7 @@ function TarjetaDetalle({
         icono="checkmark-circle-outline"
         titulo="¿El caso se resolvió?"
         mensaje={`Vamos a marcar el aviso de ${nombre} como resuelto.`}
-        detalle="Las conversaciones que se abrieron por este aviso van a quedar sólo para leer, y no vas a poder volver atrás."
+        detalle="Vas a poder seguir hablando con quien te escribió, pero no vas a poder volver atrás."
         textoConfirmar="Sí, se resolvió"
         textoCancelar="Cancelar"
         cargando={enViaje}
