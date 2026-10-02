@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Marca } from "./SiteHeader";
 
+export const EMAIL_CONTACTO = "pethood.mza@gmail.com";
+
 export const EQUIPO = [
   "Agustín Leyes",
   "Camila Fabián",
@@ -52,9 +54,7 @@ export function SiteFooter() {
             <h4>Contacto</h4>
             <ul>
               <li>
-                <a href="mailto:contacto@pethood.example">
-                  contacto@pethood.example
-                </a>
+                <a href={`mailto:${EMAIL_CONTACTO}`}>{EMAIL_CONTACTO}</a>
               </li>
               <li>Mendoza, Argentina</li>
               <li>
