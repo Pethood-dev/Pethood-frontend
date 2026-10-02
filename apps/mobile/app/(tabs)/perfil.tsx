@@ -1,8 +1,19 @@
 /**
- * GUI-09 Mi Perfil — HU-1.3 visualizar, HU-1.5 completar, HU-1.7 cierre de sesión,
- * HU-1.8 dar de baja cuenta.
- * El engranaje abre la edición. Las filas del menú solo navegan cuando su sección ya
- * existe; el resto se muestra desactivado hasta que se implemente.
+ * GUI-09 Mi Perfil — HU-1.3 visualizar, HU-1.5 completar.
+ *
+ * Resumen liviano: foto, nombre, chip de rol y el menú de secciones. A propósito no muestra
+ * el mail ni las acciones sensibles de la cuenta (cerrar sesión, dar de baja) — esas viven en
+ * `/perfil/editar`, a la que se entra con el ícono de perfil del encabezado, para que no
+ * queden botones tan delicados a un solo toque apenas se abre esta pantalla.
+ *
+ * Las filas del menú solo navegan cuando su sección ya existe; el resto se muestra
+ * desactivado hasta que se implemente.
+ *
+ * Menú, contadores y chip siguen al switch refugio/adoptante (ver `services/sesion.ts`):
+ * cada perfil muestra solo lo suyo. En la vista de refugio la tarjeta es la del REFUGIO
+ * (spec 017, artboard 19: foto, nombre, dirección, reseñas y sus números), no la de la
+ * persona; y el ícono del encabezado ofrece elegir entre los datos personales y los del
+ * refugio.
  */
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
@@ -17,22 +28,30 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useToast } from '@/components/feedback/Toast';
+import { FilaUbicacion } from '@/components/perfil/FilaUbicacion';
 import { Avatar } from '@/components/ui/Avatar';
 import { BotonCircular } from '@/components/ui/BotonCircular';
 import { Chip } from '@/components/ui/Chip';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { HojaOpciones } from '@/components/ui/HojaOpciones';
+import { LogoRefugio } from '@/components/ui/LogoRefugio';
 import { SwitchRefugio } from '@/components/ui/SwitchRefugio';
 import { PALETA } from '@/constants/theme';
 import { useSesion } from '@/hooks/useSesion';
 import { ApiError, urlAbsoluta } from '@/services/api';
-import { darDeBajaCuenta, obtenerPerfil } from '@/services/usuarios';
+import { actualizarUbicacionRefugio, obtenerPerfilRefugio } from '@/services/refugio';
+import { actualizarUbicacion, obtenerPerfil } from '@/services/usuarios';
+import { etiquetaUbicacion } from '@/shared/ubicacion';
 import type { Perfil } from '@/types/auth';
+import type { PerfilRefugio } from '@/types/refugio';
 
 type NombreIcono = keyof typeof Ionicons.glyphMap;
 
+type ItemMenu = { icono: NombreIcono; label: string; ruta?: Href };
+
 /** Sin `ruta`, la fila queda visible pero desactivada: esa sección todavía no existe. */
-const MENU: { icono: NombreIcono; label: string; ruta?: Href }[] = [
+const MENU_ADOPTANTE: ItemMenu[] = [
   { icono: 'paw-outline', label: 'Mis mascotas', ruta: '/(tabs)/mis-mascotas' },
+  { icono: 'megaphone-outline', label: 'Mis publicaciones', ruta: '/publicaciones' as Href },
   // Las dos abren la misma pantalla del otro lado: lo que pedí (HU-7.3) y lo que me llegó
   // sobre mis mascotas publicadas (HU-7.5).
   {
@@ -47,18 +66,149 @@ const MENU: { icono: NombreIcono; label: string; ruta?: Href }[] = [
   },
   { icono: 'footsteps-outline', label: 'Seguimientos', ruta: '/seguimientos' },
   { icono: 'heart-outline', label: 'Favoritos', ruta: '/favoritos' },
+  { icono: 'star-outline', label: 'Reseñas', ruta: '/resenas' as Href },
   { icono: 'heart-circle-outline', label: 'Campañas' },
 ];
 
-function etiquetaRol(roles: string[], esRefugio: boolean): string {
-  if (roles.includes('ADMIN')) return 'Admin';
-  if (esRefugio) return 'Refugio';
-  return 'Adoptante';
+/**
+ * El refugio no solicita ni guarda favoritos: solo gestiona lo suyo. "Solicitudes
+ * recibidas" y "Seguimientos" abren las mismas pantallas, que desde esta vista traen solo lo
+ * del refugio.
+ */
+const MENU_REFUGIO: ItemMenu[] = [
+  { icono: 'paw-outline', label: 'Mascotas del refugio', ruta: '/(tabs)/mis-mascotas' },
+  // Misma pantalla que "Mis publicaciones": desde esta vista trae todo lo del refugio.
+  {
+    icono: 'megaphone-outline',
+    label: 'Publicaciones del refugio',
+    ruta: '/publicaciones' as Href,
+  },
+  {
+    icono: 'file-tray-full-outline',
+    label: 'Solicitudes recibidas',
+    ruta: { pathname: '/solicitudes', params: { vista: 'recibidas' } },
+  },
+  { icono: 'footsteps-outline', label: 'Seguimientos', ruta: '/seguimientos' },
+  { icono: 'star-outline', label: 'Reseñas del refugio', ruta: '/resenas' as Href },
+  { icono: 'heart-circle-outline', label: 'Campañas del refugio' },
+];
+
+/** Solo se muestra en la vista personal: en la de refugio la tarjeta es la del refugio. */
+function etiquetaRol(roles: string[]): string {
+  return roles.includes('ADMIN') ? 'Admin' : 'Adoptante';
 }
 
 function formatearValoracion(valor: number | null | undefined): string {
   if (valor === null || valor === undefined) return '—';
   return valor.toFixed(1);
+}
+
+function Contador({
+  valor,
+  etiqueta,
+  onPress,
+}: {
+  valor: string | number;
+  etiqueta: string;
+  onPress?: () => void;
+}) {
+  const contenido = (
+    <>
+      <Text className="font-titulo text-[26px] leading-[29px] text-organic-accent-600">
+        {valor}
+      </Text>
+      <Text className="mt-1 text-center font-cuerpo text-[13px] text-organic-neutral-600">
+        {etiqueta}
+      </Text>
+    </>
+  );
+
+  if (!onPress) {
+    return <View className="flex-1 items-center">{contenido}</View>;
+  }
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Ver reseñas (${etiqueta})`}
+      onPress={onPress}
+      className="flex-1 items-center active:opacity-70"
+    >
+      {contenido}
+    </Pressable>
+  );
+}
+
+/** Artboard 19: la tarjeta es la del refugio, no la de quien lo está usando. */
+function TarjetaRefugio({
+  refugio,
+  onGuardarUbicacion,
+  onVerResenas,
+}: {
+  refugio: PerfilRefugio;
+  onGuardarUbicacion: (mapaUrl: string) => Promise<void>;
+  onVerResenas: () => void;
+}) {
+  const { promedio, cantidad } = refugio.valoracion;
+
+  return (
+    <View className="rounded-[30px] bg-organic-surface p-6 shadow-sm">
+      <View className="flex-row items-center">
+        <LogoRefugio uri={urlAbsoluta(refugio.imagenUrl)} tamanio={80} />
+
+        <View className="ml-4 flex-1">
+          <Text className="font-titulo text-[22px] leading-[26px] text-organic-neutral-900">
+            {refugio.nombre}
+          </Text>
+          <Text
+            numberOfLines={2}
+            className="mt-1 font-cuerpo text-[13px] text-organic-neutral-600"
+          >
+            {etiquetaUbicacion(refugio)}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Ver reseñas del refugio"
+            onPress={onVerResenas}
+            className="mt-1.5 flex-row items-center gap-1 active:opacity-70"
+          >
+            <Ionicons name="star" size={14} color={PALETA.calido.amarillo} />
+            {promedio === null ? (
+              <Text className="font-cuerpo text-[13px] text-organic-neutral-500">
+                Sin reseñas todavía
+              </Text>
+            ) : (
+              <>
+                <Text className="font-cuerpo-semi text-[13px] text-organic-accent-700">
+                  {formatearValoracion(promedio)}
+                </Text>
+                <Text className="font-cuerpo text-[12px] text-organic-neutral-500">
+                  ({cantidad} {cantidad === 1 ? 'reseña' : 'reseñas'})
+                </Text>
+              </>
+            )}
+            <Ionicons name="chevron-forward" size={14} color={PALETA.neutral[400]} />
+          </Pressable>
+          {refugio.verificado ? null : (
+            <View className="mt-2 flex-row">
+              <Chip etiqueta="Pendiente de verificación" />
+            </View>
+          )}
+        </View>
+      </View>
+
+      <FilaUbicacion mapaUrl={refugio.mapaUrl} onGuardar={onGuardarUbicacion} />
+
+      <View className="mt-5 flex-row border-t border-organic-neutral-200 pt-5">
+        <Contador valor={refugio.estadisticas.enRefugio} etiqueta="En el refugio" />
+        <Contador valor={refugio.estadisticas.adopciones} etiqueta="Adopciones" />
+        <Contador
+          valor={refugio.estadisticas.solicitudesAbiertas}
+          etiqueta="Solicitudes abiertas"
+        />
+      </View>
+    </View>
+  );
 }
 
 export default function PerfilScreen() {
@@ -69,21 +219,27 @@ export default function PerfilScreen() {
     token,
     esRefugio,
     vistaRefugio,
+    refugioEnRevision,
     cambiarVistaRefugio,
     actualizarUsuario,
-    cerrarSesion,
   } = useSesion();
 
   const [perfil, setPerfil] = useState<Perfil | null>(null);
+  const [perfilRefugio, setPerfilRefugio] = useState<PerfilRefugio | null>(null);
   const [cargando, setCargando] = useState(true);
-  const [confirmarBaja, setConfirmarBaja] = useState(false);
-  const [dandoDeBaja, setDandoDeBaja] = useState(false);
+  const [eligiendoDatos, setEligiendoDatos] = useState(false);
 
   const cargar = useCallback(async (): Promise<void> => {
     if (!token) return;
     try {
-      const respuesta = await obtenerPerfil(token);
+      // El perfil personal se pide igual en la vista de refugio: es lo que mantiene al día
+      // los roles y el refugio de la sesión.
+      const [respuesta, refugio] = await Promise.all([
+        obtenerPerfil(token),
+        vistaRefugio ? obtenerPerfilRefugio(token) : Promise.resolve(null),
+      ]);
       setPerfil(respuesta.usuario);
+      setPerfilRefugio(refugio?.refugio ?? null);
       await actualizarUsuario(respuesta.usuario);
     } catch (error) {
       const mensaje =
@@ -94,7 +250,27 @@ export default function PerfilScreen() {
     } finally {
       setCargando(false);
     }
-  }, [token, actualizarUsuario]);
+  }, [token, vistaRefugio, actualizarUsuario]);
+
+  // El lápiz de "Ubicación" corrige el link a mano; al guardar, el backend recalcula las
+  // coordenadas y se recarga el perfil para reflejar el link nuevo.
+  const guardarUbicacionPersonal = useCallback(
+    async (mapaUrl: string): Promise<void> => {
+      if (!token) return;
+      await actualizarUbicacion(token, mapaUrl);
+      await cargar();
+    },
+    [token, cargar],
+  );
+
+  const guardarUbicacionRefugio = useCallback(
+    async (mapaUrl: string): Promise<void> => {
+      if (!token) return;
+      await actualizarUbicacionRefugio(token, mapaUrl);
+      await cargar();
+    },
+    [token, cargar],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -104,179 +280,191 @@ export default function PerfilScreen() {
 
   // Cambiar de vista cambia la app entera, no solo esta pantalla: se va a Inicio para que
   // se vea, en vez de dejar al usuario mirando un interruptor que aparentemente no hizo nada.
-  const alternarVista = async (activa: boolean): Promise<void> => {
-    await cambiarVistaRefugio(activa);
+  const alternarVista = (activa: boolean): void => {
+    cambiarVistaRefugio(activa);
     router.push('/(tabs)' as Href);
   };
 
-  const salir = async (): Promise<void> => {
-    await cerrarSesion();
-    router.replace('/login');
-  };
-
-  const confirmarDarDeBaja = async (): Promise<void> => {
-    if (!token) return;
-    setDandoDeBaja(true);
-    try {
-      await darDeBajaCuenta(token);
-      setConfirmarBaja(false);
-      toast.mostrarExito('Tu cuenta fue dada de baja');
-      await cerrarSesion();
-      router.replace('/login');
-    } catch (error) {
-      const mensaje =
-        error instanceof ApiError
-          ? error.mensaje
-          : 'No pudimos dar de baja tu cuenta. Intentalo de nuevo.';
-      toast.mostrarError(mensaje);
-    } finally {
-      setDandoDeBaja(false);
-    }
-  };
+  const menu = vistaRefugio ? MENU_REFUGIO : MENU_ADOPTANTE;
 
   const visible = perfil ?? usuario;
   const foto = urlAbsoluta(visible?.imagenUrl);
-  const incompleto = !visible?.imagenUrl || !visible?.telefono || !visible?.ubicacion;
+  // Cada vista avisa de lo suyo: la personal, de los datos de la persona; la de refugio,
+  // de los del refugio (que son los que se ven en su tarjeta).
+  const incompleto = vistaRefugio
+    ? Boolean(perfilRefugio) &&
+      (!perfilRefugio?.imagenUrl ||
+        !perfilRefugio?.telefono ||
+        !perfilRefugio?.descripcion ||
+        !etiquetaUbicacion(perfilRefugio))
+    : !visible?.imagenUrl ||
+      !visible?.telefono ||
+      !etiquetaUbicacion(visible ?? {});
+  const rutaCompletar = (vistaRefugio ? '/perfil/refugio' : '/perfil/editar') as Href;
+  const esperandoDatos = vistaRefugio ? !perfilRefugio : !visible;
+
+  const irA = (ruta: string): void => {
+    setEligiendoDatos(false);
+    router.push(ruta as Href);
+  };
 
   return (
-    <View className="flex-1 bg-pethood-beige">
+    <View className="flex-1 bg-organic-bg">
       <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="flex-row items-center justify-between px-5 pb-2 pt-3">
-          <Text className="text-2xl font-bold text-pethood-orange">Mi Perfil</Text>
+        <View className="flex-row items-center justify-between border-b border-organic-neutral-300 bg-organic-neutral-100 px-[21px] py-[13px]">
+          <Text className="font-titulo text-[24px] leading-[29px] text-organic-accent-600">
+            {vistaRefugio ? 'Mi Refugio' : 'Mi Perfil'}
+          </Text>
+          {/* El ícono sigue siendo el de perfil (no una ruedita de configuración): entra a
+              "Ver y editar mi perfil", donde viven los datos completos y las acciones sensibles.
+              En la vista de refugio hay dos juegos de datos, así que primero pregunta cuál. */}
           <BotonCircular
-            icono="settings-outline"
-            etiqueta="Editar perfil"
-            variante="clasico"
-            onPress={() => router.push('/perfil/editar' as Href)}
+            icono="person-circle-outline"
+            etiqueta={vistaRefugio ? 'Ver y editar datos' : 'Ver y editar mi perfil'}
+            variante="organic"
+            onPress={() =>
+              vistaRefugio ? setEligiendoDatos(true) : router.push('/perfil/editar' as Href)
+            }
           />
         </View>
 
-        {cargando && !visible ? (
+        {cargando && esperandoDatos ? (
           <View className="flex-1 items-center justify-center">
-            <ActivityIndicator color={PALETA.pethood.naranja} />
+            <ActivityIndicator color={PALETA.accent[600]} />
           </View>
         ) : (
           <ScrollView
             showsVerticalScrollIndicator={false}
-            contentContainerClassName="px-5 pb-8 pt-2"
+            contentContainerClassName="px-5 pb-8 pt-3"
           >
+            {refugioEnRevision ? (
+              <View className="mb-4 flex-row items-center gap-3 rounded-[22px] border border-organic-accent-300 bg-organic-accent-100 px-4 py-3.5">
+                <Ionicons name="hourglass-outline" size={20} color={PALETA.accent[700]} />
+                <Text className="flex-1 font-cuerpo-semi text-[15px] text-organic-accent-700">
+                  Tu refugio todavía está en revisión. Mientras tanto usás la app con tu perfil personal.
+                </Text>
+              </View>
+            ) : null}
+
             {incompleto ? (
               <Pressable
-                onPress={() => router.push('/perfil/editar' as Href)}
-                className="mb-4 rounded-2xl bg-orange-50 px-4 py-3"
+                onPress={() => router.push(rutaCompletar)}
+                className="mb-4 flex-row items-center gap-3 rounded-[22px] border border-organic-accent-300 bg-organic-accent-100 px-4 py-3.5"
               >
-                <Text className="text-sm font-medium text-orange-800">
-                  Completá tu perfil con foto e información personal
+                <Ionicons
+                  name={vistaRefugio ? 'business-outline' : 'person-add-outline'}
+                  size={20}
+                  color={PALETA.accent[700]}
+                />
+                <Text className="flex-1 font-cuerpo-semi text-[15px] text-organic-accent-700">
+                  {vistaRefugio
+                    ? 'Completá el perfil del refugio con foto, teléfono y descripción'
+                    : 'Completá tu perfil con foto e información personal'}
                 </Text>
               </Pressable>
             ) : null}
 
-            <View className="rounded-[28px] bg-white p-5 shadow-sm">
-              <View className="flex-row items-center">
-                <Avatar
-                  uri={foto}
-                  nombre={visible?.nombre}
-                  apellido={visible?.apellido}
-                  tamanio={80}
+            {vistaRefugio ? (
+              perfilRefugio ? (
+                <TarjetaRefugio
+                  refugio={perfilRefugio}
+                  onGuardarUbicacion={guardarUbicacionRefugio}
+                  onVerResenas={() => router.push('/resenas' as Href)}
                 />
+              ) : null
+            ) : (
+              <View className="rounded-[30px] bg-organic-surface p-6 shadow-sm">
+                <View className="flex-row items-center">
+                  <Avatar
+                    uri={foto}
+                    nombre={visible?.nombre}
+                    apellido={visible?.apellido}
+                    tamanio={92}
+                    variante="organic"
+                    tono="neutro"
+                  />
 
-                <View className="ml-4 flex-1">
-                  <Text className="text-xl font-bold text-gray-900">
-                    {visible?.nombre} {visible?.apellido}
-                  </Text>
-                  {visible?.email ? (
-                    <Text className="mt-0.5 text-sm text-gray-500">{visible.email}</Text>
-                  ) : null}
-                  <View className="mt-2">
-                    <Chip etiqueta={etiquetaRol(visible?.roles ?? [], esRefugio)} />
+                  <View className="ml-4 flex-1">
+                    <Text className="font-titulo text-[24px] leading-[27px] text-organic-neutral-900">
+                      {visible?.nombre} {visible?.apellido}
+                    </Text>
+                    {/* El mail no va acá: se ve recién dentro de "Ver y editar mi perfil". */}
+                    <View className="mt-2">
+                      <Chip etiqueta={etiquetaRol(visible?.roles ?? [])} grande />
+                    </View>
                   </View>
                 </View>
-              </View>
 
-              <View className="mt-5 flex-row border-t border-gray-100 pt-4">
-                <View className="flex-1 items-center">
-                  <Text className="text-xl font-bold text-pethood-orange">
-                    {perfil?.mascotas ?? 0}
-                  </Text>
-                  <Text className="mt-0.5 text-xs text-gray-500">Mascotas</Text>
-                </View>
-                <View className="flex-1 items-center">
-                  <Text className="text-xl font-bold text-pethood-orange">
-                    {perfil?.favoritos ?? 0}
-                  </Text>
-                  <Text className="mt-0.5 text-xs text-gray-500">Favoritos</Text>
-                </View>
-                <View className="flex-1 items-center">
-                  <Text className="text-xl font-bold text-pethood-orange">
-                    {formatearValoracion(perfil?.valoracion)}
-                  </Text>
-                  <Text className="mt-0.5 text-xs text-gray-500">Valoración</Text>
+                <FilaUbicacion
+                  mapaUrl={perfil?.mapaUrl ?? null}
+                  onGuardar={guardarUbicacionPersonal}
+                />
+
+                <View className="mt-5 flex-row border-t border-organic-neutral-200 pt-5">
+                  <Contador valor={perfil?.mascotas ?? 0} etiqueta="Mascotas" />
+                  <Contador valor={perfil?.favoritos ?? 0} etiqueta="Favoritos" />
+                  <Contador
+                    valor={formatearValoracion(perfil?.valoracion)}
+                    etiqueta="Valoración"
+                    onPress={() => router.push('/resenas' as Href)}
+                  />
                 </View>
               </View>
-            </View>
+            )}
 
-            {/* Solo para quien administra un refugio: el resto no tiene qué alternar. */}
-            {esRefugio ? (
-              <View className="mt-4">
+            {/* Reputación (Módulo 10): la sección embebida se quitó de los dos perfiles. Se
+                entra por el ítem "Reseñas"/"Reseñas del refugio" del menú o tocando la
+                valoración de la tarjeta. */}
+
+            {/* Solo para quien administra un refugio ya Activo: el resto no tiene qué alternar. */}
+            {esRefugio && !refugioEnRevision ? (
+              <View className="mt-5">
                 <SwitchRefugio activo={vistaRefugio} onCambiar={alternarVista} />
               </View>
             ) : null}
 
-            <View className="mt-4 overflow-hidden rounded-[28px] bg-white shadow-sm">
-              {MENU.map(({ icono, label, ruta }, index) => (
+            <View className="mt-5 overflow-hidden rounded-[26px] bg-organic-surface shadow-sm">
+              {menu.map(({ icono, label, ruta }, index) => (
                 <Pressable
                   key={label}
                   accessibilityRole="button"
                   disabled={!ruta}
                   onPress={ruta ? () => router.push(ruta) : undefined}
-                  className={`flex-row items-center px-4 py-3.5 ${
-                    index < MENU.length - 1 ? 'border-b border-gray-100' : ''
-                  } ${ruta ? 'active:bg-gray-50' : 'opacity-40'}`}
+                  className={`flex-row items-center px-5 py-4 ${
+                    index < menu.length - 1 ? 'border-b border-organic-neutral-200' : ''
+                  } ${ruta ? 'active:bg-organic-neutral-100' : 'opacity-40'}`}
                 >
-                  <View className="h-9 w-9 items-center justify-center rounded-xl bg-orange-50">
-                    <Ionicons name={icono} size={18} color={PALETA.pethood.naranja} />
+                  <View className="h-11 w-11 items-center justify-center rounded-2xl bg-organic-calido-amarilloClaro">
+                    <Ionicons name={icono} size={21} color={PALETA.accent[600]} />
                   </View>
-                  <Text className="ml-3 flex-1 text-base text-gray-800">{label}</Text>
-                  <Ionicons name="chevron-forward" size={18} color={PALETA.gris[300]} />
+                  <Text className="ml-4 flex-1 font-cuerpo-semi text-[17px] text-organic-neutral-900">
+                    {label}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={20} color={PALETA.neutral[400]} />
                 </Pressable>
               ))}
             </View>
-
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => void salir()}
-              className="mt-6 flex-row items-center justify-center gap-2 rounded-2xl border border-red-200 bg-white py-4 active:opacity-80"
-            >
-              <Ionicons name="log-out-outline" size={20} color={PALETA.estado.error} />
-              <Text className="text-base font-semibold text-red-600">Cerrar sesión</Text>
-            </Pressable>
-
-            {!(visible?.roles ?? []).includes('ADMIN') ? (
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setConfirmarBaja(true)}
-                className="mt-3 items-center py-3 active:opacity-70"
-              >
-                <Text className="text-sm font-medium text-red-500">Dar de baja mi cuenta</Text>
-              </Pressable>
-            ) : null}
           </ScrollView>
         )}
       </SafeAreaView>
 
-      <ConfirmDialog
-        visible={confirmarBaja}
-        tono="peligro"
-        titulo="¿Dar de baja tu cuenta?"
-        mensaje="Se van a cerrar tus solicitudes y publicaciones en curso, y tu perfil deja de ser visible para el resto."
-        detalle="No vas a poder volver a entrar con este correo. Esta acción no se puede deshacer desde la app."
-        textoConfirmar="Dar de baja"
-        textoCancelar="Cancelar"
-        cargando={dandoDeBaja}
-        onConfirmar={() => void confirmarDarDeBaja()}
-        onCerrar={() => {
-          if (!dandoDeBaja) setConfirmarBaja(false);
-        }}
+      <HojaOpciones
+        visible={eligiendoDatos}
+        titulo="Ver y editar datos"
+        subtitulo="¿Cuáles querés ver?"
+        opciones={[
+          {
+            icono: 'person-outline',
+            etiqueta: 'Mis datos personales',
+            onPress: () => irA('/perfil/editar'),
+          },
+          {
+            icono: 'business-outline',
+            etiqueta: 'Datos del refugio',
+            onPress: () => irA('/perfil/refugio'),
+          },
+        ]}
+        onCerrar={() => setEligiendoDatos(false)}
       />
     </View>
   );

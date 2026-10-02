@@ -1,23 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CustomButton } from '@/components/CustomButton';
+import { CustomButton, FORMA_BOTON_ORGANIC_PRINCIPAL } from '@/components/CustomButton';
 import { CustomInput } from '@/components/CustomInput';
+import { BotonCircular } from '@/components/ui/BotonCircular';
+import { FormularioConTeclado } from '@/components/ui/FormularioConTeclado';
 import { PALETA } from '@/constants/theme';
 import { validarEmail } from '@/lib/validacionRegistro';
 import { ApiError } from '@/services/api';
 import { solicitarRecuperacion } from '@/services/auth';
 
+/**
+ * Recuperar contraseña, paso 1: pide el correo y manda el código de 6 dígitos. Sigue la
+ * paleta Organic del resto de las pantallas de acceso (misma barra superior que el registro,
+ * inputs y botón principal del login). El paso 2 es `resetear.tsx`.
+ */
 export default function RecuperarScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -53,56 +53,80 @@ export default function RecuperarScreen() {
   };
 
   return (
-    <View className="flex-1 bg-pethood-beige">
+    <View className="flex-1 bg-organic-bg">
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          className="flex-1"
+        <View className="flex-row items-center gap-3 border-b border-organic-neutral-300 bg-organic-neutral-100 px-[19px] py-[13px]">
+          <BotonCircular
+            icono="chevron-back"
+            etiqueta="Volver"
+            variante="neutro"
+            onPress={() => router.back()}
+          />
+          <Text className="font-titulo text-[24px] leading-[29px] text-organic-accent-600">
+            Recuperar contraseña
+          </Text>
+        </View>
+
+        <FormularioConTeclado
+          showsVerticalScrollIndicator={false}
+          contentContainerClassName="flex-grow px-6 pb-8 pt-8"
         >
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            contentContainerClassName="flex-grow px-6 pb-8 pt-4"
-          >
-            <View className="mb-6 flex-row items-center">
-              <Pressable
-                onPress={() => router.back()}
-                className="mr-4 h-10 w-10 items-center justify-center rounded-full bg-white"
-                accessibilityRole="button"
-                accessibilityLabel="Volver"
-              >
-                <Ionicons name="arrow-back" size={22} color={PALETA.gris[700]} />
-              </Pressable>
-              <Text className="text-2xl font-bold text-pethood-orange">Recuperar contraseña</Text>
-            </View>
+          <View className="mb-5 h-20 w-20 items-center justify-center self-center rounded-full bg-organic-accent-100">
+            <Ionicons name="lock-closed-outline" size={36} color={PALETA.accent[600]} />
+          </View>
 
-            <Text className="mb-6 text-base text-gray-600">
-              Ingresá el correo de tu cuenta y te enviamos un código de 6 dígitos para crear una
-              nueva contraseña.
-            </Text>
+          <Text className="mb-1 text-center font-titulo text-[26px] leading-[32px] text-organic-neutral-900">
+            ¿Olvidaste tu contraseña?
+          </Text>
+          <Text className="mb-7 text-center font-cuerpo text-[17px] leading-[24px] text-organic-neutral-600">
+            Ingresá el correo de tu cuenta y te enviamos un código de 6 dígitos para crear una
+            nueva contraseña.
+          </Text>
 
-            <CustomInput
-              label="Correo electrónico"
-              placeholder="tu@correo.com"
-              value={email}
-              onChangeText={(value) => {
-                setEmail(value);
-                setError(value.trim() ? validarEmail(value) : undefined);
-              }}
-              onBlur={() => setError(validarEmail(email))}
-              error={error}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              textContentType="emailAddress"
-              required
+          <CustomInput
+            organic
+            label="Correo electrónico"
+            placeholder="tu@correo.com"
+            value={email}
+            onChangeText={(value) => {
+              setEmail(value);
+              setError(value.trim() ? validarEmail(value) : undefined);
+            }}
+            onBlur={() => setError(validarEmail(email))}
+            error={error}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoComplete="email"
+            textContentType="emailAddress"
+            required
+          />
+
+          {formError ? (
+            <Text className="mb-3 font-cuerpo text-[15px] text-red-500">{formError}</Text>
+          ) : null}
+
+          <View className="mt-2">
+            <CustomButton
+              title="Enviar código"
+              variant="acento"
+              grande
+              style={FORMA_BOTON_ORGANIC_PRINCIPAL}
+              loading={loading}
+              onPress={() => void handleEnviar()}
             />
+          </View>
 
-            {formError ? <Text className="mb-3 text-sm text-red-500">{formError}</Text> : null}
-
-            <CustomButton title="Enviar código" loading={loading} onPress={() => void handleEnviar()} />
-          </ScrollView>
-        </KeyboardAvoidingView>
+          <View className="mt-6 items-center">
+            <Text className="font-cuerpo text-[16px] text-organic-neutral-600">
+              ¿Te acordaste?{' '}
+              <Pressable onPress={() => router.back()} accessibilityRole="button">
+                <Text className="font-cuerpo-semi text-[16px] text-organic-accent-700">
+                  Iniciá sesión
+                </Text>
+              </Pressable>
+            </Text>
+          </View>
+        </FormularioConTeclado>
       </SafeAreaView>
     </View>
   );

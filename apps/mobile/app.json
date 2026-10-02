@@ -11,8 +11,9 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.pethood.app",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#F4E5D2",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -31,7 +32,7 @@
         {
           "image": "./assets/images/splash-icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#f5ead8"
+          "backgroundColor": "#F4E5D2"
         }
       ],
       "expo-status-bar",
@@ -44,7 +45,14 @@
           "cameraPermission": "PetHood usa la cámara para la foto de perfil y para las fotos de prueba del seguimiento post-adopción, que tienen que sacarse en el momento."
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "PetHood usa tu ubicación al publicar un aviso de una mascota perdida o encontrada."
+        }
+      ],
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true

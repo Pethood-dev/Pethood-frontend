@@ -23,9 +23,14 @@ const PROPORCION_ALTO = 0.48;
 
 interface GaleriaFotosProps {
   imagenes: string[];
+  /**
+   * Cuánto de la parte de abajo tapa lo que viene después (la tarjeta de la ficha se monta
+   * sobre la foto). Los puntitos y el contador se suben esa distancia para seguir a la vista.
+   */
+  solapeInferior?: number;
 }
 
-export function GaleriaFotos({ imagenes }: GaleriaFotosProps) {
+export function GaleriaFotos({ imagenes, solapeInferior = 0 }: GaleriaFotosProps) {
   const { width, height } = useWindowDimensions();
   const [actual, setActual] = useState(0);
   const [fallidas, setFallidas] = useState<Record<number, boolean>>({});
@@ -39,7 +44,7 @@ export function GaleriaFotos({ imagenes }: GaleriaFotosProps) {
 
   if (imagenes.length === 0) {
     return (
-      <View style={{ height }} className="items-center justify-center bg-pethood-beige-dark">
+      <View style={{ height: alto }} className="items-center justify-center bg-pethood-beige-dark">
         <Ionicons name="paw" size={64} color="rgba(160, 100, 40, 0.22)" />
       </View>
     );
@@ -78,13 +83,20 @@ export function GaleriaFotos({ imagenes }: GaleriaFotosProps) {
 
       {imagenes.length > 1 ? (
         <>
-          <View className="absolute right-3 top-3 rounded-full bg-black/45 px-2.5 py-1">
+          {/* Abajo a la derecha: arriba están las flechas de volver y de favoritos. */}
+          <View
+            className="absolute right-3 rounded-full bg-black/45 px-2.5 py-1"
+            style={{ bottom: 12 + solapeInferior }}
+          >
             <Text className="text-[11px] font-semibold text-white">
               {actual + 1} de {imagenes.length}
             </Text>
           </View>
 
-          <View className="absolute bottom-3 left-0 right-0 flex-row justify-center gap-1.5">
+          <View
+            className="absolute left-0 right-0 flex-row justify-center gap-1.5"
+            style={{ bottom: 18 + solapeInferior }}
+          >
             {imagenes.map((imagen, indice) => (
               <View
                 key={imagen}

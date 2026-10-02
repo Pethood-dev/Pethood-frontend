@@ -9,6 +9,7 @@ import { Platform, Pressable, Text } from 'react-native';
 import { aFechaVisible, edadEnTexto } from '../../shared/validation/dates';
 import { LIMITES } from '../../shared/validation/limits';
 import { claseValor, FormField, type VarianteCampo } from './FormField';
+import { SelectorFechaIOS } from './SelectorFechaIOS';
 import { PALETA } from '@/constants/theme';
 
 interface DateFieldProps {
@@ -27,6 +28,8 @@ interface DateFieldProps {
   /** Solo tiene sentido para fecha de nacimiento; el resto de los campos de fecha no la muestran. */
   mostrarEdad?: boolean;
   variante?: VarianteCampo;
+  /** Letra más grande de etiqueta y valor, para el alta y la publicación de mascota. */
+  grande?: boolean;
 }
 
 export function DateField({
@@ -41,6 +44,7 @@ export function DateField({
   fechaMinima = new Date(LIMITES.fecha.anioMinimo, 0, 1),
   mostrarEdad = true,
   variante,
+  grande,
 }: DateFieldProps) {
   const [abierto, setAbierto] = useState(false);
   // Fecha con la que arranca el calendario si todavía no hay valor: hoy cuando entra en el
@@ -60,6 +64,7 @@ export function DateField({
       error={error}
       ayuda={mostrarEdad && valor ? edadEnTexto(valor) : undefined}
       variante={variante}
+      grande={grande}
     >
       <Pressable
         accessibilityRole="button"
@@ -67,35 +72,46 @@ export function DateField({
         onPress={() => setAbierto(true)}
         className="flex-row items-center"
       >
-        <Text className={`flex-1 ${claseValor(Boolean(error), !valor)}`}>
+        <Text className={`flex-1 ${claseValor(Boolean(error), !valor, grande)}`}>
           {valor ? aFechaVisible(valor) : placeholder}
         </Text>
-        <Ionicons name="calendar-outline" size={18} color={PALETA.gris[400]} />
+        <Ionicons name="calendar-outline" size={grande ? 22 : 18} color={PALETA.gris[400]} />
       </Pressable>
 
-      {/* En Android es un diálogo y no ocupa lugar; en iOS se muestra embebido y necesita
-          su propio botón para cerrarse. */}
-      {abierto ? (
-        <>
-          <DateTimePicker
-            value={fechaInicial}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            maximumDate={fechaMaxima}
-            minimumDate={fechaMinima}
-            onValueChange={(_evento, fecha) => {
-              if (Platform.OS === 'android') cerrar();
-              if (fecha) onChange(fecha);
-            }}
-            onDismiss={cerrar}
-          />
-
-          {Platform.OS === 'ios' ? (
-            <Pressable accessibilityRole="button" onPress={cerrar} className="items-center py-2">
-              <Text className="text-base font-semibold text-pethood-orange">Listo</Text>
+      {/* En Android es un diálogo nativo y no ocupa lugar en el layout. En iOS el spinner
+          embebido no tenía ancho suficiente para mostrar la rueda de año, así que se abre
+          en un modal centrado aparte (SelectorFechaIOS). */}
+      {abierto && Platform.OS === 'ios' ? (
+        <SelectorFechaIOS
+          visible={abierto}
+          value={fechaInicial}
+          minimumDate={fechaMinima}
+          maximumDate={fechaMaxima}
+          onChange={onChange}
+          onCerrar={cerrar}
+          pie={
+            <Pressable accessibilityRole="button" onPress={cerrar}>
+              <Text className={`font-semibold text-pethood-orange ${grande ? 'text-lg' : 'text-base'}`}>
+                Listo
+              </Text>
             </Pressable>
-          ) : null}
-        </>
+          }
+        />
+      ) : null}
+
+      {abierto && Platform.OS !== 'ios' ? (
+        <DateTimePicker
+          value={fechaInicial}
+          mode="date"
+          display="default"
+          maximumDate={fechaMaxima}
+          minimumDate={fechaMinima}
+          onValueChange={(_evento, fecha) => {
+            cerrar();
+            if (fecha) onChange(fecha);
+          }}
+          onDismiss={cerrar}
+        />
       ) : null}
     </FormField>
   );

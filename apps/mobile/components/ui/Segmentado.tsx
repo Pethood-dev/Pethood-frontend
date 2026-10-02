@@ -19,7 +19,57 @@ export type VarianteSegmentado =
    * Botones grandes y separados, del alto de un CTA. Para cuando la elección abre caminos
    * distintos y no es un simple filtro (GUI-7.1.1 paso 1: adoptar o transitar).
    */
-  | 'tarjetas';
+  | 'tarjetas'
+  /**
+   * Riel de la paleta Organic: fondo crema y la opción elegida en `accent-700`. Es el
+   * "Perdida / Encontrada" de GUI-25 (pantalla 26 del diseño).
+   */
+  | 'organica';
+
+const CLASES_RIEL: Record<VarianteSegmentado, { riel: string; opcion: string }> = {
+  riel: {
+    riel: 'flex-row rounded-2xl border p-1',
+    opcion: 'flex-1 items-center rounded-xl py-2.5 active:opacity-80',
+  },
+  tarjetas: {
+    riel: 'flex-row gap-2.5',
+    opcion:
+      'min-h-[58px] flex-1 items-center justify-center rounded-2xl border px-3 py-3 active:opacity-80',
+  },
+  organica: {
+    riel: 'flex-row gap-1 rounded-[20px] border p-1',
+    opcion: 'flex-1 items-center rounded-2xl py-3 active:opacity-80',
+  },
+};
+
+/** Fondo del riel y colores de cada opción, según la variante y si está elegida. */
+function colores(variante: VarianteSegmentado, activa: boolean, conError: boolean) {
+  if (variante === 'organica') {
+    return {
+      riel: conError
+        ? 'border-red-300 bg-red-50'
+        : 'border-organic-neutral-200 bg-organic-neutral-200',
+      opcion: activa ? 'bg-organic-accent-700' : '',
+      texto: activa ? 'font-cuerpo-bold text-white' : 'font-cuerpo-semi text-organic-neutral-700',
+    };
+  }
+
+  if (variante === 'tarjetas') {
+    return {
+      riel: '',
+      opcion: activa
+        ? 'border-organic-accent-600 bg-organic-accent-600'
+        : 'border-organic-neutral-300 bg-organic-surface',
+      texto: activa ? 'font-cuerpo-bold text-white' : 'font-cuerpo-semi text-organic-neutral-700',
+    };
+  }
+
+  return {
+    riel: conError ? 'border-red-300 bg-red-50' : 'border-gray-100 bg-gray-50',
+    opcion: activa ? 'bg-pethood-orange' : '',
+    texto: activa ? 'font-semibold text-white' : 'text-gray-600',
+  };
+}
 
 interface SegmentadoProps<T> {
   opciones: OpcionSegmento<T>[];
@@ -28,6 +78,8 @@ interface SegmentadoProps<T> {
   variante?: VarianteSegmentado;
   /** Pinta el riel en rojo cuando el campo que lo contiene tiene un error. */
   conError?: boolean;
+  /** Letra más grande, para el alta y la publicación de mascota. */
+  grande?: boolean;
 }
 
 export function Segmentado<T extends string | number>({
@@ -36,21 +88,22 @@ export function Segmentado<T extends string | number>({
   onChange,
   variante = 'riel',
   conError = false,
+  grande = false,
 }: SegmentadoProps<T>) {
-  const esRiel = variante === 'riel';
+  const clases = CLASES_RIEL[variante];
+  // El riel clásico usa la escala de Tailwind; las variantes Organic, tamaños en px.
+  const letra =
+    variante === 'riel'
+      ? grande
+        ? 'text-base'
+        : 'text-sm'
+      : `text-center ${grande ? 'text-[16px]' : 'text-[14px]'}`;
 
   return (
-    <View
-      className={
-        esRiel
-          ? `flex-row rounded-2xl border p-1 ${
-              conError ? 'border-red-300 bg-red-50' : 'border-gray-100 bg-gray-50'
-            }`
-          : 'flex-row gap-2.5'
-      }
-    >
+    <View className={`${clases.riel} ${colores(variante, false, conError).riel}`}>
       {opciones.map((opcion) => {
         const activa = opcion.valor === valor;
+        const { opcion: fondoOpcion, texto } = colores(variante, activa, conError);
 
         return (
           <Pressable
@@ -58,31 +111,9 @@ export function Segmentado<T extends string | number>({
             accessibilityRole="radio"
             accessibilityState={{ selected: activa }}
             onPress={() => onChange(opcion.valor)}
-            className={
-              esRiel
-                ? `flex-1 items-center rounded-xl py-2.5 active:opacity-80 ${
-                    activa ? 'bg-pethood-orange' : ''
-                  }`
-                : `min-h-[58px] flex-1 items-center justify-center rounded-2xl border px-3 py-3 active:opacity-80 ${
-                    activa
-                      ? 'border-organic-accent-600 bg-organic-accent-600'
-                      : 'border-organic-neutral-300 bg-organic-surface'
-                  }`
-            }
+            className={`${clases.opcion} ${fondoOpcion}`}
           >
-            <Text
-              className={
-                esRiel
-                  ? `text-sm ${activa ? 'font-semibold text-white' : 'text-gray-600'}`
-                  : `text-center text-[14px] ${
-                      activa
-                        ? 'font-cuerpo-bold text-white'
-                        : 'font-cuerpo-semi text-organic-neutral-700'
-                    }`
-              }
-            >
-              {opcion.etiqueta}
-            </Text>
+            <Text className={`${letra} ${texto}`}>{opcion.etiqueta}</Text>
           </Pressable>
         );
       })}

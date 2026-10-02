@@ -99,6 +99,38 @@ const ESTADO = {
   enLinea: '#5BA45B',
 };
 
+/**
+ * Medallas de vacuna (spec 019 del backend). Cada vacuna tiene SU color y es el mismo en
+ * toda la app: la antirrábica es verde en la ficha de la mascota, en la publicación y en la
+ * historia clínica. Tonos apagados y cálidos, para que convivan con la paleta Organic sin
+ * competir con el naranja de marca. Cada una trae fondo, borde y tinta (ícono y texto).
+ *
+ * El mapeo tipo → color vive en `constants/Vacunas.ts`.
+ */
+const VACUNA = {
+  primovacunacion: { fondo: ORGANIC.accent[200], borde: ORGANIC.accent[300], tinta: ORGANIC.accent[700] },
+  multiple: { fondo: ORGANIC.calido.amarilloClaro, borde: ORGANIC.calido.amarillo, tinta: '#7a5a10' },
+  refuerzoMultiple: { fondo: '#f6d6cc', borde: '#e6a894', tinta: '#9c3f28' },
+  antirrabica: { fondo: '#e3f0dc', borde: '#b9d8a8', tinta: '#3d7a34' },
+  trivalenteFelina: { fondo: '#d9eaec', borde: '#a7cbd0', tinta: '#2c6a73' },
+  refuerzoTrivalenteLeucemia: { fondo: '#eadcee', borde: '#c9aad1', tinta: '#6f3f7c' },
+  refuerzoLeucemia: { fondo: '#f6dde6', borde: '#e3aac0', tinta: '#9c3d62' },
+};
+
+/**
+ * Cuadrantes de salud de la ficha de la publicación, arriba de las vacunas (ver
+ * `CuadranteSalud` en `components/publicaciones/FichaPublicacion.tsx`). Son el color del
+ * cuadrante activo; el inactivo se pinta con la rampa `neutral`, en gris.
+ * - desparasitado: marrón muy claro con la tinta del marrón de la rampa `accent`; se lee
+ *   como parte de la salud sin confundirse con una vacuna ni con un cuadrante apagado (gris).
+ * - castrado: el naranja de marca, relleno, para que sea lo primero que se ve de la salud.
+ *   Tinta marrón casi negra y no blanca: el blanco sobre ese naranja no se lee.
+ */
+const SALUD = {
+  desparasitado: { fondo: '#f1e4d3', borde: '#dcc1a0', tinta: ORGANIC.accent[800] },
+  castrado: { fondo: PETHOOD.naranja, borde: PETHOOD.naranjaIntensa, tinta: ORGANIC.accent[900] },
+};
+
 const BLANCO = '#FFFFFF';
 const NEGRO = '#000000';
 
@@ -124,6 +156,8 @@ const PALETA = {
   gris: GRIS,
   grisCalido: GRIS_CALIDO,
   estado: ESTADO,
+  vacuna: VACUNA,
+  salud: SALUD,
   blanco: BLANCO,
   negro: NEGRO,
   tabCentral: TAB_CENTRAL,

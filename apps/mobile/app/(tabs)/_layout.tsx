@@ -9,15 +9,19 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BotonTabCentral } from '@/components/ui/BotonTabCentral';
 import { IndicadorTabs } from '@/components/ui/IndicadorTabs';
 import { PALETA } from '@/constants/theme';
+import { useSesion } from '@/hooks/useSesion';
 
 /**
  * Navegación inferior del área autenticada.
  *
  * El diseño de referencia: Inicio, Mascotas, Adoptar, Chat, Perfil.
  * La pestaña Mapa del prototipo queda fuera porque el proyecto excluye el mapa interactivo.
+ *
+ * En la vista de refugio no hay botón Adoptar: el refugio no adopta (ver `services/sesion.ts`).
  */
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  const { vistaRefugio } = useSesion();
   const paddingBottom = Math.max(insets.bottom, 12);
 
   return (
@@ -35,7 +39,9 @@ export default function TabsLayout() {
           overflow: 'visible',
         },
         tabBarItemStyle: { paddingTop: 2 },
-        tabBarBackground: () => <IndicadorTabs />,
+        // Todos los íconos van de contorno, también el de la pestaña abierta: como en el
+        // diseño, la activa se distingue por el color y por la barrita de arriba.
+        tabBarBackground: () => <IndicadorTabs ocultarAdoptar={vistaRefugio} />,
         tabBarLabelStyle: { fontSize: 12, fontWeight: '500', paddingTop: 2, paddingBottom: 0 },
         // Sin ripple: el cambio de color de la pestaña activa ya es feedback suficiente, y
         // el de Android es `borderless` y sin radio, así que se derramaba fuera de la barra.
@@ -46,8 +52,8 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Inicio',
-          tabBarIcon: ({ color, focused, size }) => (
-            <Ionicons name={focused ? 'home' : 'home-outline'} size={size} color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home-outline" size={size} color={color} />
           ),
         }}
       />
@@ -65,22 +71,27 @@ export default function TabsLayout() {
         options={{
           title: '',
           tabBarLabel: () => null,
-          tabBarButton: ({ onPress, accessibilityState }) => (
-            <BotonTabCentral
-              icono="paw"
-              etiqueta="Adoptar"
-              activo={Boolean(accessibilityState?.selected)}
-              onPress={onPress}
-            />
-          ),
+          // No se usa `href: null` para ocultarla: expo-router no lo admite junto con un
+          // `tabBarButton` propio. Sin botón y sin lugar en la barra es lo mismo.
+          tabBarItemStyle: vistaRefugio ? { display: 'none' } : undefined,
+          tabBarButton: vistaRefugio
+            ? () => null
+            : ({ onPress, accessibilityState }) => (
+                <BotonTabCentral
+                  icono="paw"
+                  etiqueta="Adoptar"
+                  activo={Boolean(accessibilityState?.selected)}
+                  onPress={onPress}
+                />
+              ),
         }}
       />
       <Tabs.Screen
         name="chat"
         options={{
           title: 'Chat',
-          tabBarIcon: ({ color, focused, size }) => (
-            <Ionicons name={focused ? 'chatbubble' : 'chatbubble-outline'} size={size} color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="chatbubble-outline" size={size} color={color} />
           ),
         }}
       />
@@ -88,8 +99,8 @@ export default function TabsLayout() {
         name="perfil"
         options={{
           title: 'Perfil',
-          tabBarIcon: ({ color, focused, size }) => (
-            <Ionicons name={focused ? 'person' : 'person-outline'} size={size} color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person-outline" size={size} color={color} />
           ),
         }}
       />

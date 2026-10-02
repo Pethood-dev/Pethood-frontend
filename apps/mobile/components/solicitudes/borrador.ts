@@ -35,6 +35,11 @@ export interface MascotaDeSolicitud {
   publicacionId: number;
   nombre: string | null;
   imagenUrl: string | null;
+  /**
+   * Viene con guión bajo (`En_Transito`). `BotonSolicitar` lo usa para no ofrecer el botón
+   * sobre una mascota que el backend igual va a rechazar (`ESTADO_SOLICITABLE`).
+   */
+  estado: string;
   /** Renglón de abajo de la tarjeta: refugio y/o ubicación, ya armado. */
   subtitulo?: string | null;
   /** Para el mensaje de éxito: "Enviamos tu solicitud a X". */
@@ -194,7 +199,10 @@ export const VALIDADORES = [validarTipo, validarHogar, validarMotivo, validarCon
  * Dos normalizaciones: las fechas viajan solo si el tipo es tránsito, y los textos
  * opcionales vacíos viajan como `null` en vez de como cadena vacía.
  */
-export function aNuevaSolicitud(borrador: Borrador, publicacionId: number): NuevaSolicitud {
+export function aNuevaSolicitud(
+  borrador: Borrador,
+  publicacionId: number,
+): NuevaSolicitud {
   const esTransito = borrador.tipoSolicitud === 'Transito';
 
   return {

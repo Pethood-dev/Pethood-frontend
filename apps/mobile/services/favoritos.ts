@@ -18,6 +18,8 @@ export interface MascotaFavorita {
   raza: { id: number; nombre: string };
   /** Estado actual de la mascota. Viene con guión bajo (`En_Transito`). */
   estado: { id: number; nombre: string };
+  /** Refugio dueño de la mascota, o null si es de un adoptante particular. */
+  refugio: { id: number; nombre: string } | null;
   /**
    * Publicación activa de la mascota, o null si ya no está publicada. Sin publicación no
    * hay nada que solicitar y la tarjeta no muestra el botón (HU-7.1).
@@ -53,6 +55,9 @@ export function quitarFavorito(mascotaId: number): Promise<void> {
 /**
  * Alta. En GUI-12 se usa **solo para el "Deshacer"** del toast; el alta normal la hace el
  * swipe de HU-6.5. También es idempotente.
+ *
+ * Los favoritos son del perfil personal: desde la vista de refugio el backend los rechaza
+ * (el refugio no adopta).
  */
 export function agregarFavorito(mascotaId: number): Promise<unknown> {
   return post('/favoritos', { mascotaId });

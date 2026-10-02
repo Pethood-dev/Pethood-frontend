@@ -8,6 +8,7 @@
  * simple, sin alta de reemplazo.
  */
 import { adjuntarArchivo, del, get, patchFormData, postFormData } from './api';
+import type { TipoVacuna } from './vacunas';
 
 export interface HistoriaClinica {
   id: number;
@@ -15,6 +16,8 @@ export interface HistoriaClinica {
   fechaProxima: string | null;
   requiereRevision: boolean;
   vacunacion: boolean;
+  /** Qué vacuna es, para pintar su medalla. Null si no es vacuna (o si es anterior a spec 019). */
+  tipoVacuna: TipoVacuna | null;
   titulo: string;
   descripcion: string;
   documentoUrl: string | null;
@@ -29,17 +32,25 @@ export interface DocumentoElegido {
   tipo: string;
 }
 
+/**
+ * Alta. Con `tipoVacuna` es una vacuna (spec 019): el backend la titula con el nombre de la
+ * vacuna, así que `titulo` no viaja. Sin `tipoVacuna` es un registro común y el título es
+ * obligatorio.
+ */
 export interface DatosNuevaHistoriaClinica {
   fechaVisita: string;
   fechaProxima?: string;
   requiereRevision: boolean;
-  vacunacion: boolean;
-  titulo: string;
+  tipoVacuna?: TipoVacuna;
+  titulo?: string;
   descripcion: string;
   documento?: DocumentoElegido;
 }
 
-/** Todos opcionales salvo lo que el usuario efectivamente cambió; `vacunacion` no se manda: no es editable. */
+/**
+ * Todos opcionales salvo lo que el usuario efectivamente cambió. El tipo de vacuna no se
+ * manda: no es editable, y en una vacuna el título tampoco (es el nombre de la vacuna).
+ */
 export interface CambiosHistoriaClinica {
   fechaVisita?: string;
   fechaProxima?: string;
@@ -74,7 +85,7 @@ export async function crearHistoriaClinica(
   datos: DatosNuevaHistoriaClinica,
 ): Promise<HistoriaClinica> {
   const formData = await formDataDesde(datos);
-  formData.append('vacunacion', String(datos.vacunacion));
+  if (datos.tipoVacuna) formData.append('tipoVacuna', datos.tipoVacuna);
 
   return postFormData(`/mascotas/${mascotaId}/historias-clinicas`, formData);
 }

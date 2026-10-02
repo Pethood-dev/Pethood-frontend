@@ -15,6 +15,7 @@ import { resumenMascota } from '@/constants/Mascotas';
 import { PALETA } from '@/constants/theme';
 import { urlAbsoluta } from '@/services/api';
 import type { PublicacionFeed } from '@/services/publicaciones';
+import { rasgoSegunGenero } from '@/shared/genero';
 
 /** Cuántos chips de personalidad entran sin desbordar el ancho de la tarjeta. */
 const MAXIMO_CHIPS = 3;
@@ -95,7 +96,11 @@ export function TarjetaAdopcion({ publicacion }: TarjetaAdopcionProps) {
         {chips.length > 0 ? (
           <View className="mt-2.5 flex-row flex-wrap gap-1.5">
             {chips.map((rasgo) => (
-              <Chip key={rasgo} etiqueta={rasgo} variante="sobre-imagen" />
+              <Chip
+                key={rasgo}
+                etiqueta={rasgoSegunGenero(mascota.genero, rasgo)}
+                variante="sobre-imagen"
+              />
             ))}
           </View>
         ) : null}

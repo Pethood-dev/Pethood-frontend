@@ -11,8 +11,11 @@ import { PALETA } from '@/constants/theme';
 
 type NombreIcono = keyof typeof Ionicons.glyphMap;
 
-/** `organic` es el rediseño (Inicio); `clasico`, la paleta naranja del resto de la app. */
-type VarianteBoton = 'organic' | 'clasico';
+/**
+ * `organic` es el rediseño (Inicio); `neutro`, el mismo rediseño en crema con borde neutro
+ * (la flecha de volver del artboard 23); `clasico`, la paleta naranja del resto de la app.
+ */
+type VarianteBoton = 'organic' | 'neutro' | 'clasico';
 
 const VARIANTES: Record<
   VarianteBoton,
@@ -23,10 +26,37 @@ const VARIANTES: Record<
     color: PALETA.accent[700],
     tamanoIcono: 19,
   },
+  neutro: {
+    contenedor: 'h-[42px] w-[42px] border border-organic-neutral-300 bg-organic-neutral-100',
+    color: PALETA.neutral[700],
+    tamanoIcono: 20,
+  },
   clasico: {
     contenedor: 'h-10 w-10 bg-white',
     color: PALETA.pethood.naranja,
     tamanoIcono: 22,
+  },
+};
+
+/** Mismas variantes, un 20% más grandes: pantallas más densas como Favoritos la piden. */
+const VARIANTES_GRANDE: Record<
+  VarianteBoton,
+  { contenedor: string; color: string; tamanoIcono: number }
+> = {
+  organic: {
+    contenedor: 'h-[50px] w-[50px] border border-organic-accent-300 bg-organic-accent-100',
+    color: PALETA.accent[700],
+    tamanoIcono: 23,
+  },
+  neutro: {
+    contenedor: 'h-[50px] w-[50px] border border-organic-neutral-300 bg-organic-neutral-100',
+    color: PALETA.neutral[700],
+    tamanoIcono: 24,
+  },
+  clasico: {
+    contenedor: 'h-12 w-12 bg-white',
+    color: PALETA.pethood.naranja,
+    tamanoIcono: 26,
   },
 };
 
@@ -38,6 +68,8 @@ interface BotonCircularProps {
   variante?: VarianteBoton;
   /** Pastilla con un número sobre el ícono. En cero o sin valor no se dibuja. */
   contador?: number;
+  /** Versión más grande del mismo botón, sin cambiar de variante. */
+  grande?: boolean;
 }
 
 export function BotonCircular({
@@ -46,8 +78,9 @@ export function BotonCircular({
   onPress,
   variante = 'organic',
   contador,
+  grande = false,
 }: BotonCircularProps) {
-  const { contenedor, color, tamanoIcono } = VARIANTES[variante];
+  const { contenedor, color, tamanoIcono } = (grande ? VARIANTES_GRANDE : VARIANTES)[variante];
   const clases = `${contenedor} items-center justify-center rounded-full`;
 
   const contenido = (

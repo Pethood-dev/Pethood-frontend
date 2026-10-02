@@ -1,6 +1,10 @@
 /**
- * Varias fotos con orden: la primera es la portada. Se agregan de a una desde galería o
- * cámara, se reordenan con las flechas y se quitan con la cruz.
+ * Varias fotos con orden: la primera es la portada. Se agregan desde galería o cámara, se
+ * reordenan con las flechas y se quitan con la cruz.
+ *
+ * De dónde sacarlas se pregunta con la `HojaOpciones` de la app, no con el diálogo del
+ * sistema. Ninguno de los dos orígenes usa el recorte nativo (`allowsEditing`): cada foto pasa
+ * directo a la vista previa, que es donde se gira.
  */
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -10,10 +14,18 @@ import { elegirArchivosWeb } from '@/lib/elegirImagen';
 import { LIMITES } from '../../shared/validation/limits';
 import { PALETA } from '@/constants/theme';
 
+import { FotoPreviewModal } from './FotoPreviewModal';
+import { HojaOpciones } from './HojaOpciones';
+
 export interface FotoElegida {
   uri: string;
   nombre: string;
   tipo: string;
+  /**
+   * Solo en una foto que ya estaba subida (al editar): la ruta tal como la devolvió la API,
+   * que es con la que el backend la reconoce. `uri` es su versión absoluta, para mostrarla.
+   */
+  remota?: string;
 }
 
 interface PhotosPickerFieldProps {
@@ -45,6 +57,9 @@ function normalizarTipo(tipo: string): string {
 
 export function PhotosPickerField({ fotos, onChange, maximo, error }: PhotosPickerFieldProps) {
   const [cargando, setCargando] = useState(false);
+  /** Fotos recién elegidas, en revisión de a una en el modal de vista previa. */
+  const [cola, setCola] = useState<FotoElegida[]>([]);
+  const [hojaAbierta, setHojaAbierta] = useState(false);
 
   const lleno = fotos.length >= maximo;
 
@@ -52,9 +67,10 @@ export function PhotosPickerField({ fotos, onChange, maximo, error }: PhotosPick
     if (resultado.canceled) return;
 
     const nuevas: FotoElegida[] = [];
+    const reservadas = fotos.length + cola.length;
 
     for (const asset of resultado.assets) {
-      if (fotos.length + nuevas.length >= maximo) break;
+      if (reservadas + nuevas.length >= maximo) break;
 
       const tipo = normalizarTipo(asset.mimeType ?? tipoDesdeUri(asset.uri));
 
@@ -72,7 +88,8 @@ export function PhotosPickerField({ fotos, onChange, maximo, error }: PhotosPick
       nuevas.push({ uri: asset.uri, nombre: `foto-${Date.now()}-${nuevas.length}.${extension}`, tipo });
     }
 
-    if (nuevas.length > 0) onChange([...fotos, ...nuevas]);
+    // No se agregan todavía: pasan una por una por la vista previa, donde se pueden girar.
+    if (nuevas.length > 0) setCola((previa) => [...previa, ...nuevas]);
   };
 
   const abrirGaleria = async (): Promise<void> => {
@@ -104,7 +121,7 @@ export function PhotosPickerField({ fotos, onChange, maximo, error }: PhotosPick
 
     setCargando(true);
     try {
-      procesar(await ImagePicker.launchCameraAsync({ quality: 0.8 }));
+      procesar(await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8 }));
     } finally {
       setCargando(false);
     }
@@ -123,11 +140,13 @@ export function PhotosPickerField({ fotos, onChange, maximo, error }: PhotosPick
       return;
     }
 
-    Alert.alert('Agregar foto', '¿De dónde la sacamos?', [
-      { text: 'Cámara', onPress: () => void abrirCamara() },
-      { text: 'Galería', onPress: () => void abrirGaleria() },
-      { text: 'Cancelar', style: 'cancel' },
-    ]);
+    setHojaAbierta(true);
+  };
+
+  /** Cierra la hoja antes de abrir el selector nativo, para no taparlo. */
+  const desdeLaHoja = (abrir: () => Promise<void>) => (): void => {
+    setHojaAbierta(false);
+    void abrir();
   };
 
   const mover = (desde: number, hacia: number): void => {
@@ -149,7 +168,7 @@ export function PhotosPickerField({ fotos, onChange, maximo, error }: PhotosPick
           accessibilityLabel="Agregar fotos"
           onPress={elegir}
           disabled={cargando}
-          className={`h-32 items-center justify-center rounded-3xl border-2 border-dashed ${
+          className={`h-40 items-center justify-center rounded-3xl border-2 border-dashed ${
             error ? 'border-red-300 bg-red-50' : 'border-pethood-orange/40 bg-white/60'
           }`}
         >
@@ -157,9 +176,9 @@ export function PhotosPickerField({ fotos, onChange, maximo, error }: PhotosPick
             <ActivityIndicator color={PALETA.pethood.naranja} />
           ) : (
             <>
-              <Ionicons name="camera-outline" size={28} color={PALETA.pethood.naranja} />
-              <Text className="mt-1.5 text-sm font-medium text-gray-500">Agregar fotos</Text>
-              <Text className="mt-0.5 text-xs text-gray-400">Hasta {maximo}</Text>
+              <Ionicons name="camera-outline" size={36} color={PALETA.pethood.naranja} />
+              <Text className="mt-2 text-base font-medium text-gray-500">Agregar fotos</Text>
+              <Text className="mt-0.5 text-sm text-gray-400">Hasta {maximo}</Text>
             </>
           )}
         </Pressable>
@@ -167,13 +186,13 @@ export function PhotosPickerField({ fotos, onChange, maximo, error }: PhotosPick
         <View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-1">
             {fotos.map((foto, indice) => (
-              <View key={foto.uri} className="mx-1 w-32">
+              <View key={foto.uri} className="mx-1 w-36">
                 <View className="relative">
-                  <Image source={{ uri: foto.uri }} className="h-32 w-32 rounded-2xl" />
+                  <Image source={{ uri: foto.uri }} className="h-36 w-36 rounded-2xl" />
 
                   {indice === 0 ? (
-                    <View className="absolute left-2 top-2 rounded-full bg-pethood-orange px-2 py-0.5">
-                      <Text className="text-[10px] font-semibold text-white">Portada</Text>
+                    <View className="absolute left-2 top-2 rounded-full bg-pethood-orange px-2.5 py-1">
+                      <Text className="text-xs font-semibold text-white">Portada</Text>
                     </View>
                   ) : null}
 
@@ -182,24 +201,24 @@ export function PhotosPickerField({ fotos, onChange, maximo, error }: PhotosPick
                     accessibilityLabel={`Quitar foto ${indice + 1}`}
                     onPress={() => quitar(indice)}
                     hitSlop={6}
-                    className="absolute right-1.5 top-1.5 h-7 w-7 items-center justify-center rounded-full bg-black/50 active:opacity-80"
+                    className="absolute right-1.5 top-1.5 h-8 w-8 items-center justify-center rounded-full bg-black/50 active:opacity-80"
                   >
-                    <Ionicons name="close" size={16} color={PALETA.blanco} />
+                    <Ionicons name="close" size={18} color={PALETA.blanco} />
                   </Pressable>
                 </View>
 
-                <View className="mt-1.5 flex-row justify-center gap-2">
+                <View className="mt-2 flex-row justify-center gap-2">
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={`Mover foto ${indice + 1} hacia la izquierda`}
                     disabled={indice === 0}
                     onPress={() => mover(indice, indice - 1)}
                     hitSlop={6}
-                    className={`h-7 w-9 items-center justify-center rounded-lg bg-white ${
+                    className={`h-8 w-10 items-center justify-center rounded-lg bg-white ${
                       indice === 0 ? 'opacity-30' : 'active:opacity-70'
                     }`}
                   >
-                    <Ionicons name="chevron-back" size={16} color={PALETA.gris[500]} />
+                    <Ionicons name="chevron-back" size={18} color={PALETA.gris[500]} />
                   </Pressable>
 
                   <Pressable
@@ -208,11 +227,11 @@ export function PhotosPickerField({ fotos, onChange, maximo, error }: PhotosPick
                     disabled={indice === fotos.length - 1}
                     onPress={() => mover(indice, indice + 1)}
                     hitSlop={6}
-                    className={`h-7 w-9 items-center justify-center rounded-lg bg-white ${
+                    className={`h-8 w-10 items-center justify-center rounded-lg bg-white ${
                       indice === fotos.length - 1 ? 'opacity-30' : 'active:opacity-70'
                     }`}
                   >
-                    <Ionicons name="chevron-forward" size={16} color={PALETA.gris[500]} />
+                    <Ionicons name="chevron-forward" size={18} color={PALETA.gris[500]} />
                   </Pressable>
                 </View>
               </View>
@@ -224,27 +243,62 @@ export function PhotosPickerField({ fotos, onChange, maximo, error }: PhotosPick
                 accessibilityLabel="Agregar otra foto"
                 onPress={elegir}
                 disabled={cargando}
-                className="mx-1 h-32 w-32 items-center justify-center rounded-2xl border-2 border-dashed border-pethood-orange/40 bg-white/60"
+                className="mx-1 h-36 w-36 items-center justify-center rounded-2xl border-2 border-dashed border-pethood-orange/40 bg-white/60"
               >
                 {cargando ? (
                   <ActivityIndicator color={PALETA.pethood.naranja} />
                 ) : (
                   <>
-                    <Ionicons name="add" size={26} color={PALETA.pethood.naranja} />
-                    <Text className="mt-1 text-xs text-gray-500">Agregar</Text>
+                    <Ionicons name="add" size={30} color={PALETA.pethood.naranja} />
+                    <Text className="mt-1 text-sm text-gray-500">Agregar</Text>
                   </>
                 )}
               </Pressable>
             ) : null}
           </ScrollView>
 
-          <Text className="mt-2 text-xs text-gray-400">
+          <Text className="mt-2.5 text-sm text-gray-400">
             {fotos.length} de {maximo} · la primera es la portada
           </Text>
         </View>
       )}
 
       {error ? <Text className="mt-1.5 text-xs text-red-500">{error}</Text> : null}
+
+      <HojaOpciones
+        visible={hojaAbierta}
+        titulo="Agregar fotos"
+        subtitulo="¿De dónde las sacamos?"
+        opciones={[
+          { icono: 'camera-outline', etiqueta: 'Sacar una foto', onPress: desdeLaHoja(abrirCamara) },
+          {
+            icono: 'images-outline',
+            etiqueta: 'Elegir de la galería',
+            onPress: desdeLaHoja(abrirGaleria),
+          },
+        ]}
+        onCerrar={() => setHojaAbierta(false)}
+      />
+
+      <FotoPreviewModal
+        visible={cola.length > 0}
+        uri={cola[0]?.uri ?? ''}
+        onCancelar={() => setCola((previa) => previa.slice(1))}
+        onConfirmar={(resultado) => {
+          const actual = cola[0]!;
+          onChange([
+            ...fotos,
+            {
+              uri: resultado.uri,
+              nombre: resultado.seReescribioComoJpeg
+                ? actual.nombre.replace(/\.\w+$/, '.jpg')
+                : actual.nombre,
+              tipo: resultado.seReescribioComoJpeg ? 'image/jpeg' : actual.tipo,
+            },
+          ]);
+          setCola((previa) => previa.slice(1));
+        }}
+      />
     </View>
   );
 }

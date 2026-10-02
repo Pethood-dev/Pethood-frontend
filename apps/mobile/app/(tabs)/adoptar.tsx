@@ -7,9 +7,12 @@
  * El rechazo es temporal: la tarjeta sale del mazo y no se persiste nada, así que la
  * mascota vuelve a aparecer al recargar el feed o al cambiar los filtros. El "me gusta" sí
  * se guarda, con update optimista contra `POST /favoritos`.
+ *
+ * Solo existe en el perfil personal: desde la vista de refugio no se adopta. La pestaña se
+ * oculta (ver `(tabs)/_layout.tsx`) y, si igual se llega por un link, se vuelve a Inicio.
  */
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,21 +26,36 @@ import {
   EstadoVacio,
 } from '@/components/feedback/EstadosPantalla';
 import { useToast } from '@/components/feedback/Toast';
+import { BarraBusqueda } from '@/components/ui/BarraBusqueda';
 import { BotonCircular } from '@/components/ui/BotonCircular';
 import { PALETA } from '@/constants/theme';
+import { useDebounce } from '@/hooks/useDebounce';
+import { useSesion } from '@/hooks/useSesion';
 import { agregarFavorito } from '@/services/favoritos';
 import {
   contarFiltrosActivos,
   listarFeed,
   SIN_FILTROS,
+  TAMANIO_PAGINA,
   type FiltrosAdopcion,
   type PublicacionFeed,
 } from '@/services/publicaciones';
+import { LIMITES } from '@/shared/validation/limits';
 
 /** Con menos tarjetas que esto en el mazo se pide la página siguiente. */
 const UMBRAL_PRECARGA = 4;
 
 export default function AdoptarScreen() {
+  const { vistaRefugio } = useSesion();
+
+  // El mazo se desmonta al pasar a la vista de refugio, así no queda pidiendo páginas de
+  // un feed que el backend ya no le da a ese perfil.
+  if (vistaRefugio) return <Redirect href="/(tabs)" />;
+
+  return <MazoAdopcion />;
+}
+
+function MazoAdopcion() {
   const router = useRouter();
   const toast = useToast();
   const pila = useRef<PilaAdopcionRef>(null);
@@ -45,9 +63,31 @@ export default function AdoptarScreen() {
   const [publicaciones, setPublicaciones] = useState<PublicacionFeed[]>([]);
   const [total, setTotal] = useState(0);
   const [filtros, setFiltros] = useState<FiltrosAdopcion>(SIN_FILTROS);
+  const [busqueda, setBusqueda] = useState('');
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalFiltros, setModalFiltros] = useState(false);
+
+  // El botón de filtros de la tarjeta de Inicio llega con `?filtros=abrir`. El parámetro se
+  // limpia al usarlo: la pestaña queda montada, y si no, volver a tocarlo no haría nada.
+  const { filtros: pedidoFiltros } = useLocalSearchParams<{ filtros?: string }>();
+  useEffect(() => {
+    if (pedidoFiltros !== 'abrir') return;
+    setModalFiltros(true);
+    router.setParams({ filtros: undefined });
+  }, [pedidoFiltros, router]);
+
+  // La barra de búsqueda filtra por texto libre (HU-11.4). Se debouncea para no pedir el
+  // feed en cada tecla; vaciar el campo es inmediato.
+  const busquedaDebounced = useDebounce(busqueda, 350, (valor) => valor.trim() === '');
+
+  useEffect(() => {
+    setFiltros((actual) => {
+      const texto = busquedaDebounced.trim() || undefined;
+      if (actual.texto === texto) return actual;
+      return { ...actual, texto };
+    });
+  }, [busquedaDebounced]);
 
   /**
    * Cuántas tarjetas descartó el usuario en esta sesión de la pantalla.
@@ -68,7 +108,7 @@ export default function AdoptarScreen() {
     rechazadas.current = 0;
 
     try {
-      const feed = await listarFeed(filtrosActivos);
+      const feed = await listarFeed(filtrosActivos, 0, TAMANIO_PAGINA);
       setPublicaciones(feed.publicaciones);
       setTotal(feed.total);
     } catch (err) {
@@ -90,7 +130,7 @@ export default function AdoptarScreen() {
 
     try {
       const desplazamiento = rechazadas.current + publicaciones.length;
-      const feed = await listarFeed(filtros, desplazamiento);
+      const feed = await listarFeed(filtros, desplazamiento, TAMANIO_PAGINA);
 
       // Se filtran por id los que ya estén en el mazo: si entre el cálculo del
       // desplazamiento y la respuesta cambió algo del lado del servidor, el solapamiento
@@ -184,6 +224,20 @@ export default function AdoptarScreen() {
           </View>
         </View>
 
+        {/* Barra de búsqueda por texto libre (HU-11.4). Visible también en el estado vacío,
+            para que se pueda corregir la búsqueda sin salir de la pantalla. */}
+        {!cargando ? (
+          <View className="px-[22px] pb-3.5">
+            <BarraBusqueda
+              placeholder="Buscar por nombre, descripción o rasgo"
+              valor={busqueda}
+              onCambiar={setBusqueda}
+              onLimpiar={() => setBusqueda('')}
+              maxLength={LIMITES.publicacion.busqueda.max}
+            />
+          </View>
+        ) : null}
+
         {cargando ? (
           <EstadoCargando />
         ) : error ? (
@@ -204,7 +258,10 @@ export default function AdoptarScreen() {
                 <CustomButton
                   title="Quitar todos los filtros"
                   variant="secondary"
-                  onPress={() => setFiltros(SIN_FILTROS)}
+                  onPress={() => {
+                    setBusqueda('');
+                    setFiltros(SIN_FILTROS);
+                  }}
                 />
               </>
             ) : null}

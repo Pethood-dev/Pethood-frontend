@@ -119,7 +119,11 @@ export interface NuevaSolicitud {
 }
 
 /** Por qué el sistema frena la solicitud antes de abrir el formulario. */
-export type MotivoBloqueo = 'NO_VERIFICADO' | 'LIMITE_ALCANZADO' | 'YA_SOLICITADA';
+export type MotivoBloqueo =
+  | 'PUBLICACION_PROPIA'
+  | 'NO_VERIFICADO'
+  | 'LIMITE_ALCANZADO'
+  | 'YA_SOLICITADA';
 
 /**
  * Chequeo previo de las precondiciones de HU-7.1. Se consulta al tocar "Solicitar
@@ -152,9 +156,12 @@ export interface ListaSolicitudesRecibidas {
 /** Tope de página que acepta el backend (`filtrosRecibidasSchema`). */
 const LIMITE_MAXIMO = 50;
 
-/** Recorte por estado y por `fechaAlta` (las dos puntas inclusive). */
+/**
+ * Recorte por estado y por `fechaAlta` (las dos puntas inclusive). `estados` admite varios a
+ * la vez (trae las que están en cualquiera); vacío o ausente es "todos".
+ */
 export interface FiltrosSolicitudes {
-  estado?: EstadoSolicitudNombre;
+  estados?: EstadoSolicitudNombre[];
   fechaDesde?: Date;
   fechaHasta?: Date;
 }
@@ -165,7 +172,8 @@ export const SIN_FILTROS_SOLICITUDES: FiltrosSolicitudes = {};
 export function contarFiltrosActivosSolicitudes(filtros: FiltrosSolicitudes): number {
   let activos = 0;
 
-  if (filtros.estado !== undefined) activos += 1;
+  // Elegir varios estados es una sola elección del usuario: cuenta como un filtro.
+  if (filtros.estados && filtros.estados.length > 0) activos += 1;
   // El rango de fecha es una sola elección del usuario aunque viaje en dos campos.
   if (filtros.fechaDesde !== undefined || filtros.fechaHasta !== undefined) activos += 1;
 
@@ -174,7 +182,9 @@ export function contarFiltrosActivosSolicitudes(filtros: FiltrosSolicitudes): nu
 
 function queryDeFiltros(filtros: FiltrosSolicitudes): string {
   const params = new URLSearchParams({ limite: String(LIMITE_MAXIMO) });
-  if (filtros.estado) params.set('estado', filtros.estado);
+  if (filtros.estados && filtros.estados.length > 0) {
+    params.set('estados', filtros.estados.join(','));
+  }
   if (filtros.fechaDesde) params.set('fechaDesde', aFechaISO(filtros.fechaDesde));
   if (filtros.fechaHasta) params.set('fechaHasta', aFechaISO(filtros.fechaHasta));
   return `?${params.toString()}`;
@@ -199,11 +209,14 @@ export function listarMias(filtros: FiltrosSolicitudes = {}): Promise<ListaSolic
 
 /**
  * Precondiciones de HU-7.1. `publicacionId` es opcional: sin él solo se evalúa al usuario
- * (verificación y tope de pendientes); con él se agrega "ya solicitaste esta mascota".
+ * (verificación y tope de pendientes); con él se agrega "ya solicitaste esta mascota" y
+ * "es tu propia mascota" (o de tu refugio). Solo existe en el perfil personal.
  */
 export function obtenerElegibilidad(publicacionId?: number): Promise<Elegibilidad> {
-  const query = publicacionId === undefined ? '' : `?publicacionId=${publicacionId}`;
-  return get(`/solicitudes/elegibilidad${query}`);
+  const params = new URLSearchParams();
+  if (publicacionId !== undefined) params.set('publicacionId', String(publicacionId));
+  const query = params.toString();
+  return get(`/solicitudes/elegibilidad${query ? `?${query}` : ''}`);
 }
 
 /** HU-7.1. Devuelve la solicitud ya creada, en estado "Pendiente". */

@@ -1,31 +1,41 @@
 /**
- * GUI-15 Editar Perfil — HU-1.4 y HU-1.5 (completar foto + datos).
- * Volver con cambios sin guardar pide confirmación.
+ * GUI-15 Editar Perfil — HU-1.4, HU-1.5 (completar foto + datos), HU-1.7 cierre de sesión,
+ * HU-1.8 dar de baja cuenta.
+ *
+ * Es la pantalla a la que lleva el ícono de perfil de GUI-09: además de los datos, vive acá
+ * el mail (que ya no se muestra apenas se entra al perfil) y las acciones sensibles de la
+ * cuenta. Mientras no hay cambios sin guardar se ven "Cambiar contraseña", "Cerrar sesión" y
+ * "Dar de baja"; apenas se toca un campo, esos tres desaparecen y sólo quedan "Guardar
+ * cambios" y "Cancelar" — así nunca conviven un botón de cuenta con uno de guardado.
+ *
+ * Estética del artboard 23 (paleta Organic): encabezado crema con la flecha redonda, tarjeta
+ * `neutral-100` y botones `accent-600`. Es la misma que la de "Datos del refugio".
  */
 import { Ionicons } from '@expo/vector-icons';
 import type { ImagePickerAsset } from 'expo-image-picker';
 import { useNavigation, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CustomButton } from '@/components/CustomButton';
+import {
+  CustomButton,
+  FORMA_BOTON_ORGANIC,
+  FORMA_BOTON_ORGANIC_PRINCIPAL,
+} from '@/components/CustomButton';
 import { useToast } from '@/components/feedback/Toast';
+import { AvisoVerificacionUbicacion } from '@/components/perfil/AvisoVerificacionUbicacion';
 import { Avatar } from '@/components/ui/Avatar';
+import { BotonCircular } from '@/components/ui/BotonCircular';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { FormCard, FormCardRow } from '@/components/ui/FormCard';
+import { FormularioConTeclado } from '@/components/ui/FormularioConTeclado';
+import { SelectField } from '@/components/ui/SelectField';
 import { TextField } from '@/components/ui/TextField';
+import { PROVINCIAS, localidadesDe } from '@/constants/Provincias';
 import { PALETA } from '@/constants/theme';
 import { useSesion } from '@/hooks/useSesion';
+import { usePreviewUbicacion, type DireccionEstructurada } from '@/hooks/usePreviewUbicacion';
 import {
   abrirSelectorImagen,
   assetAArchivoLocal,
@@ -35,20 +45,29 @@ import type { ArchivoImagenLocal } from '@/lib/formDataImagen';
 import {
   sanitizarNombrePersona,
   sanitizarTelefono,
+  validarCalleAltura,
   validarEmail,
   validarNombrePersona,
   validarTelefono,
-  validarUbicacion,
 } from '@/lib/validacionRegistro';
 import { ApiError, urlAbsoluta } from '@/services/api';
-import { actualizarPerfil, obtenerPerfil } from '@/services/usuarios';
+import {
+  actualizarPerfil,
+  actualizarUbicacion,
+  darDeBajaCuenta,
+  obtenerPerfil,
+  previewUbicacion,
+} from '@/services/usuarios';
+import { LIMITES } from '@/shared/validation/limits';
 
 interface Formulario {
   nombre: string;
   apellido: string;
   email: string;
   telefono: string;
-  ubicacion: string;
+  provincia: string;
+  localidad: string;
+  calleAltura: string;
 }
 
 interface Errores {
@@ -56,21 +75,31 @@ interface Errores {
   apellido?: string;
   email?: string;
   telefono?: string;
-  ubicacion?: string;
+  calleAltura?: string;
 }
 
 function vacio(): Formulario {
-  return { nombre: '', apellido: '', email: '', telefono: '', ubicacion: '' };
+  return {
+    nombre: '',
+    apellido: '',
+    email: '',
+    telefono: '',
+    provincia: '',
+    localidad: '',
+    calleAltura: '',
+  };
 }
 
 export default function EditarPerfilScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const toast = useToast();
-  const { token, actualizarUsuario } = useSesion();
+  const { token, usuario, actualizarUsuario, cerrarSesion } = useSesion();
 
   const [form, setForm] = useState<Formulario>(vacio);
   const [inicial, setInicial] = useState<Formulario>(vacio);
+  const [verificada, setVerificada] = useState(false);
+  const [inicialVerificada, setInicialVerificada] = useState(false);
   const [fotoUrl, setFotoUrl] = useState<string | null>(null);
   const [fotoNueva, setFotoNueva] = useState<ArchivoImagenLocal | undefined>();
   const [errors, setErrors] = useState<Errores>({});
@@ -80,9 +109,13 @@ export default function EditarPerfilScreen() {
   const permitirSalir = useRef(false);
 
   const [confirmarSalida, setConfirmarSalida] = useState(false);
+  const [confirmarBaja, setConfirmarBaja] = useState(false);
+  const [dandoDeBaja, setDandoDeBaja] = useState(false);
 
   const hayCambios =
-    JSON.stringify(form) !== JSON.stringify(inicial) || Boolean(fotoNueva);
+    JSON.stringify(form) !== JSON.stringify(inicial) ||
+    verificada !== inicialVerificada ||
+    Boolean(fotoNueva);
 
   const formularioValido = useMemo(
     () =>
@@ -90,8 +123,27 @@ export default function EditarPerfilScreen() {
       !validarNombrePersona(form.apellido, 'apellido') &&
       !validarEmail(form.email) &&
       !validarTelefono(form.telefono) &&
-      !validarUbicacion(form.ubicacion),
+      !validarCalleAltura(form.calleAltura),
     [form],
+  );
+
+  const previsualizar = useCallback(
+    (direccion: DireccionEstructurada) => {
+      if (!token) {
+        return Promise.reject(new ApiError('No encontramos tu sesión.', 'NO_AUTENTICADO', 401));
+      }
+      return previewUbicacion(token, direccion).then((r) => r.ubicacion);
+    },
+    [token],
+  );
+
+  const {
+    ubicacion: ubicacionPreview,
+    cargando: cargandoPreview,
+    error: errorPreview,
+  } = usePreviewUbicacion(
+    { provincia: form.provincia, localidad: form.localidad, calleAltura: form.calleAltura },
+    previsualizar,
   );
 
   useEffect(() => {
@@ -103,10 +155,14 @@ export default function EditarPerfilScreen() {
           apellido: respuesta.usuario.apellido,
           email: respuesta.usuario.email,
           telefono: respuesta.usuario.telefono ?? '',
-          ubicacion: respuesta.usuario.ubicacion ?? '',
+          provincia: respuesta.usuario.provincia ?? '',
+          localidad: respuesta.usuario.localidad ?? '',
+          calleAltura: respuesta.usuario.calleAltura ?? '',
         };
         setForm(siguiente);
         setInicial(siguiente);
+        setVerificada(respuesta.usuario.ubicacionVerificada);
+        setInicialVerificada(respuesta.usuario.ubicacionVerificada);
         setFotoUrl(urlAbsoluta(respuesta.usuario.imagenUrl));
       })
       .catch((error) => {
@@ -148,6 +204,39 @@ export default function EditarPerfilScreen() {
     router.back();
   };
 
+  const cancelarEdicion = (): void => {
+    setForm(inicial);
+    setVerificada(inicialVerificada);
+    setFotoNueva(undefined);
+    setErrors({});
+    setFormError(undefined);
+  };
+
+  const salir = async (): Promise<void> => {
+    await cerrarSesion();
+    router.replace('/login');
+  };
+
+  const confirmarDarDeBaja = async (): Promise<void> => {
+    if (!token) return;
+    setDandoDeBaja(true);
+    try {
+      await darDeBajaCuenta(token);
+      setConfirmarBaja(false);
+      toast.mostrarExito('Tu cuenta fue dada de baja');
+      await cerrarSesion();
+      router.replace('/login');
+    } catch (error) {
+      const mensaje =
+        error instanceof ApiError
+          ? error.mensaje
+          : 'No pudimos dar de baja tu cuenta. Intentalo de nuevo.';
+      toast.mostrarError(mensaje);
+    } finally {
+      setDandoDeBaja(false);
+    }
+  };
+
   const setCampo = useCallback((campo: keyof Formulario, valor: string) => {
     setForm((prev) => ({ ...prev, [campo]: valor }));
   }, []);
@@ -185,10 +274,41 @@ export default function EditarPerfilScreen() {
     setFieldError('telefono', formateado ? validarTelefono(formateado) : undefined);
   };
 
-  const handleUbicacionChange = (value: string): void => {
-    setCampo('ubicacion', value);
-    setFieldError('ubicacion', value.trim() ? validarUbicacion(value) : undefined);
+  
+
+  
+
+  
+
+  
+
+  // Al cambiar de provincia se limpia la localidad: las del listado anterior ya no aplican.
+  // Cambiar cualquier campo de la dirección invalida la verificación anterior.
+  const handleProvinciaChange = (value: string): void => {
+    setForm((prev) => ({ ...prev, provincia: value, localidad: '' }));
+    setVerificada(false);
   };
+
+  const handleLocalidadChange = (value: string): void => {
+    setCampo('localidad', value);
+    setVerificada(false);
+  };
+
+  const handleCalleAlturaChange = (value: string): void => {
+    setCampo('calleAltura', value);
+    setFieldError('calleAltura', value.trim() ? validarCalleAltura(value) : undefined);
+    setVerificada(false);
+  };
+
+  const guardarUbicacionManual = useCallback(
+    async (mapaUrl: string): Promise<void> => {
+      if (!token) return;
+      const respuesta = await actualizarUbicacion(token, mapaUrl);
+      await actualizarUsuario(respuesta.usuario);
+      setVerificada(true);
+    },
+    [token, actualizarUsuario],
+  );
 
   const aplicarAsset = (asset: ImagePickerAsset): void => {
     const errorArchivo = validarAssetImagen(asset);
@@ -215,18 +335,13 @@ export default function EditarPerfilScreen() {
       apellido: validarNombrePersona(form.apellido, 'apellido'),
       email: validarEmail(form.email),
       telefono: validarTelefono(form.telefono),
-      ubicacion: validarUbicacion(form.ubicacion),
+      calleAltura: validarCalleAltura(form.calleAltura),
     };
     setErrors(next);
     return !Object.values(next).some(Boolean);
   };
 
   const explicarQueFalta = (): void => {
-    if (!hayCambios) {
-      toast.mostrarAdvertencia('Todavía no cambiaste nada.');
-      return;
-    }
-
     validar();
     toast.mostrarAdvertencia('Revisá los campos marcados en rojo.');
   };
@@ -244,7 +359,10 @@ export default function EditarPerfilScreen() {
           apellido: form.apellido.trim(),
           email: form.email.trim(),
           telefono: form.telefono.trim(),
-          ubicacion: form.ubicacion.trim(),
+          provincia: form.provincia.trim(),
+          localidad: form.localidad.trim(),
+          calleAltura: form.calleAltura.trim(),
+          ubicacionVerificada: verificada,
         },
         fotoNueva,
       );
@@ -266,154 +384,238 @@ export default function EditarPerfilScreen() {
   const fotoVisible = fotoNueva?.uri ?? fotoUrl;
 
   return (
-    <View className="flex-1 bg-pethood-beige">
+    <View className="flex-1 bg-organic-bg">
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
-        <View className="flex-row items-center px-5 pb-2 pt-2">
-          <Pressable
-            onPress={volver}
-            className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-white"
-            accessibilityRole="button"
-            accessibilityLabel="Volver"
-          >
-            <Ionicons name="arrow-back" size={22} color={PALETA.gris[700]} />
-          </Pressable>
-          <Text className="text-2xl font-bold text-pethood-orange">Editar Perfil</Text>
+        <View className="flex-row items-center gap-3 border-b border-organic-neutral-300 bg-organic-neutral-100 px-[19px] py-[13px]">
+          <BotonCircular icono="arrow-back" etiqueta="Volver" variante="neutro" onPress={volver} />
+          <Text className="font-titulo text-[22px] leading-[26px] text-organic-accent-600">
+            Datos personales
+          </Text>
         </View>
 
         {cargando ? (
           <View className="flex-1 items-center justify-center">
-            <ActivityIndicator color={PALETA.pethood.naranja} />
+            <ActivityIndicator color={PALETA.accent[600]} />
           </View>
         ) : (
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            className="flex-1"
+          <FormularioConTeclado
+            showsVerticalScrollIndicator={false}
+            contentContainerClassName="px-5 pb-8 pt-4"
           >
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              contentContainerClassName="px-5 pb-8 pt-4"
-            >
-              <View className="mb-6 items-center">
-                <Pressable
-                  onPress={abrirSelectorFoto}
-                  accessibilityRole="button"
-                  accessibilityLabel="Cambiar foto de perfil"
-                  className="relative"
-                >
-                  <Avatar
-                    uri={fotoVisible}
-                    nombre={form.nombre}
-                    apellido={form.apellido}
-                    tamanio={112}
-                  />
-                  <View className="absolute bottom-0 right-0 h-9 w-9 items-center justify-center rounded-full bg-pethood-orange">
-                    <Ionicons name="camera" size={16} color={PALETA.blanco} />
-                  </View>
-                </Pressable>
-              </View>
-
-              <FormCard>
-                <FormCardRow>
-                  <TextField
-                    label="Nombre"
-                    obligatorio
-                    value={form.nombre}
-                    onChangeText={handleNombreChange}
-                    onBlur={() =>
-                      setFieldError('nombre', validarNombrePersona(form.nombre, 'nombre'))
-                    }
-                    error={errors.nombre}
-                    autoCapitalize="words"
-                    autoCorrect={false}
-                    autoComplete="given-name"
-                    textContentType="givenName"
-                    maxLength={50}
-                  />
-                </FormCardRow>
-                <FormCardRow>
-                  <TextField
-                    label="Apellido"
-                    obligatorio
-                    value={form.apellido}
-                    onChangeText={handleApellidoChange}
-                    onBlur={() =>
-                      setFieldError('apellido', validarNombrePersona(form.apellido, 'apellido'))
-                    }
-                    error={errors.apellido}
-                    autoCapitalize="words"
-                    autoCorrect={false}
-                    autoComplete="family-name"
-                    textContentType="familyName"
-                    maxLength={50}
-                  />
-                </FormCardRow>
-                <FormCardRow>
-                  <TextField
-                    label="Correo"
-                    obligatorio
-                    value={form.email}
-                    onChangeText={handleEmailChange}
-                    onBlur={() => setFieldError('email', validarEmail(form.email))}
-                    error={errors.email}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    textContentType="emailAddress"
-                  />
-                </FormCardRow>
-                <FormCardRow>
-                  <TextField
-                    label="Teléfono"
-                    obligatorio
-                    value={form.telefono}
-                    onChangeText={handleTelefonoChange}
-                    onBlur={() => setFieldError('telefono', validarTelefono(form.telefono))}
-                    error={errors.telefono}
-                    keyboardType="phone-pad"
-                    autoComplete="tel"
-                    textContentType="telephoneNumber"
-                    maxLength={16}
-                  />
-                </FormCardRow>
-                <FormCardRow ultima>
-                  <TextField
-                    label="Barrio / ciudad"
-                    obligatorio
-                    value={form.ubicacion}
-                    onChangeText={handleUbicacionChange}
-                    onBlur={() => setFieldError('ubicacion', validarUbicacion(form.ubicacion))}
-                    error={errors.ubicacion}
-                    autoCapitalize="words"
-                    maxLength={80}
-                  />
-                </FormCardRow>
-              </FormCard>
-
+            <View className="mb-6 items-center">
               <Pressable
-                onPress={() => router.push('/perfil/password' as Href)}
-                className="mt-5 items-center"
+                onPress={abrirSelectorFoto}
+                accessibilityRole="button"
+                accessibilityLabel="Cambiar foto de perfil"
+                className="relative"
               >
-                <Text className="text-sm font-semibold text-pethood-orange">
-                  Cambiar contraseña
-                </Text>
-              </Pressable>
-
-              {formError ? (
-                <Text className="mt-3 text-center text-sm text-red-500">{formError}</Text>
-              ) : null}
-
-              <View className="mt-6">
-                <CustomButton
-                  title="Guardar cambios"
-                  loading={guardando}
-                  disabled={!formularioValido || !hayCambios}
-                  onPress={() => void guardar()}
-                  onPressDeshabilitado={explicarQueFalta}
+                <Avatar
+                  uri={fotoVisible}
+                  nombre={form.nombre}
+                  apellido={form.apellido}
+                  tamanio={112}
+                  variante="organic"
+                  tono="neutro"
                 />
+                <View className="absolute bottom-0 right-0 h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-organic-accent-600">
+                  <Ionicons name="camera" size={16} color={PALETA.blanco} />
+                </View>
+              </Pressable>
+            </View>
+
+            <FormCard organic>
+              <FormCardRow>
+                <TextField
+                  label="Nombre"
+                  obligatorio
+                  lapiz
+                  grande
+                  value={form.nombre}
+                  onChangeText={handleNombreChange}
+                  onBlur={() =>
+                    setFieldError('nombre', validarNombrePersona(form.nombre, 'nombre'))
+                  }
+                  error={errors.nombre}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  autoComplete="given-name"
+                  textContentType="givenName"
+                  maxLength={50}
+                />
+              </FormCardRow>
+              <FormCardRow>
+                <TextField
+                  label="Apellido"
+                  obligatorio
+                  lapiz
+                  grande
+                  value={form.apellido}
+                  onChangeText={handleApellidoChange}
+                  onBlur={() =>
+                    setFieldError('apellido', validarNombrePersona(form.apellido, 'apellido'))
+                  }
+                  error={errors.apellido}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  autoComplete="family-name"
+                  textContentType="familyName"
+                  maxLength={50}
+                />
+              </FormCardRow>
+              <FormCardRow>
+                <TextField
+                  label="Correo"
+                  obligatorio
+                  lapiz
+                  grande
+                  value={form.email}
+                  onChangeText={handleEmailChange}
+                  onBlur={() => setFieldError('email', validarEmail(form.email))}
+                  error={errors.email}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  textContentType="emailAddress"
+                />
+              </FormCardRow>
+              <FormCardRow>
+                <TextField
+                  label="Teléfono"
+                  obligatorio
+                  lapiz
+                  grande
+                  value={form.telefono}
+                  onChangeText={handleTelefonoChange}
+                  onBlur={() => setFieldError('telefono', validarTelefono(form.telefono))}
+                  error={errors.telefono}
+                  keyboardType="phone-pad"
+                  autoComplete="tel"
+                  textContentType="telephoneNumber"
+                  maxLength={16}
+                />
+              </FormCardRow>
+              <FormCardRow>
+                <SelectField
+                  lapiz
+                  grande
+                  label="Provincia"
+                  placeholder="Elegí tu provincia"
+                  opciones={PROVINCIAS.map((provincia) => ({
+                    valor: provincia.nombre,
+                    etiqueta: provincia.nombre,
+                  }))}
+                  valor={form.provincia || null}
+                  onChange={handleProvinciaChange}
+                  buscable
+                />
+              </FormCardRow>
+              <FormCardRow>
+                <SelectField
+                  lapiz
+                  grande
+                  label="Localidad"
+                  placeholder="Elegí tu localidad"
+                  opciones={localidadesDe(form.provincia).map((localidad) => ({
+                    valor: localidad,
+                    etiqueta: localidad,
+                  }))}
+                  valor={form.localidad || null}
+                  onChange={handleLocalidadChange}
+                  deshabilitado={!form.provincia}
+                  textoDeshabilitado="Elegí primero la provincia"
+                  buscable
+                />
+              </FormCardRow>
+              <FormCardRow ultima>
+                <TextField
+                  label="Calle y altura"
+                  lapiz
+                  grande
+                  value={form.calleAltura}
+                  onChangeText={handleCalleAlturaChange}
+                  onBlur={() => setFieldError('calleAltura', validarCalleAltura(form.calleAltura))}
+                  error={errors.calleAltura}
+                  autoCapitalize="words"
+                  maxLength={LIMITES.usuario.calleAltura.max}
+                />
+              </FormCardRow>
+            </FormCard>
+
+            <View className="mt-3">
+              <AvisoVerificacionUbicacion
+                ubicacion={ubicacionPreview}
+                cargando={cargandoPreview}
+                error={errorPreview}
+                verificada={verificada}
+                onVerificar={() => setVerificada(true)}
+                onGuardarManual={guardarUbicacionManual}
+              />
+            </View>
+
+            {formError ? (
+              <Text className="mt-3 text-center text-sm text-red-500">{formError}</Text>
+            ) : null}
+
+            {/* Botones mutuamente excluyentes con los de guardado: mientras hay cambios sin
+                guardar no tiene sentido ofrecer cerrar sesión o dar de baja la cuenta a
+                mitad de una edición, así que un set reemplaza al otro por completo. */}
+            {hayCambios ? (
+              <View className="mt-6 flex-row gap-3">
+                <View className="flex-1">
+                  <CustomButton
+                    title="Cancelar"
+                    variant="acento-borde"
+                    style={FORMA_BOTON_ORGANIC}
+                    onPress={cancelarEdicion}
+                  />
+                </View>
+                <View className="flex-1">
+                  <CustomButton
+                    title="Guardar cambios"
+                    variant="acento"
+                    style={FORMA_BOTON_ORGANIC_PRINCIPAL}
+                    loading={guardando}
+                    disabled={!formularioValido}
+                    onPress={() => void guardar()}
+                    onPressDeshabilitado={explicarQueFalta}
+                  />
+                </View>
               </View>
-            </ScrollView>
-          </KeyboardAvoidingView>
+            ) : (
+              <View className="mt-6 gap-3">
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => void salir()}
+                  style={FORMA_BOTON_ORGANIC}
+                  className="flex-row items-center justify-center gap-2 border border-organic-neutral-300 bg-organic-neutral-100 py-4 active:opacity-80"
+                >
+                  <Ionicons name="log-out-outline" size={20} color={PALETA.estado.error} />
+                  <Text className="font-cuerpo-semi text-base text-red-600">Cerrar sesión</Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => router.push('/perfil/password' as Href)}
+                  className="items-center py-2"
+                >
+                  <Text className="font-cuerpo-semi text-base text-organic-accent-600">
+                    Cambiar contraseña
+                  </Text>
+                </Pressable>
+
+                {!(usuario?.roles ?? []).includes('ADMIN') ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => setConfirmarBaja(true)}
+                    className="items-center py-3 active:opacity-70"
+                  >
+                    <Text className="font-cuerpo text-base text-red-500">
+                      Dar de baja mi cuenta
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            )}
+          </FormularioConTeclado>
         )}
       </SafeAreaView>
 
@@ -426,6 +628,21 @@ export default function EditarPerfilScreen() {
         textoCancelar="Seguir editando"
         onConfirmar={salirSinGuardar}
         onCerrar={() => setConfirmarSalida(false)}
+      />
+
+      <ConfirmDialog
+        visible={confirmarBaja}
+        tono="peligro"
+        titulo="¿Dar de baja tu cuenta?"
+        mensaje="Se van a cerrar tus solicitudes y publicaciones en curso, y tu perfil deja de ser visible para el resto."
+        detalle="No vas a poder volver a entrar con este correo. Esta acción no se puede deshacer desde la app."
+        textoConfirmar="Dar de baja"
+        textoCancelar="Cancelar"
+        cargando={dandoDeBaja}
+        onConfirmar={() => void confirmarDarDeBaja()}
+        onCerrar={() => {
+          if (!dandoDeBaja) setConfirmarBaja(false);
+        }}
       />
     </View>
   );

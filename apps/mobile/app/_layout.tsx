@@ -12,6 +12,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import 'react-native-reanimated';
 
 import { BarraNavegacionSistema } from '@/components/BarraNavegacionSistema';
@@ -29,19 +30,26 @@ export default function RootLayout() {
     // Requisito de react-native-gesture-handler: sin esta raíz, el arrastre del mazo de
     // tarjetas de Adoptar no recibe eventos en Android.
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SesionProvider>
-        {/* El provider de toasts envuelve al Stack para que un toast disparado antes de
-            navegar siga visible en la pantalla siguiente. */}
-        <ToastProvider>
-          <StatusBar style="dark" />
-          {/* Oculta la barra de navegación del sistema para ganar la franja inferior. No
-              queda bloqueada: Android la vuelve a mostrar cuando el usuario desliza desde
-              el borde y la esconde sola al rato. El módulo es solo de Android; en iOS y
-              web BarraNavegacionSistema no importa expo-navigation-bar. */}
-          <BarraNavegacionSistema />
-          <RootNavigator />
-        </ToastProvider>
-      </SesionProvider>
+      {/* Mide el teclado cuadro a cuadro para `FormularioConTeclado`. Va una sola vez en la
+          raíz y no por pantalla: así escucha a la ventana durante toda la vida de la app y
+          no queda nada a medio restaurar cuando una pantalla se desmonta con el teclado
+          abierto (lo que le pasaba a `useAnimatedKeyboard` en el chat). Detecta solo que la
+          app es edge-to-edge, así que no necesita configuración. */}
+      <KeyboardProvider>
+        <SesionProvider>
+          {/* El provider de toasts envuelve al Stack para que un toast disparado antes de
+              navegar siga visible en la pantalla siguiente. */}
+          <ToastProvider>
+            <StatusBar style="dark" />
+            {/* Oculta la barra de navegación del sistema para ganar la franja inferior. No
+                queda bloqueada: Android la vuelve a mostrar cuando el usuario desliza desde
+                el borde y la esconde sola al rato. El módulo es solo de Android; en iOS y
+                web BarraNavegacionSistema no importa expo-navigation-bar. */}
+            <BarraNavegacionSistema />
+            <RootNavigator />
+          </ToastProvider>
+        </SesionProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }
@@ -75,11 +83,22 @@ function RootNavigator() {
         {/* GUI-12. Va en el stack y no en las tabs porque se entra desde la Home y desde
             el Perfil, y el back tiene que volver al origen real. */}
         <Stack.Screen name="favoritos" />
+        {/* GUI-06 (HU-13.1). También en el stack: se entra desde las dos vistas de Inicio. */}
+        <Stack.Screen name="perdidos/index" />
+        {/* GUI-25. Pantalla y no modal, como en el diseño (pantalla 26). */}
+        <Stack.Screen name="perdidos/nuevo" options={{ presentation: 'card' }} />
         <Stack.Screen name="mascotas/crear" options={{ presentation: 'card' }} />
+        {/* HU-6.4. Se abre tocando una tarjeta de "Mis mascotas". */}
+        <Stack.Screen name="mascotas/[id]/index" options={{ presentation: 'card' }} />
         <Stack.Screen name="mascotas/[id]/editar" options={{ presentation: 'card' }} />
+        {/* "Mis publicaciones". Fuera de las tabs, como Favoritos: se entra desde el Perfil y
+            el back vuelve al origen real. */}
+        <Stack.Screen name="publicaciones/index" />
         <Stack.Screen name="publicaciones/crear" options={{ presentation: 'card' }} />
         {/* Se abre tocando una tarjeta del mazo de Adoptar, sin descartarla. */}
-        <Stack.Screen name="publicaciones/[id]" options={{ presentation: 'card' }} />
+        <Stack.Screen name="publicaciones/[id]/index" options={{ presentation: 'card' }} />
+        {/* Edición de la publicación propia, desde su ficha. */}
+        <Stack.Screen name="publicaciones/[id]/editar" options={{ presentation: 'card' }} />
         {/* GUI-27. Bandeja de quien publicó la mascota (HU-7.4/7.5) — refugio o adoptante
             particular, no una tab fija: se entra desde el Perfil y desde el bloqueo al
             eliminar una mascota con solicitudes abiertas. */}
@@ -87,6 +106,8 @@ function RootNavigator() {
         <Stack.Screen name="solicitudes/[id]" options={{ presentation: 'card' }} />
         <Stack.Screen name="perfil/editar" options={{ presentation: 'card' }} />
         <Stack.Screen name="perfil/password" options={{ presentation: 'card' }} />
+        {/* Spec 017. Datos del refugio: se entra desde el ícono de Mi Perfil en la vista de refugio. */}
+        <Stack.Screen name="perfil/refugio" options={{ presentation: 'card' }} />
         {/* HU-9.1/HU-9.2. Fuera de las tabs: se entra desde Perfil y el back vuelve al
             origen real, igual que Favoritos. */}
         <Stack.Screen name="seguimientos/index" />
@@ -95,11 +116,20 @@ function RootNavigator() {
           name="seguimientos/[solicitudId]/actualizacion"
           options={{ presentation: 'card' }}
         />
+        {/* Spec 011 §6.11: el refugio le escribe una pregunta propia al adoptante. */}
+        <Stack.Screen
+          name="seguimientos/[solicitudId]/pregunta"
+          options={{ presentation: 'card' }}
+        />
         {/* HU-9.3. Ruta propia y no hija del expediente: se puede abrir suelta. */}
         <Stack.Screen name="seguimientos/actualizaciones/[seguimientoId]" />
         {/* GUI-14. Fuera de las tabs para que la conversación ocupe la pantalla entera y el
             back vuelva al listado. Sólo recibe el chatId: el contacto lo trae la API. */}
         <Stack.Screen name="chats/[chatId]" options={{ presentation: 'card' }} />
+        {/* Spec 023 (GUI-26). Perfil público de otra persona o de un refugio: se entra desde
+            «Publicado por» de la ficha y desde la cabecera del chat. */}
+        <Stack.Screen name="perfiles/usuario/[id]" options={{ presentation: 'card' }} />
+        <Stack.Screen name="perfiles/refugio/[id]" options={{ presentation: 'card' }} />
         <Stack.Screen name="+not-found" />
       </Stack.Protected>
     </Stack>

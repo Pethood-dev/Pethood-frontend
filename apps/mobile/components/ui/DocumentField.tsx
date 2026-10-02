@@ -11,6 +11,8 @@ import { ActivityIndicator, Alert, Image, Pressable, Text, View } from 'react-na
 import { LIMITES } from '@/shared/validation/limits';
 import { useState } from 'react';
 
+import { EditorFotoModal } from './EditorFotoModal';
+
 export interface DocumentoElegido {
   uri: string;
   nombre: string;
@@ -26,6 +28,8 @@ interface DocumentFieldProps {
   urlExistente?: string | null;
   nombreExistente?: string | null;
   error?: string;
+  /** Letra, ícono y caja más grandes, para el registro médico nuevo. */
+  grande?: boolean;
 }
 
 const MENSAJE_INVALIDO = 'No es posible subir ese documento, revise el formato o tamaño';
@@ -56,8 +60,11 @@ export function DocumentField({
   urlExistente,
   nombreExistente,
   error,
+  grande = false,
 }: DocumentFieldProps) {
   const [cargando, setCargando] = useState(false);
+  /** Imagen recién elegida, en revisión en el editor de recorte/rotación antes de confirmarse. */
+  const [pendiente, setPendiente] = useState<{ uri: string; tipo: string } | null>(null);
 
   const abrirGaleria = async (): Promise<void> => {
     setCargando(true);
@@ -77,12 +84,8 @@ export function DocumentField({
         return;
       }
 
-      onChange({
-        uri: asset.uri,
-        nombre: `comprobante.${EXTENSION_POR_TIPO[tipo] ?? 'jpg'}`,
-        tipo,
-        esImagen: true,
-      });
+      // No se confirma todavía: primero pasa por el editor, donde se puede recortar y girar.
+      setPendiente({ uri: asset.uri, tipo });
     } finally {
       setCargando(false);
     }
@@ -112,12 +115,7 @@ export function DocumentField({
         return;
       }
 
-      onChange({
-        uri: asset.uri,
-        nombre: `comprobante.${EXTENSION_POR_TIPO[tipo] ?? 'jpg'}`,
-        tipo,
-        esImagen: true,
-      });
+      setPendiente({ uri: asset.uri, tipo });
     } finally {
       setCargando(false);
     }
@@ -141,12 +139,18 @@ export function DocumentField({
         return;
       }
 
-      onChange({
-        uri: asset.uri,
-        nombre: asset.name || `comprobante.${EXTENSION_POR_TIPO[tipo] ?? 'pdf'}`,
-        tipo,
-        esImagen: tipo !== 'application/pdf',
-      });
+      // El pdf no pasa por el editor: recortar/rotar sólo tiene sentido para una imagen.
+      if (tipo === 'application/pdf') {
+        onChange({
+          uri: asset.uri,
+          nombre: asset.name || `comprobante.${EXTENSION_POR_TIPO[tipo] ?? 'pdf'}`,
+          tipo,
+          esImagen: false,
+        });
+        return;
+      }
+
+      setPendiente({ uri: asset.uri, tipo });
     } finally {
       setCargando(false);
     }
@@ -167,7 +171,11 @@ export function DocumentField({
 
   return (
     <View>
-      <Text className="mb-1.5 text-[9px] font-semibold uppercase tracking-wide text-gray-400">
+      <Text
+        className={`mb-1.5 font-semibold uppercase tracking-wide text-gray-400 ${
+          grande ? 'text-[13px]' : 'text-[9px]'
+        }`}
+      >
         Documento
       </Text>
 
@@ -176,26 +184,33 @@ export function DocumentField({
         accessibilityLabel="Adjuntar comprobante médico"
         onPress={elegir}
         disabled={cargando}
-        className={`flex-row items-center gap-2.5 rounded-xl border-[1.5px] border-dashed px-3 py-2.5 ${
-          error ? 'border-red-300 bg-red-50' : 'border-gray-300 bg-gray-50'
-        }`}
+        className={`flex-row items-center rounded-xl border-[1.5px] border-dashed ${
+          grande ? 'gap-3 px-4 py-3.5' : 'gap-2.5 px-3 py-2.5'
+        } ${error ? 'border-red-300 bg-red-50' : 'border-gray-300 bg-gray-50'}`}
       >
         {cargando ? (
           <ActivityIndicator color="#FF9D5C" />
         ) : hayArchivo ? (
           documento?.esImagen ? (
-            <Image source={{ uri: documento.uri }} className="h-8 w-8 rounded-lg" />
+            <Image
+              source={{ uri: documento.uri }}
+              className={grande ? 'h-11 w-11 rounded-lg' : 'h-8 w-8 rounded-lg'}
+            />
           ) : (
-            <View className="h-8 w-8 items-center justify-center rounded-lg bg-pethood-orange">
-              <Ionicons name="document-text" size={16} color="#FFFFFF" />
+            <View
+              className={`items-center justify-center rounded-lg bg-pethood-orange ${
+                grande ? 'h-11 w-11' : 'h-8 w-8'
+              }`}
+            >
+              <Ionicons name="document-text" size={grande ? 20 : 16} color="#FFFFFF" />
             </View>
           )
         ) : (
-          <Ionicons name="cloud-upload-outline" size={18} color="#9CA3AF" />
+          <Ionicons name="cloud-upload-outline" size={grande ? 23 : 18} color="#9CA3AF" />
         )}
 
         <Text
-          className={`flex-1 text-sm ${hayArchivo ? 'text-gray-800' : 'text-gray-400'}`}
+          className={`flex-1 ${grande ? 'text-base' : 'text-sm'} ${hayArchivo ? 'text-gray-800' : 'text-gray-400'}`}
           numberOfLines={1}
         >
           {nombreVisible ?? 'Adjuntar archivo...'}
@@ -210,12 +225,35 @@ export function DocumentField({
             onPress={() => onChange(null)}
             hitSlop={8}
           >
-            <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+            <Ionicons name="close-circle" size={grande ? 21 : 18} color="#9CA3AF" />
           </Pressable>
         ) : null}
       </Pressable>
 
-      {error ? <Text className="mt-1 text-xs text-red-500">{error}</Text> : null}
+      {error ? (
+        <Text className={`mt-1 text-red-500 ${grande ? 'text-sm' : 'text-xs'}`}>{error}</Text>
+      ) : null}
+
+      <EditorFotoModal
+        visible={pendiente !== null}
+        uri={pendiente?.uri ?? ''}
+        onCancelar={() => setPendiente(null)}
+        onConfirmar={(resultado) => {
+          // Si el editor no tocó nada (sin girar ni recortar) devuelve la misma uri de
+          // entrada y conserva el formato original; si reescribió el archivo, siempre
+          // sale como jpeg.
+          const seReescribio = resultado.uri !== pendiente!.uri;
+          const tipoFinal = seReescribio ? 'image/jpeg' : pendiente!.tipo;
+
+          onChange({
+            uri: resultado.uri,
+            nombre: `comprobante.${EXTENSION_POR_TIPO[tipoFinal] ?? 'jpg'}`,
+            tipo: tipoFinal,
+            esImagen: true,
+          });
+          setPendiente(null);
+        }}
+      />
     </View>
   );
 }

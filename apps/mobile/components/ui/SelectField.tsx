@@ -1,8 +1,9 @@
 /** Selector cerrado: abre una hoja con las opciones y no admite texto libre. */
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
-import { FlatList, Modal, Pressable, Text } from 'react-native';
+import { useMemo, useState } from 'react';
+import { FlatList, Modal, Pressable, Text, TextInput, View } from 'react-native';
 import { claseValor, FormField } from './FormField';
+import { usePaletaFormulario } from './FormCard';
 import { PALETA } from '@/constants/theme';
 
 export interface OpcionSelect<T> {
@@ -23,6 +24,20 @@ interface SelectFieldProps<T> {
   /** Un selector dependiente queda inhabilitado hasta que se elige el campo del que depende. */
   deshabilitado?: boolean;
   textoDeshabilitado?: string;
+  /** Letra más grande de etiqueta y valor, para el alta y la publicación de mascota. */
+  grande?: boolean;
+  /** Lapicito junto a la etiqueta, para marcar que el campo se puede editar (perfil). */
+  lapiz?: boolean;
+  /**
+   * Fuerza la paleta Organic cuando el campo va suelto, sin una `FormCard organic` que lo
+   * envuelva (el registro, que usa `CustomInput organic`).
+   */
+  organic?: boolean;
+  /**
+   * Agrega un buscador arriba de la lista. Necesario con listas largas como las localidades
+   * (Buenos Aires tiene cientos), donde scrollear a mano no es viable.
+   */
+  buscable?: boolean;
 }
 
 export function SelectField<T extends string | number>({
@@ -36,19 +51,33 @@ export function SelectField<T extends string | number>({
   onBlur,
   deshabilitado = false,
   textoDeshabilitado,
+  grande,
+  lapiz,
+  organic = false,
+  buscable = false,
 }: SelectFieldProps<T>) {
   const [abierto, setAbierto] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
+  const paletaContexto = usePaletaFormulario();
+  const paleta = organic ? 'organic' : paletaContexto;
 
   const seleccionada = opciones.find((opcion) => opcion.valor === valor);
   const textoVacio = deshabilitado && textoDeshabilitado ? textoDeshabilitado : placeholder;
 
+  const visibles = useMemo(() => {
+    if (!buscable || !busqueda.trim()) return opciones;
+    const termino = busqueda.trim().toLocaleLowerCase('es-AR');
+    return opciones.filter((opcion) => opcion.etiqueta.toLocaleLowerCase('es-AR').includes(termino));
+  }, [buscable, busqueda, opciones]);
+
   const cerrar = (): void => {
     setAbierto(false);
+    setBusqueda('');
     onBlur?.();
   };
 
   return (
-    <FormField label={label} obligatorio={obligatorio} error={error}>
+    <FormField label={label} obligatorio={obligatorio} error={error} grande={grande} lapiz={lapiz} paleta={paleta}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`${label}. ${seleccionada?.etiqueta ?? 'sin elegir'}`}
@@ -58,12 +87,16 @@ export function SelectField<T extends string | number>({
         className="flex-row items-center"
       >
         <Text
-          className={`flex-1 ${claseValor(Boolean(error), !seleccionada)}`}
+          className={`flex-1 ${claseValor(Boolean(error), !seleccionada, grande, paleta)}`}
           numberOfLines={1}
         >
           {seleccionada?.etiqueta ?? textoVacio}
         </Text>
-        <Ionicons name="chevron-down" size={18} color={deshabilitado ? PALETA.gris[300] : PALETA.gris[400]} />
+        <Ionicons
+          name="chevron-down"
+          size={grande ? 22 : 18}
+          color={deshabilitado ? PALETA.gris[300] : PALETA.gris[400]}
+        />
       </Pressable>
 
       <Modal
@@ -72,24 +105,52 @@ export function SelectField<T extends string | number>({
         animationType="fade"
         onRequestClose={cerrar}
       >
-        <Pressable
-          className="flex-1 justify-end bg-black/40"
-          onPress={cerrar}
-          accessibilityRole="button"
-          accessibilityLabel="Cerrar"
-        >
+        {/* Fondo y hoja son hermanos, no uno dentro del otro: un Pressable anidado en otro
+            en web (React 19) dispara su onPress al renderizar y tira el handler de cerrar. */}
+        <View className="flex-1 justify-end bg-black/40">
           <Pressable
-            className="max-h-[60%] rounded-t-3xl bg-white pb-8 pt-5"
-            onPress={() => undefined}
-          >
-            <Text className="mb-3 px-6 text-lg font-bold text-gray-900">{label}</Text>
+            accessibilityRole="button"
+            accessibilityLabel="Cerrar"
+            onPress={cerrar}
+            className="absolute inset-0"
+          />
+
+          <View className="max-h-[60%] rounded-t-3xl bg-white pb-8 pt-5">
+            <Text className={`mb-3 px-6 font-bold text-gray-900 ${grande ? 'text-xl' : 'text-lg'}`}>
+              {label}
+            </Text>
+
+            {buscable ? (
+              <View className="mx-6 mb-3 flex-row items-center gap-2 rounded-2xl border border-gray-200 bg-gray-50 px-3">
+                <Ionicons name="search" size={18} color={PALETA.gris[400]} />
+                <TextInput
+                  value={busqueda}
+                  onChangeText={setBusqueda}
+                  placeholder="Buscar…"
+                  placeholderTextColor={PALETA.gris[400]}
+                  autoCorrect={false}
+                  className="flex-1 py-3 text-base text-gray-900"
+                />
+                {busqueda ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Limpiar búsqueda"
+                    onPress={() => setBusqueda('')}
+                    hitSlop={8}
+                  >
+                    <Ionicons name="close-circle" size={18} color={PALETA.gris[400]} />
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : null}
 
             <FlatList
-              data={opciones}
+              data={visibles}
               keyExtractor={(opcion) => String(opcion.valor)}
+              keyboardShouldPersistTaps="handled"
               ListEmptyComponent={
                 <Text className="px-6 py-4 text-base text-gray-500">
-                  No hay opciones disponibles
+                  {buscable && busqueda ? 'Sin resultados' : 'No hay opciones disponibles'}
                 </Text>
               }
               renderItem={({ item }) => {
@@ -102,21 +163,24 @@ export function SelectField<T extends string | number>({
                     onPress={() => {
                       onChange(item.valor);
                       setAbierto(false);
+                      setBusqueda('');
                     }}
-                    className="flex-row items-center justify-between px-6 py-4 active:bg-gray-50"
+                    className={`flex-row items-center justify-between px-6 active:bg-gray-50 ${grande ? 'py-5' : 'py-4'}`}
                   >
                     <Text
-                      className={`text-base ${activa ? 'font-semibold text-pethood-orange' : 'text-gray-800'}`}
+                      className={`${grande ? 'text-xl' : 'text-base'} ${activa ? 'font-semibold text-pethood-orange' : 'text-gray-800'}`}
                     >
                       {item.etiqueta}
                     </Text>
-                    {activa ? <Ionicons name="checkmark" size={20} color={PALETA.pethood.naranja} /> : null}
+                    {activa ? (
+                      <Ionicons name="checkmark" size={grande ? 24 : 20} color={PALETA.pethood.naranja} />
+                    ) : null}
                   </Pressable>
                 );
               }}
             />
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
     </FormField>
   );

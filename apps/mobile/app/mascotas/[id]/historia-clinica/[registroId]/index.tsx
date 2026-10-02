@@ -4,16 +4,19 @@
  * HU-8.4 (eliminar) es una baja lógica simple, sin alta de reemplazo — a diferencia de
  * "Modificar" (HU-8.3), que da de baja y crea un registro nuevo.
  */
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import * as WebBrowser from 'expo-web-browser';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EstadoCargando, EstadoError } from '@/components/feedback/EstadosPantalla';
 import { useToast } from '@/components/feedback/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { PressableAnimado } from '@/components/ui/PressableAnimado';
+import { estiloDeVacuna } from '@/constants/Vacunas';
+import { PALETA } from '@/constants/theme';
 import { useSesion } from '@/hooks/useSesion';
 import { ApiError, urlAbsoluta } from '@/services/api';
 import {
@@ -30,10 +33,10 @@ function nombreDocumento(url: string): string {
 function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   return (
     <View className="flex-1">
-      <Text className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">
+      <Text className="font-cuerpo-semi text-[11px] uppercase tracking-wide text-organic-neutral-500">
         {etiqueta}
       </Text>
-      <Text className="mt-1 text-[15px] text-gray-800">{valor}</Text>
+      <Text className="mt-1 font-cuerpo text-lg text-organic-neutral-900">{valor}</Text>
     </View>
   );
 }
@@ -118,7 +121,7 @@ export default function DetalleHistoriaClinicaScreen() {
 
   if (cargando) {
     return (
-      <View className="flex-1 bg-white">
+      <View className="flex-1 bg-organic-neutral-100">
         <EstadoCargando />
       </View>
     );
@@ -126,7 +129,7 @@ export default function DetalleHistoriaClinicaScreen() {
 
   if (error || !registro) {
     return (
-      <View className="flex-1 bg-white">
+      <View className="flex-1 bg-organic-neutral-100">
         <SafeAreaView className="flex-1" edges={['top']}>
           <EstadoError
             mensaje={error ?? 'No encontramos el registro.'}
@@ -140,54 +143,57 @@ export default function DetalleHistoriaClinicaScreen() {
 
   const fechaVisita = parsearFecha(registro.fechaVisita);
   const fechaProxima = parsearFecha(registro.fechaProxima);
+  const estiloVacuna = registro.tipoVacuna ? estiloDeVacuna(registro.tipoVacuna) : null;
 
   return (
-    <View className="flex-1 bg-white">
+    <View className="flex-1 bg-organic-neutral-100">
       <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="bg-pethood-orange px-4 pb-4 pt-2">
+        <View className="bg-organic-accent-600 px-4 pb-5 pt-3">
           <View className="flex-row items-center gap-3">
-            <Pressable
+            <PressableAnimado
               accessibilityRole="button"
               accessibilityLabel="Volver"
               onPress={() => router.back()}
               hitSlop={8}
-              className="h-9 w-9 items-center justify-center rounded-full bg-white/20 active:opacity-80"
+              className="h-11 w-11 items-center justify-center rounded-full bg-white/20"
             >
-              <Ionicons name="arrow-back" size={18} color="#FFFFFF" />
-            </Pressable>
+              <Ionicons name="arrow-back" size={22} color={PALETA.blanco} />
+            </PressableAnimado>
 
             <View className="flex-1">
-              <Text className="text-lg font-bold text-white" numberOfLines={1}>
+              <Text className="font-titulo text-2xl text-white" numberOfLines={1}>
                 {registro.titulo}
               </Text>
-              <Text className="text-xs text-white/80">Registro #{registro.id}</Text>
+              <Text className="font-cuerpo text-sm text-white/80">Registro #{registro.id}</Text>
             </View>
           </View>
         </View>
 
         <ScrollView className="flex-1" contentContainerClassName="p-4 pb-8">
-          <View className="overflow-hidden rounded-2xl border border-gray-100">
-            <View className="border-b border-gray-100 p-3.5">
+          <View className="overflow-hidden rounded-[22px] border border-organic-neutral-200 bg-organic-neutral-100">
+            <View className="border-b border-organic-neutral-200 p-4">
               <Dato
                 etiqueta="Fecha visita"
                 valor={fechaVisita ? aFechaVisible(fechaVisita) : '—'}
               />
             </View>
 
-            <View className="flex-row gap-3 border-b border-gray-100 p-3.5">
+            <View className="flex-row gap-3 border-b border-organic-neutral-200 p-4">
               <View className="flex-1">
-                <Text className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">
+                <Text className="font-cuerpo-semi text-[11px] uppercase tracking-wide text-organic-neutral-500">
                   Requiere revisión
                 </Text>
-                <View className="mt-1.5 flex-row items-center gap-1.5">
+                <View className="mt-2 flex-row items-center gap-2">
                   <Ionicons
                     name={registro.requiereRevision ? 'checkmark-circle' : 'close-circle-outline'}
-                    size={16}
-                    color={registro.requiereRevision ? '#3f7a43' : '#9CA3AF'}
+                    size={20}
+                    color={registro.requiereRevision ? PALETA.accent[700] : PALETA.neutral[400]}
                   />
                   <Text
-                    className={`text-sm font-semibold ${
-                      registro.requiereRevision ? 'text-emerald-700' : 'text-gray-500'
+                    className={`font-cuerpo-semi text-base ${
+                      registro.requiereRevision
+                        ? 'text-organic-accent-700'
+                        : 'text-organic-neutral-500'
                     }`}
                   >
                     {registro.requiereRevision ? 'Sí' : 'No'}
@@ -201,63 +207,85 @@ export default function DetalleHistoriaClinicaScreen() {
               />
             </View>
 
-            {registro.vacunacion ? (
-              <View className="flex-row items-center gap-1.5 border-b border-gray-100 bg-orange-50/60 px-3.5 py-2.5">
-                <Ionicons name="shield-checkmark-outline" size={14} color="#E0742E" />
-                <Text className="text-xs font-semibold text-pethood-orange">
-                  Vacuna — visible en la ficha de la mascota
+            {estiloVacuna ? (
+              <View
+                className="flex-row items-center gap-2 border-b border-organic-neutral-200 px-4 py-3"
+                style={{ backgroundColor: estiloVacuna.fondo }}
+              >
+                <MaterialCommunityIcons name="needle" size={18} color={estiloVacuna.tinta} />
+                <Text
+                  className="flex-1 font-cuerpo-semi text-sm"
+                  style={{ color: estiloVacuna.tinta }}
+                >
+                  Vacuna — visible como medalla en la ficha de la mascota
+                </Text>
+              </View>
+            ) : registro.vacunacion ? (
+              // Vacuna cargada antes de los tipos de vacuna: no tiene medalla.
+              <View className="flex-row items-center gap-2 border-b border-organic-neutral-200 bg-organic-accent-100 px-4 py-3">
+                <Ionicons name="shield-checkmark-outline" size={18} color={PALETA.accent[700]} />
+                <Text className="flex-1 font-cuerpo-semi text-sm text-organic-accent-700">
+                  Vacuna
                 </Text>
               </View>
             ) : null}
 
-            <View className="border-b border-gray-100 p-3.5">
-              <Text className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">
+            <View className="border-b border-organic-neutral-200 p-4">
+              <Text className="font-cuerpo-semi text-[11px] uppercase tracking-wide text-organic-neutral-500">
                 Descripción
               </Text>
-              <Text className="mt-1 text-[13px] leading-5 text-gray-700">
+              <Text className="mt-1.5 font-cuerpo text-base leading-6 text-organic-neutral-700">
                 {registro.descripcion}
               </Text>
             </View>
 
-            <View className="p-3.5">
-              <Text className="mb-1.5 text-[9px] font-semibold uppercase tracking-wide text-gray-400">
+            <View className="p-4">
+              <Text className="mb-2 font-cuerpo-semi text-[11px] uppercase tracking-wide text-organic-neutral-500">
                 Documentos
               </Text>
 
               {registro.documentoUrl ? (
-                <Pressable
+                <PressableAnimado
                   accessibilityRole="button"
                   accessibilityLabel="Ver comprobante médico"
                   onPress={() => void abrirDocumento()}
-                  className="flex-row items-center gap-2.5 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5 active:opacity-80"
+                  escala={0.97}
+                  className="flex-row items-center gap-3 rounded-2xl border border-organic-neutral-300 bg-organic-neutral-100 px-3.5 py-3"
                 >
-                  <View className="h-8 w-8 items-center justify-center rounded-lg bg-pethood-orange">
-                    <Ionicons name="document-text" size={16} color="#FFFFFF" />
+                  <View className="h-11 w-11 items-center justify-center rounded-xl bg-organic-accent-600">
+                    <Ionicons name="document-text" size={20} color={PALETA.blanco} />
                   </View>
-                  <Text className="flex-1 text-xs font-semibold text-gray-800" numberOfLines={1}>
+                  <Text
+                    className="flex-1 font-cuerpo-semi text-sm text-organic-neutral-900"
+                    numberOfLines={1}
+                  >
                     {nombreDocumento(registro.documentoUrl)}
                   </Text>
-                  <Ionicons name="chevron-forward" size={14} color="#C3B69E" />
-                </Pressable>
+                  <Ionicons name="chevron-forward" size={18} color={PALETA.neutral[400]} />
+                </PressableAnimado>
               ) : (
-                <Text className="text-xs text-gray-400">Sin documentos adjuntos</Text>
+                <Text className="font-cuerpo text-sm text-organic-neutral-400">
+                  Sin documentos adjuntos
+                </Text>
               )}
             </View>
           </View>
 
           {puedeGestionar ? (
-            <View className="mt-5 flex-row gap-2.5">
-              <Pressable
+            <View className="mt-6 flex-row gap-3">
+              <PressableAnimado
                 accessibilityRole="button"
                 accessibilityLabel="Eliminar registro"
                 onPress={() => setConfirmarEliminar(true)}
-                className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-red-50 py-3.5 active:opacity-80"
+                escala={0.96}
+                className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl py-4"
+                style={{ backgroundColor: PALETA.calido.amarilloClaro }}
               >
-                <Ionicons name="trash-outline" size={16} color="#C0392B" />
-                <Text className="text-base font-semibold text-red-700">Eliminar</Text>
-              </Pressable>
+                <Ionicons name="trash-outline" size={20} color={PALETA.accent[800]} />
+                <Text className="font-cuerpo-semi text-lg text-organic-accent-800">Eliminar</Text>
+              </PressableAnimado>
 
-              <Pressable
+              <PressableAnimado
                 accessibilityRole="button"
                 accessibilityLabel="Modificar datos"
                 onPress={() =>
@@ -266,11 +294,19 @@ export default function DetalleHistoriaClinicaScreen() {
                     params: { id: mascotaId, registroId: registro.id },
                   })
                 }
-                className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-pethood-orange py-3.5 active:opacity-90"
+                escala={0.96}
+                className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-organic-accent-600 py-4"
+                style={{
+                  shadowColor: PALETA.accent[800],
+                  shadowOpacity: 0.3,
+                  shadowRadius: 10,
+                  shadowOffset: { width: 0, height: 5 },
+                  elevation: 6,
+                }}
               >
-                <Ionicons name="pencil" size={16} color="#FFFFFF" />
-                <Text className="text-base font-semibold text-white">Modificar</Text>
-              </Pressable>
+                <Ionicons name="pencil" size={20} color={PALETA.blanco} />
+                <Text className="font-cuerpo-semi text-lg text-white">Modificar</Text>
+              </PressableAnimado>
             </View>
           ) : null}
         </ScrollView>

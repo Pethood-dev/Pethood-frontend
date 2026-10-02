@@ -2,21 +2,17 @@ import { Ionicons } from '@expo/vector-icons';
 import type { ImagePickerAsset } from 'expo-image-picker';
 import { Link, router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import {
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { Image, Platform, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CustomButton } from '@/components/CustomButton';
+import { CustomButton, FORMA_BOTON_ORGANIC_PRINCIPAL } from '@/components/CustomButton';
 import { CustomInput } from '@/components/CustomInput';
 import { FechaNacimientoPicker } from '@/components/FechaNacimientoPicker';
 import { useToast } from '@/components/feedback/Toast';
+import { BotonCircular } from '@/components/ui/BotonCircular';
+import { FormularioConTeclado } from '@/components/ui/FormularioConTeclado';
+import { SelectField } from '@/components/ui/SelectField';
+import { PROVINCIAS, localidadesDe } from '@/constants/Provincias';
 import { PALETA } from '@/constants/theme';
 import {
   enmascararFechaNacimiento,
@@ -35,6 +31,7 @@ import type { ArchivoImagenLocal } from '@/lib/formDataImagen';
 import {
   sanitizarNombrePersona,
   sanitizarTelefono,
+  validarCalleAltura,
   validarConfirmacionPassword,
   validarEmail,
   validarNombrePersona,
@@ -43,6 +40,7 @@ import {
 } from '@/lib/validacionRegistro';
 import { ApiError } from '@/services/api';
 import { registro } from '@/services/auth';
+import { LIMITES } from '@/shared/validation/limits';
 
 interface RegisterForm {
   firstName: string;
@@ -52,6 +50,9 @@ interface RegisterForm {
   birthDate: string;
   password: string;
   confirmPassword: string;
+  provincia: string;
+  localidad: string;
+  calleAltura: string;
 }
 
 interface RegisterErrors {
@@ -62,9 +63,14 @@ interface RegisterErrors {
   birthDate?: string;
   password?: string;
   confirmPassword?: string;
+  calleAltura?: string;
   foto?: string;
 }
 
+/**
+ * GUI-02 Crear cuenta — HU-1.1 y HU-1.5 (foto opcional). Diseño del artboard 02 (paleta
+ * Organic): encabezado crema fijo con la flecha redonda, campos crema y botones grandes.
+ */
 export default function RegisterScreen() {
   const toast = useToast();
   const [form, setForm] = useState<RegisterForm>({
@@ -75,6 +81,9 @@ export default function RegisterScreen() {
     birthDate: '',
     password: '',
     confirmPassword: '',
+    provincia: '',
+    localidad: '',
+    calleAltura: '',
   });
   const [foto, setFoto] = useState<ArchivoImagenLocal | undefined>();
   const [showPassword, setShowPassword] = useState(false);
@@ -128,6 +137,20 @@ export default function RegisterScreen() {
     const formateado = sanitizarTelefono(value);
     setForm((prev) => ({ ...prev, phone: formateado }));
     setFieldError('phone', formateado ? validarTelefono(formateado) : undefined);
+  };
+
+  // Al cambiar de provincia se limpia la localidad: las del listado anterior ya no aplican.
+  const handleProvinciaChange = (value: string): void => {
+    setForm((prev) => ({ ...prev, provincia: value, localidad: '' }));
+  };
+
+  const handleLocalidadChange = (value: string): void => {
+    setForm((prev) => ({ ...prev, localidad: value }));
+  };
+
+  const handleCalleAlturaChange = (value: string): void => {
+    setForm((prev) => ({ ...prev, calleAltura: value }));
+    setFieldError('calleAltura', value.trim() ? validarCalleAltura(value) : undefined);
   };
 
   const handleBirthDateChange = (value: string): void => {
@@ -207,6 +230,7 @@ export default function RegisterScreen() {
       birthDate: validarFechaNacimiento(form.birthDate),
       password: validarPassword(form.password),
       confirmPassword: validarConfirmacionPassword(form.password, form.confirmPassword),
+      calleAltura: validarCalleAltura(form.calleAltura),
     };
 
     setErrors((prev) => ({ ...nextErrors, foto: prev.foto }));
@@ -232,6 +256,9 @@ export default function RegisterScreen() {
           password: form.password,
           fechaNacimiento: form.birthDate.trim(),
           telefono: form.phone.trim(),
+          provincia: form.provincia.trim(),
+          localidad: form.localidad.trim(),
+          calleAltura: form.calleAltura.trim(),
         },
         foto,
       );
@@ -249,229 +276,284 @@ export default function RegisterScreen() {
   };
 
   return (
-    <View className="flex-1 bg-pethood-beige">
+    <View className="flex-1 bg-organic-bg">
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          className="flex-1"
+        <View className="flex-row items-center gap-3 border-b border-organic-neutral-300 bg-organic-neutral-100 px-[19px] py-[13px]">
+          <BotonCircular
+            icono="chevron-back"
+            etiqueta="Volver"
+            variante="neutro"
+            onPress={() => router.back()}
+          />
+          <Text className="font-titulo text-[24px] leading-[29px] text-organic-accent-600">
+            Crear cuenta
+          </Text>
+        </View>
+
+        <FormularioConTeclado
+          showsVerticalScrollIndicator={false}
+          contentContainerClassName="flex-grow px-6 pb-8 pt-5"
         >
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            contentContainerClassName="flex-grow px-6 pb-8 pt-4"
-          >
-            <View className="mb-6 flex-row items-center">
-              <Pressable
-                onPress={() => router.back()}
-                className="mr-4 h-10 w-10 items-center justify-center rounded-full bg-white"
-                accessibilityRole="button"
-                accessibilityLabel="Volver"
-              >
-                <Ionicons name="arrow-back" size={22} color={PALETA.gris[700]} />
-              </Pressable>
-              <Text className="text-2xl font-bold text-pethood-orange">Crear cuenta</Text>
-            </View>
+          <Text className="mb-1.5 font-cuerpo text-[17px] text-organic-neutral-600">
+            Completá tus datos para unirte a PetHood
+          </Text>
+          <Text className="mb-6 font-cuerpo text-[15px] text-organic-neutral-500">
+            Los campos con <Text className="text-organic-accent-600">*</Text> son obligatorios
+          </Text>
 
-            <Text className="mb-2 text-base text-gray-600">
-              Completá tus datos para unirte a PetHood
-            </Text>
-            <Text className="mb-6 text-sm text-gray-500">
-              Los campos con <Text className="font-semibold text-pethood-orange">*</Text> son
-              obligatorios
-            </Text>
-
-            <View className="mb-6 items-center">
-              <Pressable
-                onPress={abrirSelectorFoto}
-                accessibilityRole="button"
-                accessibilityLabel="Elegir foto de perfil"
-                className="relative"
-              >
-                {foto ? (
-                  <View className="h-28 w-28 overflow-hidden rounded-full">
-                    <Image source={{ uri: foto.uri }} className="h-28 w-28" />
-                  </View>
-                ) : (
-                  <View className="h-28 w-28 items-center justify-center rounded-full border border-gray-200 bg-white">
-                    <Ionicons name="camera-outline" size={36} color={PALETA.pethood.naranja} />
-                  </View>
-                )}
-                <View className="absolute bottom-0 right-0 h-8 w-8 items-center justify-center rounded-full bg-pethood-orange">
-                  <Ionicons name={foto ? 'pencil' : 'add'} size={16} color={PALETA.blanco} />
+          <View className="mb-6 items-center">
+            <Pressable
+              onPress={abrirSelectorFoto}
+              accessibilityRole="button"
+              accessibilityLabel="Elegir foto de perfil"
+              className="relative"
+            >
+              {foto ? (
+                <View className="h-28 w-28 overflow-hidden rounded-full">
+                  <Image source={{ uri: foto.uri }} className="h-28 w-28" />
                 </View>
+              ) : (
+                <View className="h-28 w-28 items-center justify-center rounded-full border border-organic-neutral-300 bg-organic-neutral-100">
+                  <Ionicons name="camera-outline" size={36} color={PALETA.accent[600]} />
+                </View>
+              )}
+              <View className="absolute bottom-0 right-0 h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-organic-accent-600">
+                <Ionicons name={foto ? 'pencil' : 'add'} size={16} color={PALETA.blanco} />
+              </View>
+            </Pressable>
+            <Text className="mt-2 font-cuerpo text-[15px] text-organic-neutral-600">
+              Foto de perfil (opcional)
+            </Text>
+            {foto && Platform.OS === 'web' ? (
+              <Pressable
+                onPress={() => setFoto(undefined)}
+                accessibilityRole="button"
+                accessibilityLabel="Quitar foto de perfil"
+                className="mt-1"
+              >
+                <Text className="font-cuerpo-semi text-[15px] text-red-500">Quitar foto</Text>
               </Pressable>
-              <Text className="mt-2 text-sm text-gray-500">Foto de perfil (opcional)</Text>
-              {foto && Platform.OS === 'web' ? (
-                <Pressable
-                  onPress={() => setFoto(undefined)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Quitar foto de perfil"
-                  className="mt-1"
-                >
-                  <Text className="text-sm font-semibold text-red-500">Quitar foto</Text>
-                </Pressable>
-              ) : null}
-              {errors.foto ? (
-                <Text className="mt-1.5 text-sm text-red-500">{errors.foto}</Text>
-              ) : null}
-            </View>
+            ) : null}
+            {errors.foto ? (
+              <Text className="mt-1.5 font-cuerpo text-[15px] text-red-500">{errors.foto}</Text>
+            ) : null}
+          </View>
 
-            <View className="flex-row gap-3">
-              <View className="flex-1">
-                <CustomInput
-                  label="Nombre"
-                  placeholder="Tu nombre"
-                  value={form.firstName}
-                  onChangeText={handleNombreChange}
-                  onBlur={() =>
-                    setFieldError('firstName', validarNombrePersona(form.firstName, 'nombre'))
-                  }
-                  error={errors.firstName}
-                  autoCapitalize="words"
-                  autoCorrect={false}
-                  autoComplete="given-name"
-                  textContentType="givenName"
-                  maxLength={50}
-                  required
-                />
-              </View>
-              <View className="flex-1">
-                <CustomInput
-                  label="Apellido"
-                  placeholder="Tu apellido"
-                  value={form.lastName}
-                  onChangeText={handleApellidoChange}
-                  onBlur={() =>
-                    setFieldError('lastName', validarNombrePersona(form.lastName, 'apellido'))
-                  }
-                  error={errors.lastName}
-                  autoCapitalize="words"
-                  autoCorrect={false}
-                  autoComplete="family-name"
-                  textContentType="familyName"
-                  maxLength={50}
-                  required
-                />
-              </View>
-            </View>
-
-            <CustomInput
-              label="Correo electrónico"
-              placeholder="tu@correo.com"
-              value={form.email}
-              onChangeText={handleEmailChange}
-              onBlur={() => setFieldError('email', validarEmail(form.email))}
-              error={errors.email}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              textContentType="emailAddress"
-              required
-            />
-
-            <CustomInput
-              label="Teléfono"
-              placeholder="Ej. 2615123456"
-              value={form.phone}
-              onChangeText={handlePhoneChange}
-              onBlur={() => setFieldError('phone', validarTelefono(form.phone))}
-              error={errors.phone}
-              keyboardType="phone-pad"
-              autoComplete="tel"
-              textContentType="telephoneNumber"
-              maxLength={16}
-              required
-            />
-
-            <CustomInput
-              label="Fecha de nacimiento"
-              placeholder="DD/MM/AAAA"
-              value={form.birthDate}
-              onChangeText={handleBirthDateChange}
-              onBlur={() => setFieldError('birthDate', validarFechaNacimiento(form.birthDate))}
-              error={errors.birthDate}
-              keyboardType="number-pad"
-              inputMode="numeric"
-              maxLength={10}
-              autoCorrect={false}
-              rightIcon={<Ionicons name="calendar-outline" size={22} color={PALETA.pethood.naranja} />}
-              onRightIconPress={abrirCalendario}
-              required
-            />
-
-            <CustomInput
-              label="Contraseña"
-              placeholder="Mínimo 8 caracteres"
-              value={form.password}
-              onChangeText={handlePasswordChange}
-              onBlur={() => setFieldError('password', validarPassword(form.password))}
-              error={errors.password}
-              secureTextEntry={!showPassword}
-              autoCapitalize="none"
-              autoComplete="new-password"
-              textContentType="newPassword"
-              rightIcon={
-                <Ionicons
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  size={22}
-                  color={PALETA.gris[400]}
-                />
-              }
-              onRightIconPress={() => setShowPassword((prev) => !prev)}
-              required
-            />
-
-            <CustomInput
-              label="Repetí tu contraseña"
-              placeholder="Volvé a escribirla"
-              value={form.confirmPassword}
-              onChangeText={handleConfirmPasswordChange}
-              onBlur={() =>
-                setFieldError(
-                  'confirmPassword',
-                  validarConfirmacionPassword(form.password, form.confirmPassword),
-                )
-              }
-              error={errors.confirmPassword}
-              secureTextEntry={!showConfirmPassword}
-              autoCapitalize="none"
-              autoComplete="new-password"
-              textContentType="newPassword"
-              rightIcon={
-                <Ionicons
-                  name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
-                  size={22}
-                  color={PALETA.gris[400]}
-                />
-              }
-              onRightIconPress={() => setShowConfirmPassword((prev) => !prev)}
-              required
-            />
-
-            {formError ? <Text className="mb-3 text-sm text-red-500">{formError}</Text> : null}
-
-            <View className="mt-4">
-              <CustomButton
-                title="Registrarme"
-                loading={loading}
-                disabled={!formularioListo}
-                onPress={handleRegister}
-                onPressDeshabilitado={explicarQueFalta}
+          <View className="flex-row gap-3">
+            <View className="flex-1">
+              <CustomInput
+                organic
+                label="Nombre"
+                placeholder="Tu nombre"
+                value={form.firstName}
+                onChangeText={handleNombreChange}
+                onBlur={() =>
+                  setFieldError('firstName', validarNombrePersona(form.firstName, 'nombre'))
+                }
+                error={errors.firstName}
+                autoCapitalize="words"
+                autoCorrect={false}
+                autoComplete="given-name"
+                textContentType="givenName"
+                maxLength={50}
+                required
               />
             </View>
-
-            <View className="mt-6 items-center">
-              <Text className="text-base text-gray-600">
-                ¿Ya tenés cuenta?{' '}
-                <Link href="/login" asChild>
-                  <Pressable>
-                    <Text className="font-semibold text-pethood-orange">Iniciá sesión</Text>
-                  </Pressable>
-                </Link>
-              </Text>
+            <View className="flex-1">
+              <CustomInput
+                organic
+                label="Apellido"
+                placeholder="Tu apellido"
+                value={form.lastName}
+                onChangeText={handleApellidoChange}
+                onBlur={() =>
+                  setFieldError('lastName', validarNombrePersona(form.lastName, 'apellido'))
+                }
+                error={errors.lastName}
+                autoCapitalize="words"
+                autoCorrect={false}
+                autoComplete="family-name"
+                textContentType="familyName"
+                maxLength={50}
+                required
+              />
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
+          </View>
+
+          <CustomInput
+            organic
+            label="Correo electrónico"
+            placeholder="tu@correo.com"
+            value={form.email}
+            onChangeText={handleEmailChange}
+            onBlur={() => setFieldError('email', validarEmail(form.email))}
+            error={errors.email}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoComplete="email"
+            textContentType="emailAddress"
+            required
+          />
+
+          <CustomInput
+            organic
+            label="Teléfono"
+            placeholder="Ej. +2615123456"
+            value={form.phone}
+            onChangeText={handlePhoneChange}
+            onBlur={() => setFieldError('phone', validarTelefono(form.phone))}
+            error={errors.phone}
+            keyboardType="phone-pad"
+            autoComplete="tel"
+            textContentType="telephoneNumber"
+            maxLength={16}
+            required
+          />
+
+          <View className="mb-4">
+            <SelectField
+              organic
+              grande
+              label="Provincia"
+              placeholder="Elegí tu provincia"
+              opciones={PROVINCIAS.map((provincia) => ({
+                valor: provincia.nombre,
+                etiqueta: provincia.nombre,
+              }))}
+              valor={form.provincia || null}
+              onChange={handleProvinciaChange}
+              buscable
+            />
+          </View>
+
+          <View className="mb-4">
+            <SelectField
+              organic
+              grande
+              label="Localidad"
+              placeholder="Elegí tu localidad"
+              opciones={localidadesDe(form.provincia).map((localidad) => ({
+                valor: localidad,
+                etiqueta: localidad,
+              }))}
+              valor={form.localidad || null}
+              onChange={handleLocalidadChange}
+              deshabilitado={!form.provincia}
+              textoDeshabilitado="Elegí primero la provincia"
+              buscable
+            />
+          </View>
+
+          <CustomInput
+            organic
+            label="Calle y altura"
+            placeholder="Ej. Av. San Martín 123"
+            value={form.calleAltura}
+            onChangeText={handleCalleAlturaChange}
+            onBlur={() => setFieldError('calleAltura', validarCalleAltura(form.calleAltura))}
+            error={errors.calleAltura}
+            autoCapitalize="words"
+            maxLength={LIMITES.usuario.calleAltura.max}
+          />
+
+          <CustomInput
+            organic
+            label="Fecha de nacimiento"
+            placeholder="DD/MM/AAAA"
+            value={form.birthDate}
+            onChangeText={handleBirthDateChange}
+            onBlur={() => setFieldError('birthDate', validarFechaNacimiento(form.birthDate))}
+            error={errors.birthDate}
+            keyboardType="number-pad"
+            inputMode="numeric"
+            maxLength={10}
+            autoCorrect={false}
+            rightIcon={<Ionicons name="calendar-outline" size={24} color={PALETA.accent[600]} />}
+            onRightIconPress={abrirCalendario}
+            required
+          />
+
+          <CustomInput
+            organic
+            label="Contraseña"
+            placeholder="Mínimo 8 caracteres"
+            value={form.password}
+            onChangeText={handlePasswordChange}
+            onBlur={() => setFieldError('password', validarPassword(form.password))}
+            error={errors.password}
+            secureTextEntry={!showPassword}
+            autoCapitalize="none"
+            autoComplete="new-password"
+            textContentType="newPassword"
+            rightIcon={
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={24}
+                color={PALETA.neutral[500]}
+              />
+            }
+            onRightIconPress={() => setShowPassword((prev) => !prev)}
+            required
+          />
+
+          <CustomInput
+            organic
+            label="Repetí tu contraseña"
+            placeholder="Volvé a escribirla"
+            value={form.confirmPassword}
+            onChangeText={handleConfirmPasswordChange}
+            onBlur={() =>
+              setFieldError(
+                'confirmPassword',
+                validarConfirmacionPassword(form.password, form.confirmPassword),
+              )
+            }
+            error={errors.confirmPassword}
+            secureTextEntry={!showConfirmPassword}
+            autoCapitalize="none"
+            autoComplete="new-password"
+            textContentType="newPassword"
+            rightIcon={
+              <Ionicons
+                name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={24}
+                color={PALETA.neutral[500]}
+              />
+            }
+            onRightIconPress={() => setShowConfirmPassword((prev) => !prev)}
+            required
+          />
+
+          {formError ? (
+            <Text className="mb-3 font-cuerpo text-[15px] text-red-500">{formError}</Text>
+          ) : null}
+
+          <View className="mt-4">
+            <CustomButton
+              title="Registrarme"
+              variant="acento"
+              grande
+              style={FORMA_BOTON_ORGANIC_PRINCIPAL}
+              loading={loading}
+              disabled={!formularioListo}
+              onPress={handleRegister}
+              onPressDeshabilitado={explicarQueFalta}
+            />
+          </View>
+
+          <View className="mt-6 items-center">
+            <Text className="font-cuerpo text-[16px] text-organic-neutral-600">
+              ¿Ya tenés cuenta?{' '}
+              <Link href="/login" asChild>
+                <Pressable>
+                  <Text className="font-cuerpo-semi text-[16px] text-organic-accent-700">
+                    Iniciá sesión
+                  </Text>
+                </Pressable>
+              </Link>
+            </Text>
+          </View>
+        </FormularioConTeclado>
       </SafeAreaView>
 
       <FechaNacimientoPicker

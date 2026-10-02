@@ -3,9 +3,10 @@
  * antes: consultar las precondiciones, mostrar el cartel del bloqueo si no se cumplen y
  * abrir el modal si se cumplen.
  *
- * Está en un componente y no en cada pantalla porque son dos entradas al mismo flujo (la
- * ficha del animal y la grilla de Favoritos) y las reglas son las mismas: si estuviera
- * escrito dos veces, el día que cambie un mensaje quedaría distinto según de dónde entrás.
+ * Está en un componente y no en cada pantalla porque son tres entradas al mismo flujo (la
+ * ficha del animal, la grilla de Favoritos y el carrusel de Inicio) y las reglas son las
+ * mismas: si estuviera escrito varias veces, el día que cambie un mensaje quedaría distinto
+ * según de dónde entrás.
  *
  * Las precondiciones se consultan al TOCAR y no al montar: en una grilla de favoritos
  * serían tantas peticiones como tarjetas, y ninguna sirve hasta que el usuario decide.
@@ -19,7 +20,9 @@ import { CustomButton } from '@/components/CustomButton';
 import { useToast } from '@/components/feedback/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { FLAGS } from '@/constants/flags';
+import { ESTADO_SOLICITABLE } from '@/constants/Mascotas';
 import { PALETA } from '@/constants/theme';
+import { useSesion } from '@/hooks/useSesion';
 import {
   obtenerElegibilidad,
   type Elegibilidad,
@@ -83,10 +86,19 @@ const CARTELES: Record<
   MotivoBloqueo,
   { titulo: string; icono: keyof typeof Ionicons.glyphMap; accion: string; descartar: string }
 > = {
+  // No debería llegar a mostrarse: la ficha y la tarjeta ocultan el botón sobre la propia
+  // mascota. Queda como red de contención si igual se llega a tocar (p. ej. quedó montado
+  // de antes de cambiar el switch de vista).
+  PUBLICACION_PROPIA: {
+    titulo: 'Es tu propia mascota',
+    icono: 'information-circle-outline',
+    accion: 'Entendido',
+    descartar: 'Cerrar',
+  },
   NO_VERIFICADO: {
-    titulo: 'Tenés que verificarte para solicitar',
+    titulo: 'Tenés que verificar tu cuenta para solicitar',
     icono: 'shield-checkmark-outline',
-    accion: 'Verificar mi cuenta',
+    accion: 'Ir a mi perfil',
     descartar: 'Más tarde',
   },
   LIMITE_ALCANZADO: {
@@ -107,7 +119,9 @@ export type VarianteBotonSolicitar =
   /** Botón ancho al pie de la ficha del animal (GUI-10). */
   | 'ficha'
   /** Botón bajo, dentro de la tarjeta de la grilla de Favoritos (GUI-12). */
-  | 'tarjeta';
+  | 'tarjeta'
+  /** Pastilla del carrusel de favoritos de Inicio. */
+  | 'inicio';
 
 interface BotonSolicitarProps {
   mascota: MascotaDeSolicitud;
@@ -129,6 +143,9 @@ export function BotonSolicitar({
 }: BotonSolicitarProps) {
   const router = useRouter();
   const toast = useToast();
+  // Desde la vista de refugio no se adopta: el botón no se ofrece (y el backend igual
+  // rechaza la solicitud). Ver `services/sesion.ts`.
+  const { vistaRefugio } = useSesion();
 
   const [verificando, setVerificando] = useState(false);
   const [bloqueo, setBloqueo] = useState<Elegibilidad | null>(null);
@@ -227,15 +244,28 @@ export function BotonSolicitar({
       return;
     }
 
+    // Es tu propia mascota: no hay a dónde navegar, el cartel solo se cierra.
+    if (motivo === 'PUBLICACION_PROPIA') return;
+
     irASolicitud(motivo === 'YA_SOLICITADA' ? idAbierta : null);
   }, [bloqueo, irASolicitud, router]);
 
   const cartel = bloqueo?.motivo ? CARTELES[bloqueo.motivo] : null;
 
+  // En_Tratamiento, En_Transito, Adoptado, etc.: el backend igual la rechaza
+  // (`ESTADO_SOLICITABLE`), así que ofrecer el botón solo termina en un error al final del
+  // formulario. Una solicitud ya enviada se sigue mostrando igual: puede haber quedado en
+  // ese estado justo por la adopción que esta misma solicitud generó.
+  const solicitable = mascota.estado === ESTADO_SOLICITABLE;
+
+  if (vistaRefugio) return null;
+
   return (
     <>
       {enviadaId == null ? (
-        <BotonAbrir variante={variante} cargando={verificando} onPress={() => void intentar()} />
+        solicitable ? (
+          <BotonAbrir variante={variante} cargando={verificando} onPress={() => void intentar()} />
+        ) : null
       ) : (
         <EstadoEnviada variante={variante} onVer={() => irASolicitud(enviadaId)} />
       )}
@@ -251,7 +281,9 @@ export function BotonSolicitar({
           accionPrincipal={{ etiqueta: cartel.accion, onPress: resolverBloqueo }}
           textoDescartar={cartel.descartar}
           onCerrar={() => setBloqueo(null)}
-        />
+        >
+          {bloqueo.motivo === 'NO_VERIFICADO' ? <PasosVerificacion /> : null}
+        </ConfirmDialog>
       ) : null}
 
       {/* Solo se monta al abrirlo: en la grilla de Favoritos habría un formulario entero
@@ -280,7 +312,7 @@ export function BotonSolicitar({
 /** Segunda línea del cartel: explica el bloqueo con los números concretos del usuario. */
 function detalleDe(elegibilidad: Elegibilidad): string | undefined {
   if (elegibilidad.motivo === 'NO_VERIFICADO') {
-    return 'Necesitamos tu DNI y una selfie para confirmar tu identidad. La verificación tarda como máximo 24 horas.';
+    return 'Los refugios y quienes publican una mascota necesitan saber que del otro lado hay una persona real. Por eso, antes de tu primera solicitud, confirmamos tu identidad. Es un trámite único.';
   }
 
   if (elegibilidad.motivo === 'LIMITE_ALCANZADO') {
@@ -288,6 +320,36 @@ function detalleDe(elegibilidad: Elegibilidad): string | undefined {
   }
 
   return undefined;
+}
+
+/** Qué hay que tener a mano y qué pasa después, para que el cartel no deje dudas. */
+function PasosVerificacion() {
+  const pasos: { icono: keyof typeof Ionicons.glyphMap; texto: string }[] = [
+    { icono: 'card-outline', texto: 'Una foto del frente de tu DNI' },
+    { icono: 'card-outline', texto: 'Una foto del dorso de tu DNI' },
+    { icono: 'person-circle-outline', texto: 'Una selfie tuya, con buena luz y sin anteojos de sol' },
+  ];
+
+  return (
+    <View className="gap-2.5 rounded-2xl bg-organic-neutral-100 p-4">
+      <Text className="font-cuerpo-semi text-[13px] uppercase tracking-wide text-organic-neutral-500">
+        Qué vas a necesitar
+      </Text>
+      {pasos.map(({ icono, texto }, i) => (
+        <View key={i} className="flex-row items-center gap-3">
+          <Ionicons name={icono} size={20} color={PALETA.accent[600]} />
+          <Text className="flex-1 text-sm leading-5 text-organic-neutral-700">{texto}</Text>
+        </View>
+      ))}
+      <Text className="mt-1 text-[13px] leading-[18px] text-organic-neutral-500">
+        Un administrador las revisa en un máximo de 24 horas y te avisamos apenas tu cuenta quede
+        verificada. Tus fotos se usan solo para esto y no se muestran en tu perfil público.
+      </Text>
+      <Text className="text-[13px] leading-[18px] text-organic-neutral-500">
+        Tocá “Ir a mi perfil” para empezar.
+      </Text>
+    </View>
+  );
 }
 
 interface BotonAbrirProps {
@@ -308,6 +370,25 @@ function BotonAbrir({ variante, cargando, onPress }: BotonAbrirProps) {
     );
   }
 
+  if (variante === 'inicio') {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Solicitar adopción"
+        accessibilityState={{ busy: cargando }}
+        disabled={cargando}
+        onPress={onPress}
+        className={`h-[38px] items-center justify-center rounded-full bg-organic-accent-600 px-2 active:opacity-90 ${
+          cargando ? 'opacity-60' : ''
+        }`}
+      >
+        <Text numberOfLines={1} className="font-cuerpo-bold text-[13.5px] text-organic-accent-100">
+          {cargando ? 'Abriendo…' : 'Solicitar adopción'}
+        </Text>
+      </Pressable>
+    );
+  }
+
   // En la tarjeta el botón compite con la foto y el badge: va más bajo y con menos texto.
   return (
     <Pressable
@@ -316,11 +397,11 @@ function BotonAbrir({ variante, cargando, onPress }: BotonAbrirProps) {
       accessibilityState={{ busy: cargando }}
       disabled={cargando}
       onPress={onPress}
-      className={`items-center justify-center rounded-xl bg-organic-accent-600 py-2 active:opacity-90 ${
+      className={`items-center justify-center rounded-xl bg-organic-accent-600 py-2.5 active:opacity-90 ${
         cargando ? 'opacity-60' : ''
       }`}
     >
-      <Text className="font-cuerpo-semi text-[12.5px] text-white">
+      <Text className="font-cuerpo-semi text-[15px] text-white">
         {cargando ? 'Abriendo…' : 'Solicitar'}
       </Text>
     </Pressable>
@@ -350,15 +431,31 @@ function EstadoEnviada({
     );
   }
 
+  if (variante === 'inicio') {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Ya solicitada. Ver mi solicitud"
+        onPress={onVer}
+        className="h-[38px] flex-row items-center justify-center gap-1.5 rounded-full bg-organic-neutral-200 px-2 active:opacity-80"
+      >
+        <Ionicons name="checkmark" size={14} color={PALETA.neutral[700]} />
+        <Text numberOfLines={1} className="font-cuerpo-bold text-[13px] text-organic-neutral-700">
+          Ya solicitada
+        </Text>
+      </Pressable>
+    );
+  }
+
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel="Ver mi solicitud"
       onPress={onVer}
-      className="flex-row items-center justify-center gap-1.5 rounded-xl border border-organic-accent-300 bg-organic-accent-100 py-2 active:opacity-80"
+      className="flex-row items-center justify-center gap-1.5 rounded-xl border border-organic-accent-300 bg-organic-accent-100 py-2.5 active:opacity-80"
     >
-      <Ionicons name="checkmark" size={13} color={PALETA.accent[600]} />
-      <Text className="font-cuerpo-semi text-[12.5px] text-organic-accent-600">Enviada</Text>
+      <Ionicons name="checkmark" size={16} color={PALETA.accent[600]} />
+      <Text className="font-cuerpo-semi text-[15px] text-organic-accent-600">Enviada</Text>
     </Pressable>
   );
 }

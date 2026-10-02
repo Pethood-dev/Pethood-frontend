@@ -14,23 +14,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CustomButton } from '@/components/CustomButton';
 import { EstadoCargando, EstadoError } from '@/components/feedback/EstadosPantalla';
 import { useToast } from '@/components/feedback/Toast';
-import { useSesion } from '@/hooks/useSesion';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { DateField } from '@/components/ui/DateField';
 import { FormCard, FormCardColumns, FormCardRow } from '@/components/ui/FormCard';
+import { FormularioConTeclado } from '@/components/ui/FormularioConTeclado';
 import { PhotoPicker, type FotoElegida } from '@/components/ui/PhotoPicker';
 import { SelectField, type OpcionSelect } from '@/components/ui/SelectField';
 import { TextAreaField } from '@/components/ui/TextAreaField';
@@ -47,6 +40,7 @@ import {
   type Mascota,
   type Tamanio,
 } from '@/services/mascotas';
+import { textoSegunGenero } from '@/shared/genero';
 import { aFechaISO, parsearFecha, validarFechaPasada } from '@/shared/validation/dates';
 import { LIMITES } from '@/shared/validation/limits';
 import { filtrarEntradaDecimal, validarDecimal } from '@/shared/validation/numbers';
@@ -84,7 +78,6 @@ function textoAPeso(texto: string): number | null {
 export default function EditarMascotaScreen() {
   const router = useRouter();
   const toast = useToast();
-  const { esRefugio } = useSesion();
   const { id } = useLocalSearchParams<{ id: string }>();
   const mascotaId = Number(id);
 
@@ -124,7 +117,7 @@ export default function EditarMascotaScreen() {
 
       try {
         const [mascota, especiesCargadas] = await Promise.all([
-          obtenerMiMascota(mascotaId, esRefugio ? 'REFUGIO' : 'PERSONAL'),
+          obtenerMiMascota(mascotaId),
           listarEspecies(),
         ]);
 
@@ -153,7 +146,7 @@ export default function EditarMascotaScreen() {
     };
 
     void cargar();
-  }, [mascotaId, esRefugio]);
+  }, [mascotaId]);
 
   // La raza depende de la especie, igual que en el alta.
   useEffect(() => {
@@ -338,150 +331,144 @@ export default function EditarMascotaScreen() {
             onAccion={() => router.back()}
           />
         ) : (
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          <FormularioConTeclado
             className="flex-1"
+            contentContainerClassName="px-4 pb-10"
+            showsVerticalScrollIndicator={false}
           >
-            <ScrollView
-              className="flex-1"
-              contentContainerClassName="px-4 pb-10"
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              <PhotoPicker foto={fotoVisible} onChange={setFoto} permiteQuitar={foto !== null} />
+            <PhotoPicker foto={fotoVisible} onChange={setFoto} permiteQuitar={foto !== null} />
 
-              <FormCard>
-                <FormCardRow>
-                  <TextField
-                    label="Nombre"
-                    obligatorio
-                    placeholder="Nombre de la mascota"
-                    value={nombre}
-                    onChangeText={setNombre}
-                    onBlur={() => marcarTocado('nombre')}
-                    maxLength={LIMITES.mascota.nombre.max}
-                    error={errorDe('nombre')}
-                  />
-                </FormCardRow>
-
-                <FormCardRow>
-                  <FormCardColumns>
-                    <SelectField
-                      label="Especie"
-                      obligatorio
-                      placeholder="Elegí"
-                      opciones={especies.map((especie) => ({
-                        valor: especie.id,
-                        etiqueta: especie.nombre,
-                      }))}
-                      valor={especieId}
-                      onChange={(nuevaEspecie) => {
-                        if (nuevaEspecie === especieId) return;
-
-                        setEspecieId(nuevaEspecie);
-                        // La raza vieja puede no pertenecer a la especie nueva: se limpia y
-                        // se marca tocada para que el "elegí la raza" salte en el momento.
-                        setRazaId(null);
-                        marcarTocado('razaId');
-                      }}
-                    />
-
-                    <SelectField
-                      label="Sexo"
-                      obligatorio
-                      placeholder="Elegí"
-                      opciones={OPCIONES_GENERO}
-                      valor={genero}
-                      onChange={setGenero}
-                    />
-                  </FormCardColumns>
-                </FormCardRow>
-
-                <FormCardRow>
-                  <FormCardColumns>
-                    <SelectField
-                      label="Raza"
-                      obligatorio
-                      placeholder={cargandoRazas ? 'Cargando…' : 'Elegí'}
-                      opciones={razas.map((raza) => ({ valor: raza.id, etiqueta: raza.nombre }))}
-                      valor={razaId}
-                      onChange={setRazaId}
-                      onBlur={() => marcarTocado('razaId')}
-                      deshabilitado={especieId === null || cargandoRazas}
-                      textoDeshabilitado="Elegí la especie"
-                      error={errorDe('razaId')}
-                    />
-
-                    <DateField
-                      label="Nacimiento"
-                      obligatorio
-                      placeholder="Elegí la fecha"
-                      valor={fechaNacimiento}
-                      onChange={setFechaNacimiento}
-                      onBlur={() => marcarTocado('fechaNacimiento')}
-                      error={errorDe('fechaNacimiento')}
-                    />
-                  </FormCardColumns>
-                </FormCardRow>
-
-                <FormCardRow>
-                  <FormCardColumns>
-                    <SelectField
-                      label="Tamaño"
-                      obligatorio
-                      placeholder="Elegí"
-                      opciones={OPCIONES_TAMANIO}
-                      valor={tamanio}
-                      onChange={setTamanio}
-                    />
-
-                    <TextField
-                      label="Peso (kg)"
-                      obligatorio
-                      placeholder="Ej. 12,5"
-                      keyboardType="decimal-pad"
-                      value={peso}
-                      onChangeText={(texto) =>
-                        setPeso(filtrarEntradaDecimal(texto, LIMITES.mascota.peso.decimales))
-                      }
-                      onBlur={() => marcarTocado('peso')}
-                      error={errorDe('peso')}
-                    />
-                  </FormCardColumns>
-                </FormCardRow>
-
-                <FormCardRow>
-                  <ToggleField
-                    label="Castrado / Esterilizado"
-                    valor={castrado}
-                    onChange={setCastrado}
-                  />
-                </FormCardRow>
-
-                <FormCardRow ultima>
-                  <TextAreaField
-                    label="Descripción"
-                    placeholder="Contanos sobre su personalidad…"
-                    value={descripcion}
-                    onChangeText={setDescripcion}
-                    onBlur={() => marcarTocado('descripcion')}
-                    maximo={LIMITES.mascota.descripcion.max}
-                    error={errorDe('descripcion')}
-                  />
-                </FormCardRow>
-              </FormCard>
-
-              <View className="mt-5">
-                <CustomButton
-                  title="Guardar cambios"
-                  loading={guardando}
-                  disabled={!formularioValido || !hayCambios}
-                  onPress={() => void guardar()}
-                  onPressDeshabilitado={explicarQueFalta}
+            <FormCard>
+              <FormCardRow>
+                <TextField
+                  label="Nombre"
+                  obligatorio
+                  placeholder="Nombre de la mascota"
+                  value={nombre}
+                  onChangeText={setNombre}
+                  onBlur={() => marcarTocado('nombre')}
+                  maxLength={LIMITES.mascota.nombre.max}
+                  error={errorDe('nombre')}
                 />
-              </View>
-            </ScrollView>
-          </KeyboardAvoidingView>
+              </FormCardRow>
+
+              <FormCardRow>
+                <FormCardColumns>
+                  <SelectField
+                    label="Especie"
+                    obligatorio
+                    placeholder="Elegí"
+                    opciones={especies.map((especie) => ({
+                      valor: especie.id,
+                      etiqueta: especie.nombre,
+                    }))}
+                    valor={especieId}
+                    onChange={(nuevaEspecie) => {
+                      if (nuevaEspecie === especieId) return;
+
+                      setEspecieId(nuevaEspecie);
+                      // La raza vieja puede no pertenecer a la especie nueva: se limpia y
+                      // se marca tocada para que el "elegí la raza" salte en el momento.
+                      setRazaId(null);
+                      marcarTocado('razaId');
+                    }}
+                  />
+
+                  <SelectField
+                    label="Sexo"
+                    obligatorio
+                    placeholder="Elegí"
+                    opciones={OPCIONES_GENERO}
+                    valor={genero}
+                    onChange={setGenero}
+                  />
+                </FormCardColumns>
+              </FormCardRow>
+
+              <FormCardRow>
+                <FormCardColumns>
+                  <SelectField
+                    label="Raza"
+                    obligatorio
+                    placeholder={cargandoRazas ? 'Cargando…' : 'Elegí'}
+                    opciones={razas.map((raza) => ({ valor: raza.id, etiqueta: raza.nombre }))}
+                    valor={razaId}
+                    onChange={setRazaId}
+                    onBlur={() => marcarTocado('razaId')}
+                    deshabilitado={especieId === null || cargandoRazas}
+                    textoDeshabilitado="Elegí la especie"
+                    error={errorDe('razaId')}
+                  />
+
+                  <DateField
+                    label="Nacimiento"
+                    obligatorio
+                    placeholder="Elegí la fecha"
+                    valor={fechaNacimiento}
+                    onChange={setFechaNacimiento}
+                    onBlur={() => marcarTocado('fechaNacimiento')}
+                    error={errorDe('fechaNacimiento')}
+                  />
+                </FormCardColumns>
+              </FormCardRow>
+
+              <FormCardRow>
+                <FormCardColumns>
+                  <SelectField
+                    label="Tamaño"
+                    obligatorio
+                    placeholder="Elegí"
+                    opciones={OPCIONES_TAMANIO}
+                    valor={tamanio}
+                    onChange={setTamanio}
+                  />
+
+                  <TextField
+                    label="Peso (kg)"
+                    obligatorio
+                    placeholder="Ej. 12,5"
+                    keyboardType="decimal-pad"
+                    value={peso}
+                    onChangeText={(texto) =>
+                      setPeso(filtrarEntradaDecimal(texto, LIMITES.mascota.peso.decimales))
+                    }
+                    onBlur={() => marcarTocado('peso')}
+                    error={errorDe('peso')}
+                  />
+                </FormCardColumns>
+              </FormCardRow>
+
+              <FormCardRow>
+                <ToggleField
+                  label={textoSegunGenero(genero, 'Castrado / Esterilizado', 'Castrada / Esterilizada')}
+                  valor={castrado}
+                  onChange={setCastrado}
+                />
+              </FormCardRow>
+
+              <FormCardRow ultima>
+                <TextAreaField
+                  label="Descripción"
+                  placeholder="Contanos sobre su personalidad…"
+                  value={descripcion}
+                  onChangeText={setDescripcion}
+                  onBlur={() => marcarTocado('descripcion')}
+                  maximo={LIMITES.mascota.descripcion.max}
+                  error={errorDe('descripcion')}
+                />
+              </FormCardRow>
+            </FormCard>
+
+            <View className="mt-5">
+              <CustomButton
+                title="Guardar cambios"
+                loading={guardando}
+                disabled={!formularioValido || !hayCambios}
+                onPress={() => void guardar()}
+                onPressDeshabilitado={explicarQueFalta}
+              />
+            </View>
+          </FormularioConTeclado>
         )}
       </SafeAreaView>
 
