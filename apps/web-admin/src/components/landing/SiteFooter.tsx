@@ -31,6 +31,9 @@ export function SiteFooter() {
                 <Link href="/faq">Preguntas frecuentes</Link>
               </li>
               <li>
+                <Link href="/descargar">Descargá la app</Link>
+              </li>
+              <li>
                 <Link href="/login">Ingresar</Link>
               </li>
             </ul>
