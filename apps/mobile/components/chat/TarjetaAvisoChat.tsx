@@ -51,7 +51,7 @@ interface TarjetaAvisoChatProps {
   aviso: AvisoEnChat;
   /** Hora del mensaje que la trajo, para la firma de PetHood. */
   fecha: string | null;
-  /** Navega al aviso en el portal. Sin esto el botón no se dibuja. */
+  /** Abre el popup del aviso en la sala. Sin esto el botón no se dibuja. */
   onVerAviso?: () => void;
 }
 

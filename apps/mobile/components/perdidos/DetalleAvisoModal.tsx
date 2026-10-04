@@ -11,7 +11,11 @@
  * - "Enviar mensaje" abre la conversación con quien publicó el aviso (HU-13.2); si ya tenían
  *   una, entra a ésa. En un aviso propio no se muestra —no hay a quién escribirle— y en su
  *   lugar va "Marcar como resuelto", que cierra el caso **pero no la conversación**. Un aviso
- *   ya resuelto no ofrece ninguno de los dos.
+ *   ya resuelto no ofrece ninguno de los dos. Abierto desde la tarjeta del chat tampoco hay
+ *   "Enviar mensaje": ya se está en esa conversación.
+ * - En un aviso propio, además, "Editar" y "Eliminar" (HU-13.3), si la pantalla los pasa. Uno
+ *   resuelto no se elimina: el botón está igual y explica por qué, en vez de desaparecer sin
+ *   decir nada.
  * - Dos agregados que el diseño no trae, de cuando el lugar pasó al catálogo de provincias: a
  *   qué distancia está el lugar (si el usuario dio su ubicación y el lugar se pudo ubicar en
  *   el mapa) y un botón para verlo en Google Maps.
@@ -64,11 +68,15 @@ interface DetalleAvisoModalProps {
   onCerrar: () => void;
   /**
    * Reclamar el aviso (HU-13.2). Lo resuelve la pantalla, que es la que navega a la sala: el
-   * popup no conoce el router ni el servicio.
+   * popup no conoce el router ni el servicio. Sin esto no hay "Enviar mensaje" (desde el chat).
    */
-  onReclamar: (aviso: AvisoPerdido) => Promise<void>;
+  onReclamar?: (aviso: AvisoPerdido) => Promise<void>;
   /** Cerrar el caso. Devuelve el aviso actualizado para que la pantalla lo reemplace. */
   onResolver: (aviso: AvisoPerdido) => Promise<void>;
+  /** HU-13.3: ir a editar el aviso propio. Sin esto no hay botón "Editar". */
+  onEditar?: (aviso: AvisoPerdido) => void;
+  /** HU-13.3: eliminar el aviso propio, ya confirmado. Sin esto no hay botón "Eliminar". */
+  onEliminar?: (aviso: AvisoPerdido) => Promise<void>;
 }
 
 export function DetalleAvisoModal({
@@ -76,6 +84,8 @@ export function DetalleAvisoModal({
   onCerrar,
   onReclamar,
   onResolver,
+  onEditar,
+  onEliminar,
 }: DetalleAvisoModalProps) {
   return (
     <Modal
@@ -101,6 +111,8 @@ export function DetalleAvisoModal({
             onCerrar={onCerrar}
             onReclamar={onReclamar}
             onResolver={onResolver}
+            onEditar={onEditar}
+            onEliminar={onEliminar}
           />
         ) : null}
       </View>
@@ -113,20 +125,22 @@ function TarjetaDetalle({
   onCerrar,
   onReclamar,
   onResolver,
-}: {
-  aviso: AvisoPerdido;
-  onCerrar: () => void;
-  onReclamar: (aviso: AvisoPerdido) => Promise<void>;
-  onResolver: (aviso: AvisoPerdido) => Promise<void>;
-}) {
-  // Un solo estado para las dos acciones: nunca se puede estar haciendo las dos, porque los
-  // botones son excluyentes (`esPropio`).
+  onEditar,
+  onEliminar,
+}: Omit<DetalleAvisoModalProps, 'aviso'> & { aviso: AvisoPerdido }) {
+  // Un solo estado para todas las acciones: cada una tiene su confirmación, así que nunca se
+  // está haciendo más de una a la vez.
   const [enViaje, setEnViaje] = useState(false);
   const [confirmarResuelto, setConfirmarResuelto] = useState(false);
+  const [confirmarEliminar, setConfirmarEliminar] = useState(false);
+  /** Se tocó "Eliminar" en un caso resuelto: se explica por qué no se puede. */
+  const [explicarNoSeElimina, setExplicarNoSeElimina] = useState(false);
 
   const resuelto = estaResuelto(aviso);
+  const gestionPropia = aviso.esPropio && (onEditar !== undefined || onEliminar !== undefined);
 
   const reclamar = async (): Promise<void> => {
+    if (!onReclamar) return;
     setEnViaje(true);
     try {
       await onReclamar(aviso);
@@ -141,6 +155,17 @@ function TarjetaDetalle({
     try {
       await onResolver(aviso);
       setConfirmarResuelto(false);
+    } finally {
+      setEnViaje(false);
+    }
+  };
+
+  const eliminar = async (): Promise<void> => {
+    if (!onEliminar) return;
+    setEnViaje(true);
+    try {
+      await onEliminar(aviso);
+      setConfirmarEliminar(false);
     } finally {
       setEnViaje(false);
     }
@@ -246,7 +271,7 @@ function TarjetaDetalle({
               <Ionicons name="checkmark-circle-outline" size={19} color={PALETA.blanco} />
               <Text className="font-cuerpo-bold text-[16px] text-white">Marcar como resuelto</Text>
             </Pressable>
-          ) : (
+          ) : onReclamar ? (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={`Enviar un mensaje a ${reportante}`}
@@ -262,7 +287,40 @@ function TarjetaDetalle({
               )}
               <Text className="font-cuerpo-bold text-[16px] text-white">Enviar mensaje</Text>
             </Pressable>
-          )}
+          ) : null}
+
+          {gestionPropia ? (
+            <View className="mt-3 flex-row gap-3">
+              {onEditar ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Editar el aviso"
+                  disabled={enViaje}
+                  onPress={() => onEditar(aviso)}
+                  className="h-[48px] flex-1 flex-row items-center justify-center gap-2 rounded-full border border-organic-accent-600 active:opacity-70"
+                >
+                  <Ionicons name="create-outline" size={19} color={PALETA.accent[600]} />
+                  <Text className="font-cuerpo-bold text-[16px] text-organic-accent-600">
+                    Editar
+                  </Text>
+                </Pressable>
+              ) : null}
+              {onEliminar ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Eliminar el aviso"
+                  disabled={enViaje}
+                  onPress={() =>
+                    resuelto ? setExplicarNoSeElimina(true) : setConfirmarEliminar(true)
+                  }
+                  className="h-[48px] flex-1 flex-row items-center justify-center gap-2 rounded-full border border-red-300 active:opacity-70"
+                >
+                  <Ionicons name="trash-outline" size={19} color={PALETA.estado.error} />
+                  <Text className="font-cuerpo-bold text-[16px] text-red-600">Eliminar</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
 
           {aviso.esPropio ? null : (
             <BotonReportar
@@ -289,6 +347,32 @@ function TarjetaDetalle({
         cargando={enViaje}
         onConfirmar={() => void resolver()}
         onCerrar={() => setConfirmarResuelto(false)}
+      />
+
+      {/* Regla transversal 6: la baja se confirma. Las conversaciones no se tocan: la tarjeta
+          del aviso queda en el chat y, al tocarla, dice que se eliminó. */}
+      <ConfirmDialog
+        visible={confirmarEliminar}
+        tono="peligro"
+        titulo="¿Eliminar el aviso?"
+        mensaje={`Vamos a eliminar el aviso de ${nombre}.`}
+        detalle="Deja de verse en Mascotas Perdidas y en Mis publicaciones. Si alguien ya te escribió por este aviso, la conversación sigue igual."
+        textoConfirmar="Sí, eliminar"
+        textoCancelar="Cancelar"
+        cargando={enViaje}
+        onConfirmar={() => void eliminar()}
+        onCerrar={() => setConfirmarEliminar(false)}
+      />
+
+      {/* Sin `onConfirmar`: un solo "Entendido". No hay nada que el usuario pueda hacer. */}
+      <ConfirmDialog
+        visible={explicarNoSeElimina}
+        tono="bloqueo"
+        icono="heart-circle-outline"
+        titulo="Este aviso no se puede eliminar"
+        mensaje="El caso ya está resuelto."
+        detalle="Un aviso resuelto queda como registro de que la mascota volvió con su dueño, así que no se puede eliminar."
+        onCerrar={() => setExplicarNoSeElimina(false)}
       />
     </View>
   );

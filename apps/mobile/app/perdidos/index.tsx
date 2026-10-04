@@ -34,14 +34,14 @@ import { TarjetaAviso } from '@/components/perdidos/TarjetaAviso';
 import { BotonCircular } from '@/components/ui/BotonCircular';
 import { BotonFlotante } from '@/components/ui/BotonFlotante';
 import { PALETA } from '@/constants/theme';
+import { useGestionAviso } from '@/hooks/useGestionAviso';
 import { usePaginacionCursor } from '@/hooks/usePaginacionCursor';
-import { tomarAvisoCreado } from '@/lib/avisoRecienCreado';
+import { tomarAvisoCreado, tomarAvisoEditado } from '@/lib/avisoRecienCreado';
 import { coordenadasRecordadas, pedirUbicacion, type Coordenadas } from '@/lib/ubicacion';
 import {
   contarFiltrosActivosPerdidos,
   listarAvisos,
   reclamarAviso,
-  resolverAviso,
   SIN_FILTROS_PERDIDOS,
   type AvisoPerdido,
   type FiltrosPerdidos,
@@ -231,6 +231,14 @@ export default function MascotasPerdidasScreen() {
     refrescar();
   }, [ubicacionNueva, refrescar]);
 
+  // Al volver de editar un aviso propio, se reemplaza en su lugar.
+  useFocusEffect(
+    useCallback(() => {
+      const editado = tomarAvisoEditado();
+      if (editado) reemplazar(editado);
+    }, [reemplazar]),
+  );
+
   useFocusEffect(
     useCallback(() => {
       const creado = tomarAvisoCreado();
@@ -275,29 +283,27 @@ export default function MascotasPerdidasScreen() {
   );
 
   /**
-   * HU-13.2: el reportante cierra su caso.
+   * Lo que hace quien publicó el aviso desde su popup (HU-13.2 y HU-13.3).
    *
-   * El aviso vuelve ya resuelto y se reemplaza en el listado **sin moverlo de lugar** y sin
-   * refetch; el popup se queda abierto mostrando la marca "Volvió con su dueño", que es la
-   * confirmación de que la acción surtió efecto.
-   *
-   * No toca ninguna conversación: resolver cierra el caso, no el chat (spec 024 §9).
+   * Resuelto, el aviso se reemplaza en el listado **sin moverlo de lugar** y sin refetch; el
+   * popup se queda abierto mostrando "Volvió con su dueño", que es la confirmación de que la
+   * acción surtió efecto. Eliminado, se cierra el popup y se recarga la grilla. Para editar se
+   * cierra el popup antes de navegar, y al volver el aviso editado se reemplaza (ver el foco).
    */
-  const resolver = useCallback(
-    async (aviso: AvisoPerdido): Promise<void> => {
-      try {
-        const actualizado = await resolverAviso(aviso.id);
+  const gestion = useGestionAviso({
+    onActualizado: useCallback(
+      (actualizado: AvisoPerdido) => {
         reemplazar(actualizado);
         setSeleccionado(actualizado);
-        toast.mostrarExito('Marcamos el aviso como resuelto. ¡Qué alegría!');
-      } catch (err) {
-        toast.mostrarError(
-          err instanceof ApiError ? err.message : 'No pudimos resolver el aviso. Probá de nuevo.',
-        );
-      }
-    },
-    [reemplazar, toast],
-  );
+      },
+      [reemplazar],
+    ),
+    onEliminado: useCallback(() => {
+      setSeleccionado(null);
+      refrescar();
+    }, [refrescar]),
+    onAntesDeEditar: useCallback(() => setSeleccionado(null), []),
+  });
 
   // Se entra desde las dos vistas de Inicio: `back()` vuelve al origen real. El fallback
   // cubre el caso sin historial (deep link directo).
@@ -385,7 +391,9 @@ export default function MascotasPerdidasScreen() {
         aviso={seleccionado}
         onCerrar={() => setSeleccionado(null)}
         onReclamar={reclamar}
-        onResolver={resolver}
+        onResolver={gestion.resolver}
+        onEditar={gestion.editar}
+        onEliminar={gestion.eliminar}
       />
 
       <FiltrosPerdidosModal

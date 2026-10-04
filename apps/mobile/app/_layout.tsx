@@ -87,6 +87,8 @@ function RootNavigator() {
         <Stack.Screen name="perdidos/index" />
         {/* GUI-25. Pantalla y no modal, como en el diseño (pantalla 26). */}
         <Stack.Screen name="perdidos/nuevo" options={{ presentation: 'card' }} />
+        {/* HU-13.3. El mismo formulario del alta, desde el popup del aviso propio. */}
+        <Stack.Screen name="perdidos/[id]/editar" options={{ presentation: 'card' }} />
         <Stack.Screen name="mascotas/crear" options={{ presentation: 'card' }} />
         {/* HU-6.4. Se abre tocando una tarjeta de "Mis mascotas". */}
         <Stack.Screen name="mascotas/[id]/index" options={{ presentation: 'card' }} />
