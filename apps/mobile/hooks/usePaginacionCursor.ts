@@ -20,7 +20,12 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { agregarAlPrincipio as ponerArriba, unirPagina, type PaginaCursor } from '@/lib/paginacion';
+import {
+  agregarAlPrincipio as ponerArriba,
+  reemplazar as reemplazarEnLista,
+  unirPagina,
+  type PaginaCursor,
+} from '@/lib/paginacion';
 import { ApiError } from '@/services/api';
 
 export type { PaginaCursor };
@@ -59,6 +64,8 @@ export interface PaginacionCursor<T> {
   reintentarMas: () => void;
   /** Inserta arriba un ítem recién creado sin recargar el listado. */
   agregarAlPrincipio: (item: T) => void;
+  /** Actualiza un ítem que ya está en la lista, sin moverlo de lugar ni recargar. */
+  reemplazar: (item: T) => void;
 }
 
 function mensajeDe(err: unknown, sinConexion: string): string {
@@ -172,6 +179,13 @@ export function usePaginacionCursor<T>({
     [claveDe],
   );
 
+  const reemplazar = useCallback(
+    (item: T): void => {
+      setItems((actuales) => reemplazarEnLista(actuales, item, claveDe));
+    },
+    [claveDe],
+  );
+
   // Estables a propósito: las pantallas las ponen como dependencia de `useFocusEffect`, y una
   // función nueva en cada render volvería a correr ese efecto en cada render.
   const recargar = useCallback((): void => void primeraPagina('cargando'), [primeraPagina]);
@@ -191,5 +205,6 @@ export function usePaginacionCursor<T>({
     cargarMas,
     reintentarMas,
     agregarAlPrincipio,
+    reemplazar,
   };
 }

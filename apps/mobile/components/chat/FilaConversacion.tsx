@@ -60,23 +60,27 @@ export function FilaConversacion({
 
   const sinLeer = noLeidos > 0;
   const esSolicitud = ultimoMensaje?.tipo === 'SOLICITUD';
+  const esAviso = ultimoMensaje?.tipo === 'ANIMAL_PERDIDO';
+  // Las dos tarjetas vienen sin texto propio, así que ninguna cuenta como adjunto suelto.
+  const esTarjeta = esSolicitud || esAviso;
   const soloAdjunto =
-    !esSolicitud && ultimoMensaje?.tieneImagen && ultimoMensaje.contenido.trim() === '';
+    !esTarjeta && ultimoMensaje?.tieneImagen && ultimoMensaje.contenido.trim() === '';
 
   // `tieneVideo` viaja aparte de `tieneImagen`, que sigue en `true` con un video: así un
   // cliente que no conociera el campo nuevo mostraría "Foto" y no una línea vacía.
   const soloVideo = soloAdjunto && ultimoMensaje.tieneVideo;
 
-  // Lo que va en la línea de abajo. La tarjeta de una solicitud y el adjunto suelto no
-  // tienen texto propio: se nombra el hecho, con un ícono adelante para que se lea de un
-  // vistazo.
+  // Lo que va en la línea de abajo. Las tarjetas y el adjunto suelto no tienen texto propio:
+  // se nombra el hecho, con un ícono adelante para que se lea de un vistazo.
   const preview = esSolicitud
     ? 'Solicitud'
-    : soloVideo
-      ? 'Video'
-      : soloAdjunto
-        ? 'Foto'
-        : (ultimoMensaje?.contenido ?? 'Todavía no hay mensajes');
+    : esAviso
+      ? 'Mascota perdida'
+      : soloVideo
+        ? 'Video'
+        : soloAdjunto
+          ? 'Foto'
+          : (ultimoMensaje?.contenido ?? 'Todavía no hay mensajes');
 
   const fila = (
     <Pressable
@@ -146,6 +150,10 @@ export function FilaConversacion({
 
           {esSolicitud ? (
             <Ionicons name="document-text-outline" size={16} color={PALETA.neutral[500]} />
+          ) : null}
+
+          {esAviso ? (
+            <Ionicons name="paw-outline" size={16} color={PALETA.neutral[500]} />
           ) : null}
 
           <Text
