@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CircleCheck, Pause, Play, RotateCcw, Trash2 } from "lucide-react";
+import { CircleCheck, Eye, Pause, Play, RotateCcw, Trash2 } from "lucide-react";
 import { MotivoModal } from "@/components/admin/MotivoModal";
 import { AccionButton } from "@/components/ui/AccionButton";
 import { Feedback } from "@/components/ui/Feedback";
@@ -12,6 +12,7 @@ import {
   cambiarEstadoPublicacion,
   reactivarPublicacion,
 } from "@/services/admin-moderacion";
+import { DetallePublicacionModal } from "./DetallePublicacionModal";
 import type { AccionPublicacion, FiltrosModeracion, Lista, PublicacionAdmin } from "@/types/admin-moderacion";
 
 const CAMPO = "w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-900 sm:w-auto";
@@ -35,6 +36,7 @@ export function PublicacionesTabla({
 }) {
   const { cargando, error, exito, ejecutar, aplicarFiltros, irAPagina } = useTablaAdmin("/admin/publicaciones", filtros);
   const [modal, setModal] = useState<ModalMotivo | null>(null);
+  const [detalle, setDetalle] = useState<number | null>(null);
 
   const cambiarEstado = (p: PublicacionAdmin, accion: AccionPublicacion, verbo: string, exito: string) =>
     setModal({
@@ -94,7 +96,11 @@ export function PublicacionesTabla({
               const estado = p.estado.nombre;
               return (
                 <tr key={p.id} className="border-b border-neutral-100 last:border-0">
-                  <td data-label="Título" className="px-4 py-3 text-center text-neutral-900">{p.titulo}</td>
+                  <td data-label="Título" className="px-4 py-3 text-center text-neutral-900">
+                    <button type="button" onClick={() => setDetalle(p.id)} className="font-medium text-neutral-900 hover:underline">
+                      {p.titulo}
+                    </button>
+                  </td>
                   <td data-label="Mascota" className="px-4 py-3 text-center text-neutral-600">{p.mascota.nombre} ({p.mascota.especie})</td>
                   <td data-label="Publica" className="px-4 py-3 text-center text-neutral-600">{p.publicador.nombre}</td>
                   <td data-label="Estado" className="px-4 py-3 text-center text-neutral-600">{deBaja ? "De baja" : estado}</td>
@@ -102,6 +108,7 @@ export function PublicacionesTabla({
                   <td data-label="Fecha" className="px-4 py-3 text-center text-neutral-600">{new Date(p.fechaAlta).toLocaleDateString("es-AR")}</td>
                   <td data-label="Acciones" className="px-4 py-3">
                     <div className="flex flex-wrap justify-end gap-2 md:justify-center">
+                      <AccionButton icono={Eye} tono="info" onClick={() => setDetalle(p.id)}>Ver</AccionButton>
                       {/* El backend valida la transición (409 TRANSICION_INVALIDA); acá solo se ofrece lo plausible. */}
                       {deBaja ? (
                         <AccionButton
@@ -153,6 +160,8 @@ export function PublicacionesTabla({
       </div>
 
       <Pagination page={lista.page} limit={lista.limit} total={lista.total} onCambiar={irAPagina} />
+
+      {detalle && <DetallePublicacionModal id={detalle} token={token} onCerrar={() => setDetalle(null)} />}
 
       {modal && (
         <MotivoModal

@@ -96,6 +96,7 @@ export function PublicadoPor({
   distanciaTexto,
   mapaUrl,
   fechaTexto,
+  onVerPerfil,
 }: {
   refugio: { nombre: string; mapaUrl?: string | null } | null;
   persona: { nombre: string; apellido: string } | null;
@@ -103,6 +104,8 @@ export function PublicadoPor({
   distanciaTexto?: string | null;
   mapaUrl?: string | null;
   fechaTexto?: string | null;
+  /** Abre el perfil público de quien publicó (spec 023). */
+  onVerPerfil?: () => void;
 }) {
   const nombre = refugio?.nombre ?? (persona ? `${persona.nombre} ${persona.apellido}` : null);
   if (!nombre) return null;
@@ -173,6 +176,20 @@ export function PublicadoPor({
           </View>
         ) : null}
       </View>
+
+      {/* Hermano de los enlaces de adentro y no un contenedor: un Pressable dentro de otro
+          dispara onPress al renderizar en web (React 19). */}
+      {onVerPerfil ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Ver el perfil de ${nombre}`}
+          onPress={onVerPerfil}
+          hitSlop={10}
+          className="h-9 w-9 items-center justify-center rounded-full bg-organic-accent-100 active:opacity-70"
+        >
+          <MaterialCommunityIcons name="chevron-right" size={22} color={PALETA.accent[600]} />
+        </Pressable>
+      ) : null}
     </View>
   );
 }

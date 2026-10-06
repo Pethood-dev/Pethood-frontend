@@ -6,7 +6,15 @@
  * Si cambia un número allá, cambialo acá. Mensajes en voseo (REQUISITOS.md §5).
  */
 export const LIMITES = {
-  refugio: { nombre: { min: 2, max: 100 }, direccion: { min: 2, max: 150 }, descripcion: { max: 1000 } },
+  refugio: {
+    nombre: { min: 2, max: 100 },
+    direccion: { min: 2, max: 150 },
+    descripcion: { max: 1000 },
+    // Registro público (POST /auth/registro-refugio): la dirección va estructurada.
+    provincia: { min: 2, max: 80 },
+    localidad: { min: 2, max: 80 },
+    calleAltura: { min: 2, max: 120 },
+  },
   persona: { nombre: { min: 1, max: 50 } },
   consultaSoporte: {
     nombreCompleto: { min: 2, max: 100 },
@@ -18,6 +26,8 @@ export const LIMITES = {
   faqCategoria: { nombre: { min: 2, max: 50 }, descripcion: { max: 200 } },
   catalogo: { nombre: { min: 2, max: 50 }, descripcion: { max: 200 }, secuenciaDias: { min: 1, max: 365 } },
   motivo: { min: 1, max: 500 },
+  /** Respuesta del admin al resolver un reporte (spec 008). Solo web-admin: no se espeja en mobile. */
+  respuestaReporte: { min: 1, max: 500 },
   busqueda: { max: 100 },
   password: { min: 8 },
   imagen: { tamanioMaximoBytes: 5 * 1024 * 1024, formatos: ["image/jpeg", "image/png", "image/webp"] },

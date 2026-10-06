@@ -92,6 +92,8 @@ function RootNavigator() {
         <Stack.Screen name="campanias/refugio/index" />
         <Stack.Screen name="campanias/refugio/nueva" options={{ presentation: 'card' }} />
         <Stack.Screen name="campanias/refugio/[id]/donaciones" options={{ presentation: 'card' }} />
+        {/* HU-13.3. El mismo formulario del alta, desde el popup del aviso propio. */}
+        <Stack.Screen name="perdidos/[id]/editar" options={{ presentation: 'card' }} />
         <Stack.Screen name="mascotas/crear" options={{ presentation: 'card' }} />
         {/* HU-6.4. Se abre tocando una tarjeta de "Mis mascotas". */}
         <Stack.Screen name="mascotas/[id]/index" options={{ presentation: 'card' }} />
@@ -131,6 +133,10 @@ function RootNavigator() {
         {/* GUI-14. Fuera de las tabs para que la conversación ocupe la pantalla entera y el
             back vuelva al listado. Sólo recibe el chatId: el contacto lo trae la API. */}
         <Stack.Screen name="chats/[chatId]" options={{ presentation: 'card' }} />
+        {/* Spec 023 (GUI-26). Perfil público de otra persona o de un refugio: se entra desde
+            «Publicado por» de la ficha y desde la cabecera del chat. */}
+        <Stack.Screen name="perfiles/usuario/[id]" options={{ presentation: 'card' }} />
+        <Stack.Screen name="perfiles/refugio/[id]" options={{ presentation: 'card' }} />
         <Stack.Screen name="+not-found" />
       </Stack.Protected>
     </Stack>

@@ -218,8 +218,15 @@ function TarjetaRefugio({
 export default function PerfilScreen() {
   const router = useRouter();
   const toast = useToast();
-  const { usuario, token, esRefugio, vistaRefugio, cambiarVistaRefugio, actualizarUsuario } =
-    useSesion();
+  const {
+    usuario,
+    token,
+    esRefugio,
+    vistaRefugio,
+    refugioEnRevision,
+    cambiarVistaRefugio,
+    actualizarUsuario,
+  } = useSesion();
 
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [perfilRefugio, setPerfilRefugio] = useState<PerfilRefugio | null>(null);
@@ -334,6 +341,15 @@ export default function PerfilScreen() {
             showsVerticalScrollIndicator={false}
             contentContainerClassName="px-5 pb-8 pt-3"
           >
+            {refugioEnRevision ? (
+              <View className="mb-4 flex-row items-center gap-3 rounded-[22px] border border-organic-accent-300 bg-organic-accent-100 px-4 py-3.5">
+                <Ionicons name="hourglass-outline" size={20} color={PALETA.accent[700]} />
+                <Text className="flex-1 font-cuerpo-semi text-[15px] text-organic-accent-700">
+                  Tu refugio todavía está en revisión. Mientras tanto usás la app con tu perfil personal.
+                </Text>
+              </View>
+            ) : null}
+
             {incompleto ? (
               <Pressable
                 onPress={() => router.push(rutaCompletar)}
@@ -404,8 +420,8 @@ export default function PerfilScreen() {
                 entra por el ítem "Reseñas"/"Reseñas del refugio" del menú o tocando la
                 valoración de la tarjeta. */}
 
-            {/* Solo para quien administra un refugio: el resto no tiene qué alternar. */}
-            {esRefugio ? (
+            {/* Solo para quien administra un refugio ya Activo: el resto no tiene qué alternar. */}
+            {esRefugio && !refugioEnRevision ? (
               <View className="mt-5">
                 <SwitchRefugio activo={vistaRefugio} onCambiar={alternarVista} />
               </View>

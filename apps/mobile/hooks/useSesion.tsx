@@ -1,5 +1,5 @@
 /** Estado de sesión de la app: quién está logueado y con qué rol. */
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import { cerrarSocket } from '@/lib/socketChat';
@@ -12,6 +12,7 @@ import {
   guardarUsuario,
   obtenerToken,
   obtenerUsuario,
+  suscribirRefugioNoVerificado,
   suscribirSesionInvalida,
   tokenInvalidoOExpirado,
   type Ambito,
@@ -30,6 +31,12 @@ interface ContextoSesion {
   vistaRefugio: boolean;
   /** Lo mismo, con el nombre que usa la API (cabecera `X-Ambito`). */
   ambito: Ambito;
+  /**
+   * El refugio del usuario todavía no está Activo (pendiente de verificación, suspendido o de
+   * baja): el backend rechaza el perfil de refugio, así que la app usa el personal y no
+   * muestra el selector de perfil.
+   */
+  refugioEnRevision: boolean;
   cambiarVistaRefugio: (activa: boolean) => void;
   establecerSesion: (token: string, usuario: Usuario) => Promise<void>;
   actualizarUsuario: (usuario: Usuario) => Promise<void>;
@@ -57,6 +64,11 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   // al reabrir la app: la elección no se persiste. Si quiere su perfil personal, lo cambia
   // desde Perfil. Para quien no pertenece a un refugio este valor no tiene efecto.
   const [vistaRefugioElegida, setVistaRefugioElegida] = useState(true);
+  // Respaldo cuando el estado del refugio no está en la sesión (sesión vieja) o quedó viejo (lo
+  // suspendieron con la app abierta): el primer 403 REFUGIO_NO_VERIFICADO lo levanta, guardando
+  // el estado que había. Deja de valer apenas la sesión trae otro estado (ej. ya lo aprobaron).
+  const [rechazo, setRechazo] = useState<{ estado: string | undefined } | null>(null);
+  const estadoRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     void Promise.all([obtenerToken(), obtenerUsuario()])
@@ -81,6 +93,12 @@ export function SesionProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // Si el backend dice que el refugio no está Activo, se cae al perfil personal: el login y la
+  // app como adoptante siguen funcionando, solo el perfil de refugio queda bloqueado.
+  useEffect(() => {
+    return suscribirRefugioNoVerificado(() => setRechazo({ estado: estadoRef.current }));
+  }, []);
+
   const cambiarVistaRefugio = useCallback((activa: boolean) => {
     setVistaRefugioElegida(activa);
   }, []);
@@ -89,6 +107,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
     // Cada ingreso arranca en la vista de refugio (si pertenece a uno), aunque en la sesión
     // anterior del dispositivo se haya quedado en la personal.
     setVistaRefugioElegida(true);
+    setRechazo(null);
     setToken(nuevoToken);
     setUsuario(nuevoUsuario);
     await guardarSesion(nuevoToken, nuevoUsuario);
@@ -112,6 +131,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
     setToken(null);
     setUsuario(null);
     setVistaRefugioElegida(true);
+    setRechazo(null);
     // El socket quedó autenticado en el handshake con un token que ya no vale: no alcanza
     // con que la pantalla suelte su referencia, hay que cortarlo sí o sí.
     cerrarSocket();
@@ -122,9 +142,17 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   }, [token]);
 
   const esRefugio = esMiembroDeRefugio(usuario);
+  // El estado viene en la sesión: se sabe de entrada, sin esperar al primer 403. El 403 queda
+  // como respaldo (sesión vieja sin estado, o refugio suspendido con la app abierta).
+  const estadoRefugio = usuario?.refugio?.estado;
+  estadoRef.current = estadoRefugio;
+  const refugioEnRevision =
+    esRefugio &&
+    ((estadoRefugio !== undefined && estadoRefugio !== 'Activo') ||
+      (rechazo !== null && rechazo.estado === estadoRefugio));
   // Se cruza con el rol y no se usa el valor elegido tal cual: si al usuario le sacan el
   // refugio, la app tiene que volver sola a la vista de adoptante.
-  const vistaRefugio = esRefugio && vistaRefugioElegida;
+  const vistaRefugio = esRefugio && vistaRefugioElegida && !refugioEnRevision;
   const ambito: Ambito = vistaRefugio ? 'REFUGIO' : 'PERSONAL';
 
   // Se escribe durante el render y no en un efecto a propósito: los efectos de los hijos
@@ -141,6 +169,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
       esRefugio,
       vistaRefugio,
       ambito,
+      refugioEnRevision,
       cambiarVistaRefugio,
       establecerSesion,
       actualizarUsuario,
@@ -154,6 +183,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
       esRefugio,
       vistaRefugio,
       ambito,
+      refugioEnRevision,
       cambiarVistaRefugio,
       establecerSesion,
       actualizarUsuario,

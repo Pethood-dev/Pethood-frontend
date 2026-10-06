@@ -30,7 +30,7 @@ export default async function SolicitudesAdminPage({ searchParams }: PageProps) 
         </div>
         <ExportacionAdmin entidad="solicitudes" token={token} />
       </div>
-      <SolicitudesTabla lista={lista} filtros={filtros} />
+      <SolicitudesTabla lista={lista} filtros={filtros} token={token} />
     </div>
   );
 }

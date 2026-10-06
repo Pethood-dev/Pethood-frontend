@@ -37,6 +37,7 @@ import {
   Subtitulo,
   TarjetaFicha,
 } from '@/components/publicaciones/FichaPublicacion';
+import { BotonReportar } from '@/components/reportes/BotonReportar';
 import { ResumenReputacion } from '@/components/resenas/ResumenReputacion';
 import { BotonSolicitar, solicitudEnviadaDe } from '@/components/solicitudes/BotonSolicitar';
 import { ConfirmDialog, type TonoDialogo } from '@/components/ui/ConfirmDialog';
@@ -324,6 +325,21 @@ export default function FichaPublicacionScreen() {
             distanciaTexto={distanciaTexto}
             mapaUrl={mapaDelRefugio}
             fechaTexto={fechaPublicacionTexto}
+            onVerPerfil={
+              publicacion.refugio
+                ? () =>
+                    router.push({
+                      pathname: '/perfiles/refugio/[id]',
+                      params: { id: publicacion.refugio!.id },
+                    })
+                : publicacion.publicadoPor
+                  ? () =>
+                      router.push({
+                        pathname: '/perfiles/usuario/[id]',
+                        params: { id: publicacion.publicadoPor!.id },
+                      })
+                  : undefined
+            }
           />
 
           {/* Solo sobre lo propio: a quien adopta le alcanza con el estado de la mascota, y
@@ -394,6 +410,14 @@ export default function FichaPublicacionScreen() {
             terminal. Pausar solo desde activa, reactivar solo desde pausada, finalizar desde
             las dos (el backend vuelve a validar cada transición). */}
         <View className="px-3">
+          {publicacion.esPropia || publicacion.puedeEditar ? null : (
+            <BotonReportar
+              tipo="PUBLICACION"
+              objetoId={publicacion.id}
+              etiqueta="Reportar publicación"
+              className="mt-5"
+            />
+          )}
           {publicacion.puedeEditar && estadoPublicacion !== ESTADO_PUBLICACION.FINALIZADA ? (
             <View className="mt-5 gap-2.5">
               <CustomButton
