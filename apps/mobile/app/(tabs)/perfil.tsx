@@ -303,6 +303,8 @@ export default function PerfilScreen() {
         !etiquetaUbicacion(perfilRefugio))
     : !visible?.imagenUrl ||
       !visible?.telefono ||
+      // El DNI es obligatorio desde la spec 027: las cuentas viejas y las de Google no lo tienen.
+      (perfil ? !perfil.dni : false) ||
       !etiquetaUbicacion(visible ?? {});
   const rutaCompletar = (vistaRefugio ? '/perfil/refugio' : '/perfil/editar') as Href;
   const esperandoDatos = vistaRefugio ? !perfilRefugio : !visible;

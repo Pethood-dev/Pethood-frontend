@@ -1,5 +1,5 @@
 /**
- * GUI-13 Campañas Adoptante — HU-12.2 (spec 021): el portal de campañas de donación.
+ * GUI-13 Campañas Adoptante — HU-12.2 (spec 026): el portal de campañas de donación.
  *
  * Pantalla 13 del diseño («Campañas Solidarias»): las campañas Activa de todos los refugios, de
  * la más reciente a la más vieja, con su progreso y el botón «Donar ahora». Pagina por cursor
@@ -21,6 +21,9 @@ import { usePaginacionCursor } from '@/hooks/usePaginacionCursor';
 import { listarCampanias, type Campania } from '@/services/campanias';
 
 const SIN_CONEXION = 'No pudimos cargar las campañas. Revisá tu conexión e intentalo de nuevo.';
+
+/** Estable, fuera del componente: ver el contrato de `usePaginacionCursor`. */
+const claveDeCampania = (campania: Campania): number => campania.id;
 
 function ListaVacia() {
   return (
@@ -79,7 +82,7 @@ export default function CampaniasAdoptanteScreen() {
 
   const lista = usePaginacionCursor({
     cargarPagina,
-    claveDe: (campania: Campania) => campania.id,
+    claveDe: claveDeCampania,
     mensajeSinConexion: SIN_CONEXION,
   });
 

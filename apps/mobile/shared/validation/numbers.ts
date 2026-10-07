@@ -33,6 +33,26 @@ export function validarDecimal(
   return null;
 }
 
+const MONTO_CON_MILES = /^\d{1,3}(\.\d{3})+(,\d{1,2})?$/;
+const MONTO_SIMPLE = /^\d+([.,]\d{1,2})?$/;
+
+/**
+ * Pasa un monto en pesos tal como se escribe acá a un número con punto decimal, listo para
+ * validar y mandar: «5.000» → «5000», «5.000,50» → «5000.50», «1500,5» → «1500.5».
+ *
+ * El punto seguido de grupos de tres dígitos es separador de miles: sin esto, «5.000» se leía
+ * como cinco pesos. Lo que no encaja en ningún formato queda tal cual para que la validación
+ * lo marque, en vez de adivinar.
+ */
+export function normalizarMonto(texto: string): string {
+  const limpio = texto.trim();
+
+  if (MONTO_CON_MILES.test(limpio)) return limpio.replace(/\./g, '').replace(',', '.');
+  if (MONTO_SIMPLE.test(limpio)) return limpio.replace(',', '.');
+
+  return limpio;
+}
+
 /**
  * Filtra lo que se puede tipear en un input decimal: dígitos y un único separador.
  * Se usa en `onChangeText` para que el teclado no deje escribir algo inválido.

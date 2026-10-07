@@ -109,7 +109,7 @@ export function TarjetaCampaniaRefugio({
             onPress={() => onAccion(accion)}
           />
         ))}
-        <BotonTarjeta etiqueta="Donaciones" onPress={onRevisar} />
+        <BotonTarjeta etiqueta="Revisar donaciones" onPress={onRevisar} />
         <BotonTarjeta etiqueta="Editar" deshabilitado />
       </View>
     </View>

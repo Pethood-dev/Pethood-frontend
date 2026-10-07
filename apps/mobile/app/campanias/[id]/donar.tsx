@@ -1,5 +1,5 @@
 /**
- * Donar a una campaña (spec 021, HU-12.2 y HU-12.3). No está en el prototipo.
+ * Donar a una campaña (spec 026, HU-12.2 y HU-12.3). No está en el prototipo.
  *
  * Muestra alias y/o CBU para transferir desde el homebanking o la billetera, y un campo con el
  * monto transferido. «Terminar donación» avisa al refugio: la donación queda Pendiente y suma
@@ -13,20 +13,30 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { CustomButton } from '@/components/CustomButton';
-import { EstadoCargando, EstadoError } from '@/components/feedback/EstadosPantalla';
+import { EstadoCargando, EstadoError, EstadoVacio } from '@/components/feedback/EstadosPantalla';
 import { useToast } from '@/components/feedback/Toast';
 import { BotonCircular } from '@/components/ui/BotonCircular';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Segmentado, type OpcionSegmento } from '@/components/ui/Segmentado';
 import { FormularioConTeclado } from '@/components/ui/FormularioConTeclado';
 import { Nota } from '@/components/ui/Nota';
 import { TextField } from '@/components/ui/TextField';
 import { PALETA } from '@/constants/theme';
-import { formatearPesos } from '@/lib/campanias';
+import { useSesion } from '@/hooks/useSesion';
+import { formatearPesos, motivoParaNoDonar, notaDonar, type OrigenDonacion } from '@/lib/campanias';
 import { ApiError } from '@/services/api';
 import { donar, obtenerCampania, type Campania } from '@/services/campanias';
+import { cargarDni, obtenerPerfil } from '@/services/usuarios';
+import { validarDni } from '@/shared/validation/documento';
 import { LIMITES } from '@/shared/validation/limits';
-import { filtrarEntradaDecimal, validarDecimal } from '@/shared/validation/numbers';
+import { normalizarMonto, validarDecimal } from '@/shared/validation/numbers';
 
 const { monto: LIMITE_MONTO } = LIMITES.donacion;
+
+const OPCIONES_ORIGEN: OpcionSegmento<OrigenDonacion>[] = [
+  { valor: 'MERCADO_PAGO', etiqueta: 'Mercado Pago' },
+  { valor: 'OTRO_BANCO', etiqueta: 'Otro banco o billetera' },
+];
 
 function DatoParaCopiar({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   const toast = useToast();
@@ -69,8 +79,25 @@ export default function DonarCampaniaScreen() {
   const [error, setError] = useState<string | null>(null);
   const [intento, setIntento] = useState(0);
   const [monto, setMonto] = useState('');
+  /** Se pregunta antes de transferir: sólo las de Mercado Pago se confirman solas (spec 027). */
+  const [origen, setOrigen] = useState<OrigenDonacion | null>(null);
   const [tocado, setTocado] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const { token } = useSesion();
+  /** `null` mientras no se sabe: en ese caso decide el backend (DNI_REQUERIDO). */
+  const [tieneDni, setTieneDni] = useState<boolean | null>(null);
+  const [pidiendoDni, setPidiendoDni] = useState(false);
+  const [dni, setDni] = useState('');
+  const [errorDni, setErrorDni] = useState<string | undefined>();
+  const [guardandoDni, setGuardandoDni] = useState(false);
+
+  // Spec 027: sin DNI no se puede donar. Se pide acá, justo antes de donar, y no al entrar.
+  useEffect(() => {
+    if (!token) return;
+    obtenerPerfil(token)
+      .then((respuesta) => setTieneDni(Boolean(respuesta.usuario.dni)))
+      .catch(() => setTieneDni(null));
+  }, [token]);
 
   useEffect(() => {
     setError(null);
@@ -85,18 +112,28 @@ export default function DonarCampaniaScreen() {
       );
   }, [campaniaId, intento]);
 
-  const errorMonto = validarDecimal(monto, { ...LIMITE_MONTO, etiqueta: 'El monto' });
+  // «5.000» son cinco mil: se normaliza antes de validar y de mandar (el backend no acepta
+  // separador de miles).
+  const montoNormalizado = normalizarMonto(monto);
+  const errorMonto = validarDecimal(montoNormalizado, { ...LIMITE_MONTO, etiqueta: 'El monto' });
 
-  const terminar = async (): Promise<void> => {
-    setTocado(true);
-    if (errorMonto) return;
-
+  const enviar = async (): Promise<void> => {
     setEnviando(true);
     try {
-      await donar(campaniaId, monto);
-      toast.mostrarExito('¡Gracias! El refugio va a confirmar tu donación.');
+      const donacion = await donar(campaniaId, montoNormalizado, origen!);
+      toast.mostrarExito(
+        donacion.estado.nombre === 'Realizada'
+          ? '¡Listo! Tu donación ya se sumó a la campaña.'
+          : '¡Gracias! El refugio va a confirmar tu donación.',
+      );
       router.back();
     } catch (err) {
+      // Una sesión vieja puede no saber que falta el DNI: el backend lo avisa y se pide acá.
+      if (err instanceof ApiError && err.codigo === 'DNI_REQUERIDO') {
+        setTieneDni(false);
+        setPidiendoDni(true);
+        return;
+      }
       toast.mostrarError(
         err instanceof ApiError
           ? err.message
@@ -104,6 +141,41 @@ export default function DonarCampaniaScreen() {
       );
     } finally {
       setEnviando(false);
+    }
+  };
+
+  const terminar = async (): Promise<void> => {
+    setTocado(true);
+    if (errorMonto) return;
+
+    if (tieneDni === false) {
+      setPidiendoDni(true);
+      return;
+    }
+    await enviar();
+  };
+
+  const guardarDniYDonar = async (): Promise<void> => {
+    const error = validarDni(dni);
+    if (error) {
+      setErrorDni(error);
+      return;
+    }
+    if (!token) return;
+
+    setGuardandoDni(true);
+    try {
+      await cargarDni(token, dni);
+      setTieneDni(true);
+      setPidiendoDni(false);
+      await enviar();
+    } catch (err) {
+      // DNI de otra cuenta, ya cargado, etc.: el cartel queda abierto para corregirlo.
+      setErrorDni(
+        err instanceof ApiError ? err.message : 'No pudimos guardar tu DNI. Intentalo de nuevo.',
+      );
+    } finally {
+      setGuardandoDni(false);
     }
   };
 
@@ -126,6 +198,12 @@ export default function DonarCampaniaScreen() {
           <EstadoError mensaje={error} onAccion={() => setIntento((n) => n + 1)} />
         ) : !campania ? (
           <EstadoCargando />
+        ) : motivoParaNoDonar(campania) ? (
+          <EstadoVacio
+            icono="gift-outline"
+            titulo={campania.titulo}
+            descripcion={motivoParaNoDonar(campania)!}
+          />
         ) : (
           <FormularioConTeclado
             className="flex-1"
@@ -146,7 +224,21 @@ export default function DonarCampaniaScreen() {
 
             <View className="gap-2 rounded-[22px] bg-organic-surface p-4">
               <Text className="font-cuerpo-bold text-[15px] text-organic-neutral-900">
-                1. Transferí desde tu banco o billetera
+                1. ¿Desde dónde vas a transferir?
+              </Text>
+              <Segmentado
+                opciones={OPCIONES_ORIGEN}
+                valor={origen}
+                onChange={setOrigen}
+                variante="organica"
+              />
+            </View>
+
+            <View className="gap-2 rounded-[22px] bg-organic-surface p-4">
+              <Text className="font-cuerpo-bold text-[15px] text-organic-neutral-900">
+                {origen === 'MERCADO_PAGO'
+                  ? '2. Transferí desde tu cuenta de Mercado Pago'
+                  : '2. Transferí desde tu banco o billetera'}
               </Text>
               {campania.alias ? <DatoParaCopiar etiqueta="Alias" valor={campania.alias} /> : null}
               {campania.cbu ? <DatoParaCopiar etiqueta="CBU / CVU" valor={campania.cbu} /> : null}
@@ -154,7 +246,7 @@ export default function DonarCampaniaScreen() {
 
             <View className="gap-2 rounded-[22px] bg-organic-surface p-4">
               <Text className="font-cuerpo-bold text-[15px] text-organic-neutral-900">
-                2. Contanos cuánto transferiste
+                3. Contanos cuánto transferiste
               </Text>
               <TextField
                 label="Monto que transferiste ($)"
@@ -162,28 +254,56 @@ export default function DonarCampaniaScreen() {
                 placeholder="Ej. 5000"
                 keyboardType="decimal-pad"
                 value={monto}
-                onChangeText={(texto) =>
-                  setMonto(filtrarEntradaDecimal(texto, LIMITE_MONTO.decimales))
-                }
+                onChangeText={(texto) => setMonto(texto.replace(/[^\d.,]/g, ''))}
                 onBlur={() => setTocado(true)}
                 error={tocado && errorMonto ? errorMonto : undefined}
                 grande
               />
             </View>
 
-            <Nota texto="Tu donación se suma a la campaña cuando el refugio confirme que recibió la transferencia." />
+            <Nota texto={notaDonar(origen, campania.confirmacionAutomatica)} />
 
             <CustomButton
               title="Terminar donación"
               variant="acento"
               loading={enviando}
-              disabled={!!errorMonto}
+              disabled={!!errorMonto || !origen}
               onPress={() => void terminar()}
-              onPressDeshabilitado={() => setTocado(true)}
+              onPressDeshabilitado={() => {
+                setTocado(true);
+                if (!origen) toast.mostrarAdvertencia('Elegí desde dónde vas a transferir.');
+              }}
             />
           </FormularioConTeclado>
         )}
       </SafeAreaView>
+
+      <ConfirmDialog
+        visible={pidiendoDni}
+        tono="advertencia"
+        titulo="Falta tu DNI"
+        mensaje="Para registrar tu donación necesitamos tu DNI."
+        detalle="Se carga una sola vez. Con él, si transferís desde tu cuenta de Mercado Pago, la donación se confirma sola."
+        textoConfirmar="Guardar y donar"
+        textoCancelar="Volver"
+        cargando={guardandoDni}
+        onConfirmar={() => void guardarDniYDonar()}
+        onCerrar={() => setPidiendoDni(false)}
+      >
+        <TextField
+          label="DNI"
+          obligatorio
+          placeholder="Sin puntos, ej. 30123456"
+          keyboardType="number-pad"
+          maxLength={8}
+          value={dni}
+          onChangeText={(texto) => {
+            setDni(texto.replace(/\D/g, ''));
+            setErrorDni(undefined);
+          }}
+          error={errorDni}
+        />
+      </ConfirmDialog>
     </View>
   );
 }

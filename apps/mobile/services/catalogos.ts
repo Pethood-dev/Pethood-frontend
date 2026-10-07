@@ -30,7 +30,7 @@ export function listarEstadosPublicacion(): Promise<OpcionCatalogo[]> {
   return get('/estados-publicacion');
 }
 
-/** Filtro por estado de «Mis Campañas» (spec 021). */
+/** Filtro por estado de «Mis Campañas» (spec 026). */
 export function listarEstadosCampania(): Promise<OpcionCatalogo[]> {
   return get('/estados-campania');
 }

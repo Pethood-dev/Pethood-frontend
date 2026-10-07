@@ -1,5 +1,5 @@
 /**
- * GUI-37 Crear Campaña — HU-12.1 (spec 021). Pantalla 27 del diseño («Nueva Campaña»).
+ * GUI-37 Crear Campaña — HU-12.1 (spec 026). Pantalla 27 del diseño («Nueva Campaña»).
  *
  * Campos: imagen, título, descripción (≤300), meta (sólo números, $10.000 a $2.500.000),
  * fecha de inicio (desde hoy), fecha límite (posterior al inicio), alias y CBU/CVU (al menos
@@ -24,7 +24,7 @@ import { avisarCampaniaCreada } from '@/lib/campaniaRecienCreada';
 import { ApiError } from '@/services/api';
 import { crearCampania } from '@/services/campanias';
 import { validarAlias, validarCbu } from '@/shared/validation/bancario';
-import { validarFechaNoPasada } from '@/shared/validation/dates';
+import { esDiaAnteriorA, validarFechaNoPasada } from '@/shared/validation/dates';
 import { LIMITES } from '@/shared/validation/limits';
 import { filtrarEntradaDecimal, validarDecimal } from '@/shared/validation/numbers';
 import { validarTexto } from '@/shared/validation/text';
@@ -47,6 +47,14 @@ function hoy(): Date {
   const fecha = new Date();
   fecha.setHours(0, 0, 0, 0);
   return fecha;
+}
+
+/** La fecha límite tiene que ser posterior al inicio: el picker arranca en el día siguiente. */
+function diaSiguiente(fecha: Date): Date {
+  const siguiente = new Date(fecha);
+  siguiente.setHours(0, 0, 0, 0);
+  siguiente.setDate(siguiente.getDate() + 1);
+  return siguiente;
 }
 
 export default function NuevaCampaniaScreen() {
@@ -80,7 +88,8 @@ export default function NuevaCampaniaScreen() {
     const eInicio = validarFechaNoPasada(fechaInicio, 'La fecha de inicio');
     if (eInicio) e.fechaInicio = eInicio;
     if (!fechaFin) e.fechaFin = 'La fecha límite es obligatoria';
-    else if (fechaInicio && fechaFin.getTime() <= fechaInicio.getTime()) {
+    // Por día, como el backend: con la hora del picker, «mismo día» pasaba acá y rebotaba allá.
+    else if (fechaInicio && !esDiaAnteriorA(fechaInicio, fechaFin)) {
       e.fechaFin = 'La fecha límite tiene que ser posterior a la de inicio';
     }
     const eAlias = validarAlias(alias);
@@ -205,7 +214,7 @@ export default function NuevaCampaniaScreen() {
                 placeholder="Elegí la fecha"
                 valor={fechaFin}
                 onChange={setFechaFin}
-                fechaMinima={fechaInicio ?? hoy()}
+                fechaMinima={diaSiguiente(fechaInicio ?? hoy())}
                 fechaMaxima={FECHA_MAXIMA}
                 mostrarEdad={false}
                 error={errorDe('fechaFin')}

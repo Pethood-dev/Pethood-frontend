@@ -200,7 +200,7 @@ export const LIMITES = {
     pagina: { porDefecto: 20, maximo: 50 },
   },
 
-  /** Campaña de donación (spec 021, HU-12.1). Espejo del backend. */
+  /** Campaña de donación (spec 026, HU-12.1). Espejo del backend. */
   campania: {
     titulo: { min: 3, max: 50 },
     descripcion: { max: 300 },
@@ -212,7 +212,7 @@ export const LIMITES = {
     pagina: { porDefecto: 20, maximo: 50 },
   },
 
-  /** Donación declarada (spec 021, HU-12.3). Espejo del backend. */
+  /** Donación declarada (spec 026, HU-12.3). Espejo del backend. */
   donacion: {
     monto: { min: 1, max: 2500000, decimales: 2 },
     pagina: { porDefecto: 30, maximo: 50 },

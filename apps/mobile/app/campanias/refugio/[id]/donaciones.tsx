@@ -1,12 +1,15 @@
 /**
- * Revisar donaciones de una campaña (spec 021, HU-12.3). No está en el prototipo.
+ * Revisar donaciones de una campaña (spec 026, HU-12.3). No está en el prototipo.
  *
  * Abre en «Pendientes»: lo que el refugio tiene que hacer. «Aplicar» suma el monto a la
  * campaña (después de verificar el ingreso en su cuenta) y «Rechazar» pide el motivo. Las dos
  * con confirmación (regla transversal 6).
+ *
+ * Cada donación muestra desde dónde dijo el donante que transfirió: con Mercado Pago vinculado,
+ * las de Mercado Pago se confirman solas; las de otro banco las aplica el refugio (spec 027).
  */
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -18,10 +21,16 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Segmentado, type OpcionSegmento } from '@/components/ui/Segmentado';
 import { PALETA } from '@/constants/theme';
 import { usePaginacionCursor } from '@/hooks/usePaginacionCursor';
-import { ETIQUETA_MOTIVO, formatearPesos, type MotivoRechazo } from '@/lib/campanias';
+import {
+  ETIQUETA_MOTIVO,
+  formatearPesos,
+  origenDeDonacion,
+  type MotivoRechazo,
+} from '@/lib/campanias';
 import { ApiError } from '@/services/api';
 import {
   listarDonaciones,
+  obtenerCampania,
   resolverDonacion,
   type Donacion,
   type EstadoDonacionFiltro,
@@ -29,6 +38,9 @@ import {
 import { tiempoRelativo } from '@/shared/validation/dates';
 
 type Vista = EstadoDonacionFiltro | 'Todas';
+
+/** Estable, fuera del componente: ver el contrato de `usePaginacionCursor`. */
+const claveDeDonacion = (donacion: Donacion): number => donacion.id;
 
 const VISTAS: OpcionSegmento<Vista>[] = [
   { valor: 'Pendiente', etiqueta: 'Pendientes' },
@@ -48,12 +60,15 @@ type Revision = { donacion: Donacion; accion: 'aplicar' | 'rechazar' };
 
 function FilaDonacion({
   donacion,
+  confirmacionAutomatica,
   onRevisar,
 }: {
   donacion: Donacion;
+  confirmacionAutomatica: boolean;
   onRevisar: (accion: Revision['accion']) => void;
 }) {
   const pendiente = donacion.estado.nombre === 'Pendiente';
+  const origen = origenDeDonacion(donacion.origen, pendiente, confirmacionAutomatica);
 
   return (
     <View className="gap-2 rounded-[20px] bg-organic-surface p-4">
@@ -69,6 +84,21 @@ function FilaDonacion({
         {tiempoRelativo(new Date(donacion.fechaAlta))}
         {donacion.motivoRechazo ? ` · ${ETIQUETA_MOTIVO[donacion.motivoRechazo]}` : ''}
       </Text>
+      {origen ? (
+        <View className="flex-row flex-wrap items-center gap-2">
+          <View className="rounded-full border border-organic-neutral-300 bg-organic-bg px-2.5 py-1">
+            <Text className="text-xs font-medium text-organic-neutral-900">{origen.etiqueta}</Text>
+          </View>
+          {origen.ayuda ? (
+            <Text className="font-cuerpo text-[13px] text-organic-neutral-600">{origen.ayuda}</Text>
+          ) : null}
+        </View>
+      ) : null}
+      {donacion.confirmadaPorMercadoPago ? (
+        <View className="self-start rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1">
+          <Text className="text-xs font-medium text-sky-700">Confirmada por Mercado Pago</Text>
+        </View>
+      ) : null}
       {pendiente ? (
         <View className="mt-1 flex-row gap-2">
           <Pressable
@@ -101,6 +131,22 @@ export default function RevisarDonacionesScreen() {
   const [revision, setRevision] = useState<Revision | null>(null);
   const [motivo, setMotivo] = useState<MotivoRechazo | null>(null);
   const [procesando, setProcesando] = useState(false);
+  /** Si el refugio tiene Mercado Pago vinculado. Mientras carga (o si falla), se asume que no. */
+  const [confirmacionAutomatica, setConfirmacionAutomatica] = useState(false);
+
+  useEffect(() => {
+    let vigente = true;
+    obtenerCampania(campaniaId)
+      .then((campania) => {
+        if (vigente) setConfirmacionAutomatica(campania.confirmacionAutomatica);
+      })
+      .catch(() => {
+        // Sólo cambia el texto de ayuda: sin el dato, la fila pide revisar a mano.
+      });
+    return () => {
+      vigente = false;
+    };
+  }, [campaniaId]);
 
   const cargarPagina = useCallback(
     async (cursor: number | null) => {
@@ -116,7 +162,7 @@ export default function RevisarDonacionesScreen() {
 
   const lista = usePaginacionCursor({
     cargarPagina,
-    claveDe: (donacion: Donacion) => donacion.id,
+    claveDe: claveDeDonacion,
     mensajeSinConexion:
       'No pudimos cargar las donaciones. Revisá tu conexión e intentalo de nuevo.',
   });
@@ -189,6 +235,7 @@ export default function RevisarDonacionesScreen() {
             renderItem={({ item }) => (
               <FilaDonacion
                 donacion={item}
+                confirmacionAutomatica={confirmacionAutomatica}
                 onRevisar={(accion) => setRevision({ donacion: item, accion })}
               />
             )}

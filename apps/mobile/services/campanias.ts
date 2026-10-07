@@ -1,11 +1,11 @@
 /**
- * Campañas de donación (spec 021 del backend, HU-12.1 a HU-12.7). Contrato completo en
+ * Campañas de donación (spec 026 del backend, HU-12.1 a HU-12.7). Contrato completo en
  * `pethood-backend/docs/api-campanias.md`.
  *
  * El perfil activo viaja solo en la cabecera `X-Ambito` (`api.ts`): el portal y donar son del
  * perfil personal, lo de `/refugio/...` del perfil de refugio.
  */
-import type { MotivoRechazo } from '@/lib/campanias';
+import type { MotivoRechazo, OrigenDonacion } from '@/lib/campanias';
 import { aFechaISO } from '@/shared/validation/dates';
 import { LIMITES } from '@/shared/validation/limits';
 
@@ -30,6 +30,8 @@ export interface Campania {
   alias: string | null;
   cbu: string | null;
   refugio: { id: number; nombre: string; imagenUrl: string | null };
+  /** El refugio tiene Mercado Pago vinculado: la donación se confirma sola (spec 027). */
+  confirmacionAutomatica: boolean;
 }
 
 export interface CampaniaRefugio extends Campania {
@@ -50,6 +52,10 @@ export interface Donacion {
   monto: number;
   estado: { id: number; nombre: string };
   motivoRechazo: MotivoRechazo | null;
+  /** Desde dónde dijo que transfirió; `null` en donaciones anteriores al campo (spec 027). */
+  origen: OrigenDonacion | null;
+  /** La confirmó el sistema al encontrar la transferencia en Mercado Pago (spec 027). */
+  confirmadaPorMercadoPago: boolean;
   /** ISO 8601. */
   fechaAlta: string;
   donante: { id: number; nombre: string; apellido: string; imagenUrl: string | null };
@@ -89,8 +95,12 @@ export function obtenerCampania(id: number): Promise<Campania> {
  * «Terminar donación». `monto` va tal cual lo escribió el usuario (coma o punto): el backend
  * lo normaliza. La donación queda Pendiente hasta que el refugio la confirma.
  */
-export function donar(campaniaId: number, monto: string): Promise<Donacion> {
-  return post(`/campanias/${campaniaId}/donaciones`, { monto: monto.trim() });
+export function donar(
+  campaniaId: number,
+  monto: string,
+  origen: OrigenDonacion,
+): Promise<Donacion> {
+  return post(`/campanias/${campaniaId}/donaciones`, { monto: monto.trim(), origen });
 }
 
 /** GUI-36. «Mis Campañas» del refugio, con los mismos filtros en cada página. */

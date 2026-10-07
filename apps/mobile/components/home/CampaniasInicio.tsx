@@ -1,5 +1,5 @@
 /**
- * Accesos de Inicio a las campañas (spec 021): el bloque naranja del adoptante lleva al portal
+ * Accesos de Inicio a las campañas (spec 026): el bloque naranja del adoptante lleva al portal
  * (GUI-13) y la tarjeta chica del refugio a «Mis Campañas» (GUI-36). Conservan el diseño que
  * tenían mientras el módulo no existía; sólo dejaron de decir «Muy pronto».
  */

@@ -1,5 +1,5 @@
 /**
- * Alias y CBU/CVU para transferir (spec 021). Espejo de
+ * Alias y CBU/CVU para transferir (spec 026). Espejo de
  * `pethood-backend/src/shared/validation/bancario.ts`. Devuelven el error o `null`; vacío es
  * válido porque cada uno es opcional por separado (la pantalla exige al menos uno).
  */

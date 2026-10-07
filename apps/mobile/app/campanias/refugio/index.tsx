@@ -1,13 +1,16 @@
 /**
- * GUI-36 Campañas Refugio — «Mis Campañas» (spec 021, HU-12.1, HU-12.5, HU-12.6).
+ * GUI-36 Campañas Refugio — «Mis Campañas» (spec 026, HU-12.1, HU-12.5, HU-12.6).
  *
  * Listado de las campañas del refugio, de la más reciente a la más vieja, con filtros por
- * estado (selección múltiple) y por fecha de inicio (desde obligatoria, hasta opcional).
- * Finalizar y cancelar piden confirmación (regla transversal 6). Se entra desde la vista de
- * refugio: el backend corta si el perfil activo no es el de refugio.
+ * estado (selección múltiple) y por fecha de inicio (desde obligatoria, hasta opcional: el
+ * «Hasta» aparece recién con un «Desde» elegido). Finalizar y cancelar piden confirmación
+ * (regla transversal 6). Al volver de otra pantalla la lista se refresca: aplicar una donación
+ * cambia el recaudado y puede haber finalizado la campaña. El «+» avisa del límite de 5
+ * campañas antes de abrir el alta. Se entra desde la vista de refugio: el backend corta si el
+ * perfil activo no es el de refugio.
  */
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -22,7 +25,7 @@ import { FiltroEstados, type OpcionEstado } from '@/components/ui/FiltroEstados'
 import { estiloDeEstadoCampania } from '@/constants/EstadosCampania';
 import { PALETA } from '@/constants/theme';
 import { usePaginacionCursor } from '@/hooks/usePaginacionCursor';
-import type { AccionCampania } from '@/lib/campanias';
+import { idsDeEstadosVigentes, type AccionCampania } from '@/lib/campanias';
 import { tomarCampaniaCreada } from '@/lib/campaniaRecienCreada';
 import { ApiError } from '@/services/api';
 import {
@@ -32,9 +35,17 @@ import {
   type CampaniaRefugio,
   type FiltrosMisCampanias,
 } from '@/services/campanias';
-import { listarEstadosCampania } from '@/services/catalogos';
+import { listarEstadosCampania, type OpcionCatalogo } from '@/services/catalogos';
+import { LIMITES } from '@/shared/validation/limits';
 
 const SIN_CONEXION = 'No pudimos cargar tus campañas. Revisá tu conexión e intentalo de nuevo.';
+
+/**
+ * Fuera del componente a propósito: `usePaginacionCursor` arma `agregarAlPrincipio` con esta
+ * función, y el efecto de foco depende de él. Inline, cambiaba en cada render, el efecto se
+ * volvía a disparar y refrescaba la lista sin parar.
+ */
+const claveDeCampania = (campania: CampaniaRefugio): number => campania.id;
 
 const CONFIRMACION: Record<
   AccionCampania,
@@ -69,24 +80,27 @@ export default function MisCampaniasScreen() {
   const router = useRouter();
   const toast = useToast();
 
-  const [estados, setEstados] = useState<OpcionEstado[]>([]);
+  const [catalogo, setCatalogo] = useState<OpcionCatalogo[]>([]);
   const [filtros, setFiltros] = useState<FiltrosMisCampanias>(SIN_FILTROS_CAMPANIAS);
   const [confirmando, setConfirmando] = useState<{
     campania: CampaniaRefugio;
     accion: AccionCampania;
   } | null>(null);
   const [procesando, setProcesando] = useState(false);
+  const [verificandoLimite, setVerificandoLimite] = useState(false);
+  const [limiteAlcanzado, setLimiteAlcanzado] = useState(false);
 
   useEffect(() => {
     listarEstadosCampania()
-      .then((catalogo) =>
-        setEstados(
-          catalogo.map((e) => ({ id: e.id, etiqueta: estiloDeEstadoCampania(e.nombre).etiqueta })),
-        ),
-      )
+      .then(setCatalogo)
       // Sin catálogo el listado igual funciona; sólo falta el filtro por estado.
-      .catch(() => setEstados([]));
+      .catch(() => setCatalogo([]));
   }, []);
+
+  const estados: OpcionEstado[] = catalogo.map((estado) => ({
+    id: estado.id,
+    etiqueta: estiloDeEstadoCampania(estado.nombre).etiqueta,
+  }));
 
   const cargarPagina = useCallback(
     async (cursor: number | null) => {
@@ -102,17 +116,60 @@ export default function MisCampaniasScreen() {
 
   const lista = usePaginacionCursor({
     cargarPagina,
-    claveDe: (campania: CampaniaRefugio) => campania.id,
+    claveDe: claveDeCampania,
     mensajeSinConexion: SIN_CONEXION,
   });
 
   const { agregarAlPrincipio, recargar } = lista;
+  // `refrescar` cambia en cada render: por una ref, así el efecto de foco no se reinicia solo.
+  const refrescarRef = useRef(lista.refrescar);
+  refrescarRef.current = lista.refrescar;
+  const yaTuvoFoco = useRef(false);
+
   useFocusEffect(
     useCallback(() => {
+      // La primera vez carga el hook; al volver, se refresca (salvo que venga del alta, que ya
+      // trae la campaña nueva).
+      if (!yaTuvoFoco.current) {
+        yaTuvoFoco.current = true;
+        return;
+      }
+
       const creada = tomarCampaniaCreada();
-      if (creada) agregarAlPrincipio(creada);
+      if (creada) {
+        agregarAlPrincipio(creada);
+        return;
+      }
+      refrescarRef.current();
     }, [agregarAlPrincipio]),
   );
+
+  /**
+   * El «+»: si el refugio ya tiene 5 campañas Programadas o Activas, avisa antes de abrir el
+   * alta en vez de dejar completar todo el formulario. Si la consulta falla o no hay catálogo,
+   * abre igual: el backend corta al confirmar.
+   */
+  const nuevaCampania = async (): Promise<void> => {
+    if (verificandoLimite) return;
+
+    const vigentes = idsDeEstadosVigentes(catalogo);
+    if (vigentes.length > 0) {
+      setVerificandoLimite(true);
+      try {
+        const pagina = await listarMisCampanias({ estados: vigentes }, null);
+        if (pagina.campanias.length >= LIMITES.campania.vigentesPorRefugio) {
+          setLimiteAlcanzado(true);
+          return;
+        }
+      } catch {
+        // Sigue al alta: la validación real es la del backend.
+      } finally {
+        setVerificandoLimite(false);
+      }
+    }
+
+    router.push('/campanias/refugio/nueva' as Href);
+  };
 
   const confirmar = async (): Promise<void> => {
     if (!confirmando) return;
@@ -166,17 +223,20 @@ export default function MisCampaniasScreen() {
                 mostrarEdad={false}
               />
             </View>
-            <View className="flex-1">
-              <DateField
-                label="Hasta (opcional)"
-                placeholder="Elegí"
-                valor={filtros.fechaHasta ?? null}
-                onChange={(fecha) => setFiltros((f) => ({ ...f, fechaHasta: fecha }))}
-                fechaMinima={filtros.fechaDesde}
-                fechaMaxima={new Date(2100, 0, 1)}
-                mostrarEdad={false}
-              />
-            </View>
+            {/* La HU pide «desde» obligatorio: sin él, un «hasta» suelto no filtraría nada. */}
+            {filtros.fechaDesde ? (
+              <View className="flex-1">
+                <DateField
+                  label="Hasta (opcional)"
+                  placeholder="Elegí"
+                  valor={filtros.fechaHasta ?? null}
+                  onChange={(fecha) => setFiltros((f) => ({ ...f, fechaHasta: fecha }))}
+                  fechaMinima={filtros.fechaDesde}
+                  fechaMaxima={new Date(2100, 0, 1)}
+                  mostrarEdad={false}
+                />
+              </View>
+            ) : null}
             {filtros.fechaDesde ? (
               <Pressable
                 accessibilityRole="button"
@@ -230,7 +290,7 @@ export default function MisCampaniasScreen() {
 
         <BotonFlotante
           accessibilityLabel="Crear una campaña"
-          onPress={() => router.push('/campanias/refugio/nueva' as Href)}
+          onPress={() => void nuevaCampania()}
         />
       </SafeAreaView>
 
@@ -244,6 +304,14 @@ export default function MisCampaniasScreen() {
         cargando={procesando}
         onConfirmar={() => void confirmar()}
         onCerrar={() => setConfirmando(null)}
+      />
+
+      <ConfirmDialog
+        visible={limiteAlcanzado}
+        tono="bloqueo"
+        titulo="Llegaste al límite de campañas"
+        mensaje={`Alcanzaste el límite de ${LIMITES.campania.vigentesPorRefugio} campañas activas. Finalizá o cancelá una para crear otra.`}
+        onCerrar={() => setLimiteAlcanzado(false)}
       />
     </View>
   );
